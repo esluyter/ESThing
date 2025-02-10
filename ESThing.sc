@@ -4,7 +4,10 @@ ESThingParam {
   storeArgs { ^[name, spec, func, val] }
   *new { |name, spec, func, val|
     spec = spec ?? { name.asSpec } ?? { ControlSpec() };
-    func = func ? { |name, val, thing| thing.at(\synth).set(name, val) };
+    func = func ? { |name, val, thing|
+      thing[\synth].set(name, val);
+      thing[\synths].do({ |synth| synth.set(name, val) });
+    };
     val = val ?? { spec.default };
     ^super.newCopyArgs(name, spec, func, val);
   }
@@ -25,6 +28,7 @@ ESThingPatch {
   *initClass {
     ServerBoot.add {
       SynthDef(\ESThingPatch, { |in, out, amp|
+        // TODO: change to InFeedback when ready
         Out.ar(out, In.ar(in) * amp);
       }).add;
     };
@@ -69,11 +73,13 @@ ESThingPatch {
 
 
 ESThing {
-  var <>initFunc, <>playFunc, <>stopFunc, <>freeFunc, <>params, <inChannels, <outChannels, <>inbus, <>outbus;
+  var <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <>params, <inChannels, <outChannels, <>target;
+  var <>inbus, <>outbus, <>group;
   var <>environment, <>parentSpace;
 
-  *new { |initFunc, playFunc, stopFunc, freeFunc, params, inChannels = 0, outChannels = 2|
-    ^super.newCopyArgs(initFunc, playFunc, stopFunc, freeFunc, params, inChannels, outChannels).prInit;
+  *new { |initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 0, outChannels = 2, target|
+    target = target ?? { Server.default };
+    ^super.newCopyArgs(initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, target).prInit;
   }
   prInit {
     environment = ();
@@ -86,6 +92,7 @@ ESThing {
     initFunc.value(this);
   }
   play {
+    group = Group(target);
     fork {
       // do whatever the playfunc says
       playFunc.value(this);
@@ -96,8 +103,24 @@ ESThing {
       };
     };
   }
+  noteOn { |num = 69, vel = 64|
+    noteOnFunc.value(this, num, vel/127);
+  }
+  noteOff { |num = 69, vel = 0|
+    noteOffFunc.value(this, num, vel/127);
+  }
+  bend { |val = 8192|
+    bendFunc.value(this, val/8192 - 1);
+  }
+  touch { |val = 64|
+    touchFunc.value(this, val/127);
+  }
+  polytouch { |val = 64, num = 69|
+    polytouchFunc.value(this, val/127, num);
+  }
   stop {
     stopFunc.value(this);
+    group.free;
   }
   free {
     freeFunc.value(this);
@@ -126,7 +149,7 @@ ESThing {
   }
 
   asTarget {
-    ^this[\group] ? this[\synth]
+    ^this.group
   }
 }
 
