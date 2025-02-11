@@ -14,6 +14,10 @@ A container for any possible SC code that can be played, with built-in routing, 
   - bend
   - touch
   - polytouch
+- Provides special templates
+  - playFuncSynth (similar to {}.play)
+  - monoSynth (for interfacing a SynthDef with a midi controller, works with  `in`, `out`, `freq`, `amp`, `bend`, `touch`, `portamento` arguments
+  - polySynth (for interfacing a SynthDef with a midi controller, works with  `in`, `out`, `freq`, `amp`, `bend`, `touch`, `gate` arguments
 - Allows you to define `params` with custom hooks (by default they interface with running Synths)
 
 ### ESThingSpace
