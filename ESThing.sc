@@ -77,6 +77,12 @@ ESThing {
   var <>inbus, <>outbus, <>group;
   var <>environment, <>parentSpace;
 
+  classvar <>defaultMidicpsFunc, <>defaultVelampFunc;
+  *initClass {
+    defaultMidicpsFunc = { |num| num.midicps };
+    defaultVelampFunc = { |vel| vel.linexp(0, 1, 0.05, 1) };
+  }
+
   *new { |initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 0, outChannels = 2, target|
     target = target ?? { Server.default };
     ^super.newCopyArgs(initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, target).prInit;
