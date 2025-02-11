@@ -35,16 +35,22 @@ ESThingPatch {
   }
   storeArgs { ^[from, to, amp] }
   *new { |from, to, amp|
+    if (from.class == Association) {
+      from = (thingIndex: from.key, index: from.value);
+    };
+    if (to.class == Association) {
+      to = (thingIndex: to.key, index: to.value);
+    };
     ^super.newCopyArgs(from, to, amp);
   }
   play {
     var things = parentSpace.things;
     var addAction = \addBefore;
     // if fromThing or toThing is nil, make a dummy to direct to this space's input or output
-    var fromThing = things[from.thingIndex] ?? {
+    var fromThing = parentSpace.thingAt(from.thingIndex) ?? {
       (outbus: parentSpace.inbus)
     };
-    var toThing = things[to.thingIndex] ?? {
+    var toThing = parentSpace.thingAt(to.thingIndex) ?? {
       (inbus: parentSpace.outbus);
     };
     var target = toThing.asTarget ?? { addAction = \addAfter; things.last.asTarget };
@@ -74,7 +80,7 @@ ESThingPatch {
 
 
 ESThing {
-  var <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <>params, <inChannels, <outChannels, <>midicpsFunc, <>velampFunc, <>defName, <>args, <>func;
+  var <>name, <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <>params, <inChannels, <outChannels, <>midicpsFunc, <>velampFunc, <>defName, <>args, <>func;
   var <>inbus, <>outbus, <>group;
   var <>environment, <>parentSpace;
 
@@ -84,11 +90,11 @@ ESThing {
     defaultVelampFunc = { |vel| vel.linexp(0, 1, 0.05, 1) };
   }
 
-  storeArgs { ^[initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func] }
-  *new { |initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 0, outChannels = 2, midicpsFunc, velampFunc, defName, args, func|
+  storeArgs { ^[name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func] }
+  *new { |name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 0, outChannels = 2, midicpsFunc, velampFunc, defName, args, func|
     midicpsFunc = midicpsFunc ? defaultMidicpsFunc;
     velampFunc = velampFunc ? defaultVelampFunc;
-    ^super.newCopyArgs(initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func).prInit;
+    ^super.newCopyArgs(name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func).prInit;
   }
   prInit {
     environment = ();
@@ -230,6 +236,18 @@ ESThingSpace {
   put { |key, val|
     environment.put(key, val);
     ^this;
+  }
+
+  thingAt { |sym|
+    if (sym.isInteger) {
+      ^things[sym]
+    };
+    things.do { |thing|
+      if (thing.name == sym) {
+        ^thing
+      };
+    };
+    ^nil;
   }
 
   asTarget {

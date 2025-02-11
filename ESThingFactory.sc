@@ -1,6 +1,6 @@
 + ESThing {
-  *playFuncSynth { |func, params, inChannels = 0, outChannels = 1|
-    ^ESThing(
+  *playFuncSynth { |name, func, params, inChannels = 0, outChannels = 1|
+    ^ESThing(name,
       playFunc: { |thing|
         var funcToPlay = if (thing.func.def.argNames.first == \thing) {
           thing.func.value(thing)
@@ -19,8 +19,8 @@
     )
   }
 
-  *polySynth { |defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc|
-    ^ESThing(
+  *polySynth { |name, defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc|
+    ^ESThing(name,
       playFunc: { |thing|
         thing[\synths] = ();
       },
@@ -58,8 +58,8 @@
     )
   }
 
-  *monoSynth { |defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc|
-    ^ESThing(
+  *monoSynth { |name, defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc|
+    ^ESThing(name,
       initFunc: { |thing|
         thing[\noteStack] = [];
       },
