@@ -29,6 +29,47 @@ A container for any possible SC code that can be played, with built-in routing, 
 
 ## working examples
 
+### hello world
+read a buffer, make two sound generators, and patch outputs
+```
+(
+~ts = ESThingSpace(
+  things: [
+    // simple oscillator
+    ESThing.playFuncSynth({ SinOsc.ar }),
+    // wrap func in a func to access the thing's environment
+    ESThing.playFuncSynth({ |thing| { PlayBuf.ar(1, thing[\buf], BufRateScale.kr(thing[\buf]), loop: 1) } })
+  ],
+
+  patches: [
+    // patch each thing to one speaker
+    ESThingPatch(from: (thingIndex: 0, index: 0), to: (thingIndex: -1, index: 0), amp: 0.2),
+    ESThingPatch(from: (thingIndex: 1, index: 0), to: (thingIndex: -1, index: 1), amp: 0.2),
+  ],
+  
+  // allocate and free shared resources for the space
+  initFunc: { |space|
+    space[\buf] = Buffer.read(s, Platform.resourceDir +/+ "sounds/a11wlk01.wav");
+  },
+  freeFunc: { |space|
+    space[\buf].free;
+  }
+);
+
+// start it up
+s.waitForBoot {
+  ~ts.init;
+  s.sync;
+  ~ts.play;
+};
+)
+
+
+// stop it and free resources
+~ts.stop;
+~ts.free;
+```
+
 ### monophony and polyphony with midi
 
 with portamento, note on / off, pitch bend, aftertouch, and full parameter control
