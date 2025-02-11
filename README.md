@@ -6,120 +6,28 @@ Supports "play" / "stop" type code, as well as "noteOn" / "noteOff" type code.
 
 ## working examples
 
-### polyphony with midi
+### monophony and polyphony with midi
+
+with portamento, note on / off, pitch bend, aftertouch, and full parameter control
+
 ```
 /*
-midi polyphonic synth with note on / off, pitch bend, aftertouch, and full parameter control
+       1. SynthDefs, MIDI, overall play/stop functions
 */
-
 (
-~play = {
-  s.waitForBoot {
-    ~ts.init;
-    s.sync;
-    ~ts.play;
-  };
+s.waitForBoot {
+  SynthDef(\sinNote, { |out, amp=0.1, freq=440, bend=0, touch=0, gate=1, pregain=4, modFreq = 4, modAmt = 0.01, amFreq = 1, amAmt = 0.01, portamento = 0|
+    var env = Env.adsr.ar(2, gate);
+    var mod = SinOsc.ar(modFreq.lag2(0.1)) * (modAmt.lag2(0.1) * freq);
+    var amod = 1 - (SinOsc.ar(amFreq.lag2(0.1), pi/2) * amAmt.lag2(0.1));
+    var sig = SinOsc.ar(freq.lag2(portamento) * (bend.lag2(0.05) * 12).midiratio + mod) * env;
+    var gaincomp = (10 - (pregain + amAmt)).clip(0, 10).linexp(0, 10, 1, 4);
+    amp = amp * touch.lag2(0.05).linexp(0, 1, 1, 10);
+    sig = (sig * amp * pregain.lag2(0.05) * amod).fold(-10, 10).tanh;
+    Out.ar(out, sig * amp * gaincomp);
+  }).add;
 };
-~stop = {
-  ~ts.stop;
-  ~ts.free;
-};
-~stop.();
-~ts = ESThingSpace(
-  things: [
-    ESThing(
-      initFunc: { |thing|
-        SynthDef(\sinNote, { |out, amp=0.1, freq=440, bend=0, touch=0, gate=1, pregain=4, modFreq = 4, modAmt = 0.01, amFreq = 1, amAmt = 0.01|
-          var env = Env.adsr.ar(2, gate);
-          var mod = SinOsc.ar(modFreq.lag2(0.1)) * (modAmt.lag2(0.1) * freq);
-          var amod = 1 - (SinOsc.ar(amFreq.lag2(0.1), pi/2) * amAmt.lag2(0.1));
-          var sig = SinOsc.ar(freq * (bend.lag2(0.05) * 12).midiratio + mod) * env;
-          var gaincomp = (10 - (pregain + amAmt)).clip(0, 10).linexp(0, 10, 1, 4);
-          amp = amp * touch.linexp(0, 1, 1, 10);
-          sig = (sig * amp * pregain.lag2(0.05) * amod).fold(-10, 10).tanh;
-          Out.ar(out, sig * amp * gaincomp);
-        }).add;
-      },
-      playFunc: { |thing|
-        thing[\synths] = ();
-      },
-      noteOnFunc: { |thing, num, vel| // note: vel is mapped 0-1
-        var defaults = thing.params.collect({ |param| [param.name, param.val] }).flat;
-        var freq = num.midicps;
-        var amp = vel.linexp(0, 1, 0.05, 1);
-        thing[\synths][num].free;
-        thing[\synths][num] = Synth(\sinNote, [out: thing.outbus, freq: freq, amp: amp, bend: thing[\bend]] ++ defaults, thing.group);
-      },
-      noteOffFunc: { |thing, num = 69, vel = 0|
-        thing[\synths][num].release;
-        thing[\synths][num] = nil;
-      },
-      bendFunc: { |thing, val| // note: val is mapped -1 to 1
-        thing[\bend] = val;
-        thing[\synths].do { |synth| synth.set(\bend, val) };
-      },
-      touchFunc: { |thing, val|
-        thing[\synths].do { |synth| synth.set(\touch, val) };
-      },
-      polytouchFunc: { |thing, val, num|
-        thing[\synths][num].set(\touch, val);
-      },
-      stopFunc: { |thing|
-        thing[\group].free;
-      },
-      params: [
-        ESThingParam(\pregain, ControlSpec(1, 300, 4)),
-        ESThingParam(\modAmt, ControlSpec(0, 100, 8, default: 0.01)),
-        ESThingParam(\modFreq, ControlSpec(1, 1000, \exp, default: 4)),
-        ESThingParam(\amAmt, ControlSpec(0, 100, 8, default: 0.01)),
-        ESThingParam(\amFreq, ControlSpec(0.1, 100, \exp, default: 1))
-      ],
-      inChannels: 0,
-      outChannels: 1
-    ),
-    ESThing(
-      playFunc: { |thing|
-        thing[\synth] = {
-          var size = \size.kr(1);
-          FreeVerb.ar(In.ar(thing.inbus), \size.kr(1), 0.7) * (size + 1)
-        }.play(thing.group, thing.outbus);
-      },
-      stopFunc: { |thing|
-        thing[\synth].free;
-      },
-      params: [
-        ESThingParam(\size)
-      ],
-      inChannels: 1,
-      outChannels: 1
-    )
-  ],
 
-  patches: [
-    ESThingPatch(from: (thingIndex: -1, index: 0), to: (thingIndex: 1, index: 0), amp: 1),
-    ESThingPatch(from: (thingIndex: 0, index: 0), to: (thingIndex: 1, index: 0), amp: 0.9),
-    ESThingPatch(from: (thingIndex: 0, index: 0), to: (thingIndex: -1, index: 0), amp: 0.2),
-    ESThingPatch(from: (thingIndex: 1, index: 0), to: (thingIndex: -1, index: 1), amp: 0.2),
-  ],
-
-  initFunc: { |space|
-    space[\buf] = Buffer.read(s, Platform.resourceDir +/+ "sounds/a11wlk01.wav");
-  },
-  freeFunc: { |space|
-    space[\buf].free;
-  },
-
-  inChannels: 2,
-  outChannels: 2,
-  useADC: true,
-  useDAC: true
-);
-~play.();
-)
-
-~stop.();
-
-(
 MIDIClient.init;
 MIDIIn.connectAll;
 MIDIdef.noteOn(\noteOn, { |vel, num|
@@ -144,12 +52,120 @@ MIDIdef.cc(\knobs, { |val, num|
   { 2 } { ~ts.things[0].set127(\modFreq, val) }
   { 3 } { ~ts.things[0].set127(\amAmt, val) }
   { 4 } { ~ts.things[0].set127(\amFreq, val) }
+  { 5 } { ~ts.things[0].set127(\portamento, val) }
 
   { 7 } { ~ts.things[1].set127(\size, val) }
 
   { 15 } { ~ts.patches[2..3].do { |patch| patch.amp127_(val) } }
 });
+
+~play = {
+  s.waitForBoot {
+    ~ts.init;
+    s.sync;
+    ~ts.play;
+  };
+};
+~stop = {
+  ~ts.stop;
+  ~ts.free;
+};
 )
+
+
+
+/*
+      2a. monophonic synth
+*/
+
+(
+~stop.();
+~ts = ESThingSpace(
+  things: [
+    ESThing.monoSynth(
+      defName: \sinNote,
+      args: [],
+      params: [
+        ESThingParam(\pregain, ControlSpec(1, 300, 4)),
+        ESThingParam(\modAmt, ControlSpec(0, 100, 8, default: 0.01)),
+        ESThingParam(\modFreq, ControlSpec(1, 1000, \exp, default: 4)),
+        ESThingParam(\amAmt, ControlSpec(0, 100, 8, default: 0.01)),
+        ESThingParam(\amFreq, ControlSpec(0.1, 100, \exp, default: 1)),
+        ESThingParam(\portamento, ControlSpec(0, 5, 6))
+      ],
+      inChannels: 0,
+      outChannels: 1
+    ),
+    ESThing.playFuncSynth(
+      func: { |in|
+        FreeVerb.ar(In.ar(in), \size.kr(1), 0.7)
+      },
+      params: [
+        ESThingParam(\size)
+      ],
+      inChannels: 1,
+      outChannels: 1
+    )
+  ],
+
+  patches: [
+    ESThingPatch(from: (thingIndex: -1, index: 0), to: (thingIndex: 1, index: 0), amp: 1),
+    ESThingPatch(from: (thingIndex: 0, index: 0), to: (thingIndex: 1, index: 0), amp: 0.9),
+    ESThingPatch(from: (thingIndex: 0, index: 0), to: (thingIndex: -1, index: 0), amp: 0.2),
+    ESThingPatch(from: (thingIndex: 1, index: 0), to: (thingIndex: -1, index: 1), amp: 0.2),
+  ]
+);
+~play.();
+)
+
+~stop.();
+
+
+
+/*
+      2b. polyphonic synth with note on / off, pitch bend, aftertouch, and full parameter control
+*/
+
+(
+~stop.();
+~ts = ESThingSpace(
+  things: [
+    ESThing.polySynth(
+      defName: \sinNote,
+      args: [],
+      params: [
+        ESThingParam(\pregain, ControlSpec(1, 300, 4)),
+        ESThingParam(\modAmt, ControlSpec(0, 100, 8, default: 0.01)),
+        ESThingParam(\modFreq, ControlSpec(1, 1000, \exp, default: 4)),
+        ESThingParam(\amAmt, ControlSpec(0, 100, 8, default: 0.01)),
+        ESThingParam(\amFreq, ControlSpec(0.1, 100, \exp, default: 1))
+      ],
+      inChannels: 0,
+      outChannels: 1
+    ),
+    ESThing.playFuncSynth(
+      func: { |in|
+        FreeVerb.ar(In.ar(in), \size.kr(1), 0.7)
+      },
+      params: [
+        ESThingParam(\size)
+      ],
+      inChannels: 1,
+      outChannels: 1
+    )
+  ],
+
+  patches: [
+    ESThingPatch(from: (thingIndex: -1, index: 0), to: (thingIndex: 1, index: 0), amp: 1),
+    ESThingPatch(from: (thingIndex: 0, index: 0), to: (thingIndex: 1, index: 0), amp: 0.9),
+    ESThingPatch(from: (thingIndex: 0, index: 0), to: (thingIndex: -1, index: 0), amp: 0.2),
+    ESThingPatch(from: (thingIndex: 1, index: 0), to: (thingIndex: -1, index: 1), amp: 0.2),
+  ]
+);
+~play.();
+)
+
+~stop.();
 ```
 
 ### continuous synths with patching between them and midi knob control of parameters
