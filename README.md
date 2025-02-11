@@ -2,7 +2,7 @@
 
 A container for any possible SC code that can be played, with built-in routing, parameter control via MIDI, GUI, code, etc.
 
-###ESThing
+### ESThing
 - Provides a dedicated environment, group, inbus, and outbus.
 - Hooks for
   - init
@@ -16,7 +16,7 @@ A container for any possible SC code that can be played, with built-in routing, 
   - polytouch
 - Allows you to define `params` with custom hooks (by default they interface with running Synths)
 
-###ESThingSpace
+### ESThingSpace
 - A container for many ESThings, as well as patched connections between them
 - Provides a dedicated environment inherited by its things, as well as a group
 - Either allocates dedicated inbus and outbus, or uses ADC and DAC
