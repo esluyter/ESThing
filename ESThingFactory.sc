@@ -2,10 +2,10 @@
   *playFuncSynth { |func, params, inChannels = 0, outChannels = 1|
     ^ESThing(
       playFunc: { |thing|
-        var funcToPlay = if (func.def.argNames.first == \thing) {
-          func.value(thing)
+        var funcToPlay = if (thing.func.def.argNames.first == \thing) {
+          thing.func.value(thing)
         } {
-          func
+          thing.func
         };
         thing[\synth] = funcToPlay.play(thing.group, thing.outbus, fadeTime: 0, args: [in: thing.inbus]);
       },
@@ -14,26 +14,24 @@
       },
       params: params.asArray,
       inChannels: inChannels,
-      outChannels: outChannels
+      outChannels: outChannels,
+      func: func
     )
   }
 
   *polySynth { |defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc|
-    midicpsFunc = midicpsFunc ? defaultMidicpsFunc;
-    velampFunc = velampFunc ? defaultVelampFunc;
-
     ^ESThing(
       playFunc: { |thing|
         thing[\synths] = ();
       },
       noteOnFunc: { |thing, num, vel| // note: vel is mapped 0-1
         var defaults = thing.params.collect({ |param| [param.name, param.val] }).flat;
-        var freq = midicpsFunc.(num);
-        var amp = velampFunc.(vel);
+        var freq = thing.midicpsFunc.(num);
+        var amp = thing.velampFunc.(vel);
         thing[\synths][num].free;
-        thing[\synths][num] = Synth(defName, [out: thing.outbus, in: thing.inbus, freq: freq, amp: amp, bend: thing[\bend]] ++ args ++ defaults, thing.group);
+        thing[\synths][num] = Synth(thing.defName, [out: thing.outbus, in: thing.inbus, freq: freq, amp: amp, bend: thing[\bend]] ++ thing.args ++ defaults, thing.group);
       },
-      noteOffFunc: { |thing, num = 69, vel = 0|
+      noteOffFunc: { |thing, num, vel|
         thing[\synths][num].release;
         thing[\synths][num] = nil;
       },
@@ -52,32 +50,33 @@
       },
       params: params.asArray,
       inChannels: inChannels,
-      outChannels: outChannels
+      outChannels: outChannels,
+      midicpsFunc: midicpsFunc,
+      velampFunc: velampFunc,
+      defName: defName,
+      args: args
     )
   }
 
   *monoSynth { |defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc|
-    midicpsFunc = midicpsFunc ? defaultMidicpsFunc;
-    velampFunc = velampFunc ? defaultVelampFunc;
-
     ^ESThing(
       initFunc: { |thing|
         thing[\noteStack] = [];
       },
       playFunc: { |thing|
         var defaults = thing.params.collect({ |param| [param.name, param.val] }).flat;
-        thing[\synth] = Synth(defName, [out: thing.outbus, in: thing.inbus, freq: 440, amp: 0, bend: thing[\bend]] ++ args ++ defaults, thing.group);
+        thing[\synth] = Synth(thing.defName, [out: thing.outbus, in: thing.inbus, freq: 440, amp: 0, bend: thing[\bend]] ++ thing.args ++ defaults, thing.group);
       },
       noteOnFunc: { |thing, num, vel| // note: vel is mapped 0-1
-        var freq = midicpsFunc.(num);
-        var amp = velampFunc.(vel);
+        var freq = thing.midicpsFunc.(num);
+        var amp = thing.velampFunc.(vel);
         thing[\synth].set(\freq, freq, \amp, amp);
         thing[\noteStack] = thing[\noteStack].add(num);
       },
-      noteOffFunc: { |thing, num = 69, vel = 0|
+      noteOffFunc: { |thing, num, vel|
         thing[\noteStack].remove(num);
         if (thing[\noteStack].size > 0) {
-          thing[\synth].set(\freq, midicpsFunc.(thing[\noteStack].last));
+          thing[\synth].set(\freq, thing.midicpsFunc.(thing[\noteStack].last));
         } {
           thing[\synth].set(\amp, 0)
         };
@@ -99,7 +98,11 @@
       },
       params: params.asArray,
       inChannels: inChannels,
-      outChannels: outChannels
+      outChannels: outChannels,
+      midicpsFunc: midicpsFunc,
+      velampFunc: velampFunc,
+      defName: defName,
+      args: args
     )
   }
 }

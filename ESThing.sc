@@ -33,6 +33,7 @@ ESThingPatch {
       }).add;
     };
   }
+  storeArgs { ^[from, to, amp] }
   *new { |from, to, amp|
     ^super.newCopyArgs(from, to, amp);
   }
@@ -73,7 +74,7 @@ ESThingPatch {
 
 
 ESThing {
-  var <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <>params, <inChannels, <outChannels;
+  var <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <>params, <inChannels, <outChannels, <>midicpsFunc, <>velampFunc, <>defName, <>args, <>func;
   var <>inbus, <>outbus, <>group;
   var <>environment, <>parentSpace;
 
@@ -83,8 +84,11 @@ ESThing {
     defaultVelampFunc = { |vel| vel.linexp(0, 1, 0.05, 1) };
   }
 
-  *new { |initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 0, outChannels = 2|
-    ^super.newCopyArgs(initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels).prInit;
+  storeArgs { ^[initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func] }
+  *new { |initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 0, outChannels = 2, midicpsFunc, velampFunc, defName, args, func|
+    midicpsFunc = midicpsFunc ? defaultMidicpsFunc;
+    velampFunc = velampFunc ? defaultVelampFunc;
+    ^super.newCopyArgs(initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func).prInit;
   }
   prInit {
     environment = ();
@@ -168,17 +172,18 @@ ESThing {
 
 ESThingSpace {
   var <>things, <>patches;
-  var <>initFunc, <>playFunc, <>stopFunc, <>freeFunc, <>useADC, <>useDAC, <>target;
+  var <>initFunc, <>playFunc, <>stopFunc, <>freeFunc, <inChannels, <outChannels, <>useADC, <>useDAC, <>target;
   var <>inbus, <>outbus, <>group;
   var <>environment;
 
+  storeArgs { ^[things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, useADC, useDAC, target]}
   *new { |things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels = 2, outChannels = 2, useADC = true, useDAC = true, target|
     things = things ? [];
     patches = patches ? [];
     target = target ?? { Server.default };
-    ^super.newCopyArgs(things, patches, initFunc, playFunc, stopFunc, freeFunc, useADC, useDAC, target).prInit(inChannels, outChannels);
+    ^super.newCopyArgs(things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, useADC, useDAC, target).prInit;
   }
-  prInit { |inChannels, outChannels|
+  prInit {
     environment = ();
     things.do(_.parentSpace_(this));
     patches.do(_.parentSpace_(this));
