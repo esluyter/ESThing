@@ -191,6 +191,10 @@ MIDIdef.cc(\knobs, { |val, num|
 ~stop.();
 ```
 
+<details>
+
+<summary>Proof of concept</summary>
+  
 ### continuous synths with patching between them and midi knob control of parameters
 
 ```
@@ -285,3 +289,5 @@ MIDIdef.cc(\knobs, { |val, num|
 });
 )
 ```
+
+</details>
