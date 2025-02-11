@@ -73,7 +73,7 @@ ESThingPatch {
 
 
 ESThing {
-  var <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <>params, <inChannels, <outChannels, <>target;
+  var <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <>params, <inChannels, <outChannels;
   var <>inbus, <>outbus, <>group;
   var <>environment, <>parentSpace;
 
@@ -83,9 +83,8 @@ ESThing {
     defaultVelampFunc = { |vel| vel.linexp(0, 1, 0.05, 1) };
   }
 
-  *new { |initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 0, outChannels = 2, target|
-    target = target ?? { Server.default };
-    ^super.newCopyArgs(initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, target).prInit;
+  *new { |initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 0, outChannels = 2|
+    ^super.newCopyArgs(initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels).prInit;
   }
   prInit {
     environment = ();
@@ -98,7 +97,7 @@ ESThing {
     initFunc.value(this);
   }
   play {
-    group = Group(target);
+    group = Group(parentSpace.group);
     fork {
       // do whatever the playfunc says
       playFunc.value(this);
@@ -169,13 +168,15 @@ ESThing {
 
 ESThingSpace {
   var <>things, <>patches;
-  var <>initFunc, <>playFunc, <>stopFunc, <>freeFunc, <>useADC, <>useDAC, <>inbus, <>outbus;
+  var <>initFunc, <>playFunc, <>stopFunc, <>freeFunc, <>useADC, <>useDAC, <>target;
+  var <>inbus, <>outbus, <>group;
   var <>environment;
 
-  *new { |things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels = 2, outChannels = 2, useADC = true, useDAC = true|
+  *new { |things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels = 2, outChannels = 2, useADC = true, useDAC = true, target|
     things = things ? [];
     patches = patches ? [];
-    ^super.newCopyArgs(things, patches, initFunc, playFunc, stopFunc, freeFunc, useADC, useDAC).prInit(inChannels, outChannels);
+    target = target ?? { Server.default };
+    ^super.newCopyArgs(things, patches, initFunc, playFunc, stopFunc, freeFunc, useADC, useDAC, target).prInit(inChannels, outChannels);
   }
   prInit { |inChannels, outChannels|
     environment = ();
@@ -198,6 +199,7 @@ ESThingSpace {
     things.do(_.init);
   }
   play {
+    group = Group(target);
     fork {
       playFunc.value(this);
       Server.default.sync;
@@ -210,6 +212,7 @@ ESThingSpace {
     stopFunc.value(this);
     things.do(_.stop);
     patches.do(_.stop);
+    group.free;
   }
   free {
     freeFunc.value(this);
@@ -222,5 +225,9 @@ ESThingSpace {
   put { |key, val|
     environment.put(key, val);
     ^this;
+  }
+
+  asTarget {
+    ^this.group
   }
 }
