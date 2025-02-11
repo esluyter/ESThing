@@ -2,7 +2,12 @@
   *playFuncSynth { |func, params, inChannels = 0, outChannels = 1|
     ^ESThing(
       playFunc: { |thing|
-        thing[\synth] = func.play(thing.group, thing.outbus, fadeTime: 0, args: [in: thing.inbus]);
+        var funcToPlay = if (func.def.argNames.first == \thing) {
+          func.value(thing)
+        } {
+          func
+        };
+        thing[\synth] = funcToPlay.play(thing.group, thing.outbus, fadeTime: 0, args: [in: thing.inbus]);
       },
       stopFunc: { |thing|
         thing[\synth].free;
