@@ -2,7 +2,30 @@
 
 A container for any possible SC code that can be played, with built-in routing, parameter control via MIDI, GUI, code, etc.
 
-Supports "play" / "stop" type code, as well as "noteOn" / "noteOff" type code.
+###ESThing
+- Provides a dedicated environment, group, inbus, and outbus.
+- Hooks for
+  - init
+  - free
+  - play
+  - stop
+  - noteOn
+  - noteOff
+  - bend
+  - touch
+  - polytouch
+- Allows you to define `params` with custom hooks (by default they interface with running Synths)
+
+###ESThingSpace
+- A container for many ESThings, as well as patched connections between them
+- Provides a dedicated environment inherited by its things, as well as a group
+- Either allocates dedicated inbus and outbus, or uses ADC and DAC
+- Hooks for
+  - init
+  - free
+  - play
+  - stop
+- Allows you to define `patches`, i.e. 1x1 connections between a specific output of one thing and a specific input of another, with gain control
 
 ## working examples
 
