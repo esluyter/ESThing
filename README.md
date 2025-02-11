@@ -80,7 +80,7 @@ with portamento, note on / off, pitch bend, aftertouch, and full parameter contr
 
 ```
 /*
-       1. SynthDefs, MIDI, overall play/stop functions
+       1. Prep: SynthDefs, MIDI, overall on/off switch
 */
 (
 s.waitForBoot {
@@ -150,7 +150,7 @@ MIDIdef.cc(\knobs, { |val, num|
 ~stop.();
 ~ts = ESThingSpace(
   things: [
-    ESThing.monoSynth(
+    ESThing.monoSynth(\sinNote,
       defName: \sinNote,
       args: [],
       params: [
@@ -164,7 +164,7 @@ MIDIdef.cc(\knobs, { |val, num|
       inChannels: 0,
       outChannels: 1
     ),
-    ESThing.playFuncSynth(
+    ESThing.playFuncSynth(\verb,
       func: { |in|
         FreeVerb.ar(In.ar(in), \size.kr(1), 0.7)
       },
@@ -177,17 +177,16 @@ MIDIdef.cc(\knobs, { |val, num|
   ],
 
   patches: [
-    ESThingPatch(from: (thingIndex: -1, index: 0), to: (thingIndex: 1, index: 0), amp: 1),
-    ESThingPatch(from: (thingIndex: 0, index: 0), to: (thingIndex: 1, index: 0), amp: 0.9),
-    ESThingPatch(from: (thingIndex: 0, index: 0), to: (thingIndex: -1, index: 0), amp: 0.2),
-    ESThingPatch(from: (thingIndex: 1, index: 0), to: (thingIndex: -1, index: 1), amp: 0.2),
+    ESThingPatch(from: -1->0, to: \verb->0), amp: 1),  //mic in to verb
+    ESThingPatch(from: \sinNote->0, to: \verb->0, amp: 0.9),  // oscillator to verb
+    ESThingPatch(from: \sinNote->0, to: -1->0, amp: 0.2), // oscillator to left out
+    ESThingPatch(from: \verb->, to: -1->1, amp: 0.2), // verb to right out
   ]
 );
 ~play.();
 )
 
 ~stop.();
-
 
 
 /*
@@ -224,10 +223,10 @@ MIDIdef.cc(\knobs, { |val, num|
   ],
 
   patches: [
-    ESThingPatch(from: (thingIndex: -1, index: 0), to: (thingIndex: 1, index: 0), amp: 1),
-    ESThingPatch(from: (thingIndex: 0, index: 0), to: (thingIndex: 1, index: 0), amp: 0.9),
-    ESThingPatch(from: (thingIndex: 0, index: 0), to: (thingIndex: -1, index: 0), amp: 0.2),
-    ESThingPatch(from: (thingIndex: 1, index: 0), to: (thingIndex: -1, index: 1), amp: 0.2),
+    ESThingPatch(from: -1->0, to: \verb->0), amp: 1),  //mic in to verb
+    ESThingPatch(from: \sinNote->0, to: \verb->0, amp: 0.9),  // oscillator to verb
+    ESThingPatch(from: \sinNote->0, to: -1->0, amp: 0.2), // oscillator to left out
+    ESThingPatch(from: \verb->, to: -1->1, amp: 0.2), // verb to right out
   ]
 );
 ~play.();
