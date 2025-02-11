@@ -26,7 +26,7 @@
         var freq = midicpsFunc.(num);
         var amp = velampFunc.(vel);
         thing[\synths][num].free;
-        thing[\synths][num] = Synth(defName, [out: thing.outbus, freq: freq, amp: amp, bend: thing[\bend]] ++ args ++ defaults, thing.group);
+        thing[\synths][num] = Synth(defName, [out: thing.outbus, in: thing.inbus, freq: freq, amp: amp, bend: thing[\bend]] ++ args ++ defaults, thing.group);
       },
       noteOffFunc: { |thing, num = 69, vel = 0|
         thing[\synths][num].release;
@@ -61,7 +61,7 @@
       },
       playFunc: { |thing|
         var defaults = thing.params.collect({ |param| [param.name, param.val] }).flat;
-        thing[\synth] = Synth(defName, [out: thing.outbus, freq: 440, amp: 0, bend: thing[\bend]] ++ args ++ defaults, thing.group);
+        thing[\synth] = Synth(defName, [out: thing.outbus, in: thing.inbus, freq: 440, amp: 0, bend: thing[\bend]] ++ args ++ defaults, thing.group);
       },
       noteOnFunc: { |thing, num, vel| // note: vel is mapped 0-1
         var freq = midicpsFunc.(num);
