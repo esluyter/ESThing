@@ -408,6 +408,35 @@ s.waitForBoot {
 )
 ```
 
+### fledgling GUI
+
+```
+(
+var left = 0;
+
+Window.closeAll;
+w = Window("Space", Rect(0, 40, 1000, 800)).front;
+
+~thingView = { |thing, parentView, left|  
+  var width = 90;
+  var height = thing.params.size * 75 + 30;
+  var view = View(parentView, Rect(left + 50, thing.top, width, height)).background_(Color.gray(1));
+  if (thing.name.notNil) {
+    StaticText(view, Rect(2, 0, width, 20)).string_(thing.name).font_(Font.sansSerif(14, true));
+  };
+  thing.params.do { |param, i|
+    EZKnob(view, Rect(2, 75*i + 20, 80, 70), param.name, labelWidth: 100, labelHeight: 15)
+  };
+  view;
+};
+
+~thingViews = ~ts.things.collect { |thing| 
+  left = left + thing.left.postln;
+  ~thingView.(thing, w, left); 
+  left = left + 100;
+};
+)
+```
 <img width="1112" alt="Screen Shot 2025-02-13 at 05 36 15" src="https://github.com/user-attachments/assets/d37af6a9-11ae-4cd3-bb80-48978d571bff" />
 
 
