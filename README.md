@@ -235,6 +235,179 @@ MIDIdef.cc(\knobs, { |val, num|
 ~stop.();
 ```
 
+### sinmod : knobs keep their value when you change and reevaluate the space
+
+```
+( // server and general prep
+~play = {
+  s.waitForBoot {
+    ~ts.init;
+    s.sync;
+    ~ts.play;
+  };
+};
+~stop = {
+  ~ts.stop;
+  ~ts.free;
+};
+
+MIDIClient.init;
+MIDIIn.connectAll;
+MIDIdef.noteOn(\noteOn, { |vel, num|
+  ~ts.things[0].noteOn(num, vel.postln);
+});
+MIDIdef.noteOff(\noteOff, { |vel, num|
+  ~ts.things[0].noteOff(num, vel);
+});
+MIDIdef.bend(\bend, { |val|
+  ~ts.things[0].bend(val);
+});
+MIDIdef.touch(\touch, { |val|
+  ~ts.things[0].touch(val);
+});
+MIDIdef.polytouch(\polytouch, { |val, num|
+  ~ts.things[0].polytouch(val, num);
+});
+MIDIdef.cc(\knobs, { |val, num|
+  switch (num)
+  { 1 } { ~ts.(\sinmod).set127(\mod, val); ~ts.(\sinesyn).set127(\mod, val); ~ts.(\laughsyn).set127(\mod, val) }
+  { 24 } { ~ts.(\sinmod).set127(\grainFreq, val); ~ts.(\sinesyn).set127(\grainFreq, val) }
+  { 25 } { ~ts.(\sinmod).set127(\grainFreqKbd, val); ~ts.(\sinesyn).set127(\grainFreqKbd, val) }
+  { 26 } { /*~ts.(\sinmod).set127(\grainAtk, val);*/ }
+  { 27 } { /*~ts.(\sinmod).set127(\grainRel, val);*/ }
+  { 28 } { /*~ts.(\sinmod).set127(\atk, val);*/ }
+  { 29 } { /*~ts.(\sinmod).set127(\dec, val);*/ }
+  { 30 } { /*~ts.(\sinmod).set127(\sus, val);*/ }
+  { 31 } { /*~ts.(\sinmod).set127(\rel, val);*/ }
+});
+
+s.waitForBoot {
+  SynthDef(\sinmod, {
+    var freq = \freq.kr(140) * \bend.kr(0, 0.1).midiratio + [0, 1];
+    var gate = \gate.kr(1) + Impulse.kr(0);
+    var mixLevel = \levels.kr([1, 0, 0, 0], 0.1)[0];
+    var level = \sinmodLevel.kr(1);
+
+    var in = LocalIn.ar(2);
+    var env = Env.adsr(\atk.kr(2), \dec.kr(5), \sus.kr(0.5), \rel.kr(2)).ar(2, gate);
+
+    var grainFreqKbd = \grainFreqKbd.kr(0.5, 0.1);
+    var grainFreq = (\grainFreq.kr(0, 0.1) * LinSelectX.kr(grainFreqKbd, [DC.kr(300), freq]));
+    var grainTrig = Impulse.ar(grainFreq);
+    var grainTilt = LFDNoise3.kr(1.0) * \grainTilt.kr(0);
+    var grainAtk = \grainAtk.kr(0.3) + (grainTilt * [0.2, -0.2]).max(0);
+    var grainRel = \grainRel.kr(0.5) + (grainTilt * [-0.3, 0.3]).max(0);
+    var grainDur = grainFreq.reciprocal * grainRel.linlin(0, 0.7, 0.5, 1);
+    var grainEnv = Env.linen(grainAtk * grainDur, (1 - (grainAtk + grainRel) * grainDur), grainRel * grainDur).ar(0, grainTrig);
+    var modDecay = \modDecay.kr(7.5);
+    var sat = \sat.kr(0);
+    var mod = \mod.kr(0.4).linexp(0.0, 1.0, 0.1, 20.0) * LFDNoise3.ar(in.exprange(0.0001, 1)) * Line.ar(1.0, 0.5, modDecay).lincurve(0, 1, 0, 1, -4);
+    var sig = SinOsc.ar(freq + (in * mod * freq));
+
+    var grainEnvDC = (grainFreq < 0.1).lag2(0.2);
+    grainEnv = grainEnv + grainEnvDC;
+
+    sig = sig * env;
+    sig = sig * grainEnv;
+    sig = (XFade2.ar(sig, DFM1.ar(sig, LFDNoise3.kr(0.1).exprange(1000, 10000)), LFDNoise3.kr(0.1).range(-1, -1 + sat)));
+    sig = XFade2.ar(sig, sig.tanh, -1 + (sat * 10));
+    LocalOut.ar(sig);
+    Out.ar(\out.kr(0), sig * \amp.kr(0.1) * mixLevel * level);
+  }).add;
+};
+)
+
+
+( // main
+~stop.();
+~ts = ESThingSpace(
+  things: [
+    ESThing.polySynth(\sinmod,
+      defName: \sinmod,
+      args: [],
+      params: [
+        \mod,
+        \grainFreq->ControlSpec(0, 10, 10),
+        \grainFreqKbd->ControlSpec(default: 0.5),
+        \grainAtk->ControlSpec(0, 0.5, default: 0.3),
+        \grainRel->ControlSpec(0, 0.7, default: 0.5),
+        \atk->ControlSpec(0, 5, 4, default: 2),
+        \dec->ControlSpec(0, 5, 4, default: 5),
+        \sus->ControlSpec(0, 1, default: 0.5),
+        \rel->ControlSpec(0, 10, default: 2),
+      ],
+      inChannels: 0,
+      outChannels: 2
+    ),
+
+    ESThing.playFuncSynth(\sinesyn, { |in|
+      var localIn = LocalIn.ar(2);
+      var inA = InFeedback.ar(in, 2) * \grainFreq.kr(1);
+      var freq = \freq.kr(440, 0.05) * \bend.kr(0, 0.1).midiratio;//MouseX.kr(20, 1000, \exponential);
+      var amp = \amp.kr(0.1, 0.05);
+      var mod = \mod.kr(0, 0.05).lincurve(0, 1, 0.0, 1.0, 3);
+      var sig = SinOsc.ar(((localIn + inA) * mod.linexp(0, 1, 0.08, 1.0)/*MouseY.kr(0.08, 1.0, \exponential)*/).linexp(-1, 1, 0.01, 100) * freq);
+      sig = VAMoogLadderOS.ar(sig, (freq * 50 + 500) * (sig * \grainFreqKbd.kr(0).linlin(0, 1, 0, 10)).linexp(-1, 1, 0.5, 2, nil), (inA * Latch.ar(inA, Impulse.ar(inA.linexp(-1, 1, 0.1, 10)))).linexp(-1, 1, 0.001, 0.2));
+      sig = sig + ([0.000001, 0] * LFDNoise3.ar(localIn.linexp(-1, 1, 0.1, 1.0)).range(0.0, 1.0)) + (0.5 * sig.reverse);
+      LocalOut.ar(sig);
+      Limiter.ar(sig * 1, 1.5) * 0.2 * amp;
+    }, [
+      \mod,
+      \freq,
+      \grainFreq->ControlSpec(0, 10, 10),
+      \grainFreqKbd->ControlSpec(default: 0.5)
+    ], inChannels: 2, outChannels: 2, top: 0, left: 20),
+
+    ESThing.playFuncSynth(\laughsyn, { |thing|
+      var buf = thing[\laughbuf];
+      { |in|
+        var buf = \buf.kr(buf);
+        var localIn = LocalIn.ar(2);
+        var inB = InFeedback.ar(in, 2);
+        var freq = \freq.kr(440, 0.5);
+        var amp = \amp.kr(0.1, 0.05);
+        var mod = \mod.kr(0, 0.05).lincurve(0, 1, 0.0, 1.0, 3);
+        var phs = Phasor.ar(DC.ar(0.0), freq.expexp(20, 1000, 0.01, 10, nil)/*MouseX.kr(0.01, 10, \exponential)*/ * BufRateScale.kr(buf) * Latch.ar(localIn, Impulse.ar(localIn.linexp(-1, 1, 0.1, 50))).linlin(-1, 1, -2, 4) + (localIn), 0.3, 5.4 * BufSampleRate.kr(buf));
+        var sig = BufRd.ar(2, buf, phs, interpolation: Latch.ar(localIn.linlin(-1, 1, 1, 4), Impulse.ar(localIn.linexp(-1, 1, 0.1, 10))));
+        sig = sig + ([0.000001, 0] * LFDNoise3.ar(localIn.linexp(-1, 1, 0.1, 1.0)).range(0.0, 1.0)) + (0.5 * sig.reverse);
+        sig = VAMoogLadderOS.ar(sig, localIn.linexp(-1, 1, 500, 10000), mod);
+        LocalOut.ar(sig + ([0.000001, 0] * Line.ar(1.0, 0.0, 10)) + (0.9 * sig.reverse));
+        sig * amp;
+      }
+    }, [
+      \mod,
+      \freq
+    ], inChannels: 2, outChannels: 2),
+
+    ESThing()
+  ],
+
+  patches: [
+    (\sinmod->0 : -1->0, amp: 0.2),
+    (\sinmod->1 : -1->1, amp: 0.2),
+
+    (\laughsyn->0 : \sinesyn->0, amp: 10),
+    (\laughsyn->1 : \sinesyn->1, amp: 10),
+    (\sinesyn->0 : \laughsyn->0, amp: 10),
+    (\sinesyn->1 : \laughsyn->1, amp: 10),
+
+    (\sinesyn->0 : -1->0, amp: 0.2),
+    (\laughsyn->0 : -1->1, amp: 0.2),
+  ],
+
+  initFunc: { |space|
+    space[\laughbuf] = Buffer.read(s, "/Users/ericsluyter/Music/Logic/Bounces/pw laugh.wav");
+  },
+  freeFunc: { |space|
+    space[\laughbuf].free;
+  },
+
+  oldSpace: ~ts // comment out to refresh all values
+);
+~play.();
+)
+```
+
 <details>
 
 <summary>Proof of concept</summary>
