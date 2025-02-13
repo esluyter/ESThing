@@ -13,35 +13,36 @@ ESThingParam {
   }
   val_ { |argval|
     val = argval;
-    [name, val].postln;
+    //[name, val].postln;
     func.value(name, val, parentThing);
   }
   val127_ { |midival|
     this.val_(spec.map(midival / 127));
   }
+  value { ^val }
 }
 
 ESThingPatch {
-  var <from, <to, <amp;
+  var <name, <from, <to, <amp;
   var <synth;
   var <>parentSpace;
   *initClass {
     ServerBoot.add {
       SynthDef(\ESThingPatch, { |in, out, amp|
         // TODO: change to InFeedback when ready
-        Out.ar(out, In.ar(in) * amp);
+        Out.ar(out, InFeedback.ar(in) * amp);
       }).add;
     };
   }
-  storeArgs { ^[from, to, amp] }
-  *new { |from, to, amp|
+  storeArgs { ^[name, from, to, amp] }
+  *new { |name, from, to, amp|
     if (from.class == Association) {
       from = (thingIndex: from.key, index: from.value);
     };
     if (to.class == Association) {
       to = (thingIndex: to.key, index: to.value);
     };
-    ^super.newCopyArgs(from, to, amp);
+    ^super.newCopyArgs(name, from, to, amp);
   }
   play {
     var things = parentSpace.things;
@@ -80,7 +81,7 @@ ESThingPatch {
 
 
 ESThing {
-  var <>name, <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <>params, <inChannels, <outChannels, <>midicpsFunc, <>velampFunc, <>defName, <>args, <>func;
+  var <>name, <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <>params, <inChannels, <outChannels, <>midicpsFunc, <>velampFunc, <>defName, <>args, <>func, <>top, <>left;
   var <>inbus, <>outbus, <>group;
   var <>environment, <>parentSpace;
 
@@ -90,18 +91,20 @@ ESThing {
     defaultVelampFunc = { |vel| vel.linexp(0, 1, 0.05, 1) };
   }
 
-  storeArgs { ^[name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func] }
-  *new { |name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 0, outChannels = 2, midicpsFunc, velampFunc, defName, args, func|
+  storeArgs { ^[name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left] }
+  *new { |name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 0, outChannels = 2, midicpsFunc, velampFunc, defName, args, func, top = 50, left = 0|
     midicpsFunc = midicpsFunc ? defaultMidicpsFunc;
     velampFunc = velampFunc ? defaultVelampFunc;
     params = params.asArray.collect { |param|
-      if (param.class == Association) {
-        ESThingParam(param.key, param.value);
-      } {
-        param
+      if (param.isSymbol) {
+        param = ESThingParam(param, param.asSpec ?? { ControlSpec() })
       };
+      if (param.class == Association) {
+        param = ESThingParam(param.key, param.value);
+      };
+      param
     };
-    ^super.newCopyArgs(name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func).prInit;
+    ^super.newCopyArgs(name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left).prInit;
   }
   prInit {
     environment = ();
@@ -158,18 +161,22 @@ ESThing {
     ^this;
   }
 
-  getParam { |name|
+  paramAt { |name|
     params.do { |param|
       if (param.name == name) { ^param }
     };
+    ^nil;
   }
   set { |what, val|
-    this.getParam(what).val_(val);
+    this.paramAt(what).val_(val);
   }
   set127 { |what, val|
-    this.getParam(what).val127_(val)
+    this.paramAt(what).val127_(val)
   }
 
+  index {
+    ^parentSpace.things.indexOf(this);
+  }
   asTarget {
     ^this.group
   }
@@ -190,13 +197,25 @@ ESThingSpace {
   var <>environment;
 
   storeArgs { ^[things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, useADC, useDAC, target]}
-  *new { |things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels = 2, outChannels = 2, useADC = true, useDAC = true, target|
+  *new { |things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels = 2, outChannels = 2, useADC = true, useDAC = true, target, oldSpace|
     things = things ? [];
-    patches = patches ? [];
+    // syntactic sugar
+    patches = patches.asArray.collect { |patch|
+      if (patch.isKindOf(Dictionary)) {
+        patch.keysValuesDo({ |k, v|
+          if (k.class == Association) {
+            patch.from = k;
+            patch.to = v;
+          };
+        });
+        patch = ESThingPatch(patch.name, patch.from, patch.to, patch.amp);
+      };
+      patch
+    };
     target = target ?? { Server.default };
-    ^super.newCopyArgs(things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, useADC, useDAC, target).prInit;
+    ^super.newCopyArgs(things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, useADC, useDAC, target).prInit(oldSpace);
   }
-  prInit {
+  prInit { |oldSpace|
     environment = ();
     things.do(_.parentSpace_(this));
     patches.do(_.parentSpace_(this));
@@ -209,6 +228,26 @@ ESThingSpace {
       outbus = 0.asBus;
     } {
       outbus = Bus.audio(Server.default, outChannels);
+    };
+
+    // for all named things,
+    // set all knob values to their previous (i.e. current) position
+    // if oldSpace is provided
+    if (oldSpace.notNil) {
+      oldSpace.things.do { |oldThing|
+        if (oldThing.name.notNil) {
+          var thisThing = this.thingAt(oldThing.name);
+          if (thisThing.notNil) {
+            oldThing.params.do { |oldParam|
+              var newParam = thisThing.paramAt(oldParam.name);
+              if (newParam.notNil and: {newParam.val != oldParam.val}) {
+                [oldParam.name, oldParam.value].postln;
+                newParam.val_(oldParam.val);
+              };
+            };
+          };
+        };
+      };
     };
   }
 
@@ -256,6 +295,8 @@ ESThingSpace {
     };
     ^nil;
   }
+  //syntactic sugar
+  value { |sym| ^this.thingAt(sym) }
 
   asTarget {
     ^this.group
