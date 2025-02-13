@@ -237,6 +237,8 @@ MIDIdef.cc(\knobs, { |val, num|
 
 ### sinmod : knobs keep their value when you change and reevaluate the space
 
+some dirty working code showing latest practice
+
 ```
 ( // server and general prep
 ~play = {
@@ -285,8 +287,6 @@ s.waitForBoot {
   SynthDef(\sinmod, {
     var freq = \freq.kr(140) * \bend.kr(0, 0.1).midiratio + [0, 1];
     var gate = \gate.kr(1) + Impulse.kr(0);
-    var mixLevel = \levels.kr([1, 0, 0, 0], 0.1)[0];
-    var level = \sinmodLevel.kr(1);
 
     var in = LocalIn.ar(2);
     var env = Env.adsr(\atk.kr(2), \dec.kr(5), \sus.kr(0.5), \rel.kr(2)).ar(2, gate);
@@ -312,7 +312,7 @@ s.waitForBoot {
     sig = (XFade2.ar(sig, DFM1.ar(sig, LFDNoise3.kr(0.1).exprange(1000, 10000)), LFDNoise3.kr(0.1).range(-1, -1 + sat)));
     sig = XFade2.ar(sig, sig.tanh, -1 + (sat * 10));
     LocalOut.ar(sig);
-    Out.ar(\out.kr(0), sig * \amp.kr(0.1) * mixLevel * level);
+    Out.ar(\out.kr(0), sig * \amp.kr(0.1));
   }).add;
 };
 )
