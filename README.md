@@ -408,6 +408,9 @@ s.waitForBoot {
 )
 ```
 
+<img width="1112" alt="Screen Shot 2025-02-13 at 05 36 15" src="https://github.com/user-attachments/assets/d37af6a9-11ae-4cd3-bb80-48978d571bff" />
+
+
 <details>
 
 <summary>Proof of concept</summary>
