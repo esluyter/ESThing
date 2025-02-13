@@ -5,30 +5,25 @@ A container for any possible SC code that can be played, with built-in routing, 
 ### ESThing
 - Provides a dedicated environment, group, inbus, and outbus.
 - Hooks for
-  - init
-  - free
-  - play
-  - stop
-  - noteOn
-  - noteOff
-  - bend
-  - touch
-  - polytouch
+  - init/free
+  - play/stop
+  - noteOn/noteOff/bend
+  - touch/polytouch
+- Allows you to define `params` with custom hooks
+  - by default these send `set` messages to whatever is in the environment under `synth` and `synths`
 - Provides special templates
   - playFuncSynth (similar to {}.play)
-  - monoSynth (for interfacing a SynthDef with a midi controller, works with  `in`, `out`, `freq`, `amp`, `bend`, `touch`, `portamento` arguments
-  - polySynth (for interfacing a SynthDef with a midi controller, works with  `in`, `out`, `freq`, `amp`, `bend`, `touch`, `gate` arguments
-- Allows you to define `params` with custom hooks (by default they interface with running Synths)
+  - Playing a SynthDef with e.g. a midi controller, using `in`, `out`, `freq`, `amp`, `bend`, `touch`, `portamento`/`gate` controls
+    - monoSynth
+    - polySynth
 
 ### ESThingSpace
 - A container for many ESThings, as well as patched connections between them
 - Provides a dedicated environment inherited by its things, as well as a group
 - Either allocates dedicated inbus and outbus, or uses ADC and DAC
 - Hooks for
-  - init
-  - free
-  - play
-  - stop
+  - init/free
+  - play/stop
 - Allows you to define `patches`, i.e. 1x1 connections between a specific output of one thing and a specific input of another, with gain control
 
 ## working examples
@@ -39,16 +34,21 @@ read a buffer, make two sound generators, and patch outputs
 (
 ~ts = ESThingSpace(
   things: [
-    // simple oscillator
-    ESThing.playFuncSynth({ SinOsc.ar }),
+    // give things names to reference them later
+    ESThing.playFuncSynth(\osc, { SinOsc.ar }),
     // wrap func in a func to access the thing's environment
-    ESThing.playFuncSynth({ |thing| { PlayBuf.ar(1, thing[\buf], BufRateScale.kr(thing[\buf]), loop: 1) } })
+    ESThing.playFuncSynth(\playbuf, { |thing|
+      { PlayBuf.ar(1, thing[\buf], BufRateScale.kr(thing[\buf]), loop: 1) }
+    })
   ],
 
   patches: [
     // patch each thing to one speaker
-    ESThingPatch(from: (thingIndex: 0, index: 0), to: (thingIndex: -1, index: 0), amp: 0.2),
-    ESThingPatch(from: (thingIndex: 1, index: 0), to: (thingIndex: -1, index: 1), amp: 0.2),
+    // syntax is terse so this hopefully won't get tiresome
+    // (fromThingName->outletNumber : toThingName->inletNumber)
+    // -1 means output
+    (\osc->0 : -1->0, amp: 0.2),
+    (\playbuf->0 : -1->1, amp: 0.2),
   ],
   
   // allocate and free shared resources for the space
@@ -154,12 +154,12 @@ MIDIdef.cc(\knobs, { |val, num|
       defName: \sinNote,
       args: [],
       params: [
-        ESThingParam(\pregain, ControlSpec(1, 300, 4)),
-        ESThingParam(\modAmt, ControlSpec(0, 100, 8, default: 0.01)),
-        ESThingParam(\modFreq, ControlSpec(1, 1000, \exp, default: 4)),
-        ESThingParam(\amAmt, ControlSpec(0, 100, 8, default: 0.01)),
-        ESThingParam(\amFreq, ControlSpec(0.1, 100, \exp, default: 1)),
-        ESThingParam(\portamento, ControlSpec(0, 5, 6))
+        \pregain->ControlSpec(1, 300, 4),
+        \modAmt->ControlSpec(0, 100, 8, default: 0.01),
+        \modFreq->ControlSpec(1, 1000, \exp, default: 4),
+        \amAmt->ControlSpec(0, 100, 8, default: 0.01),
+        \amFreq->ControlSpec(0.1, 100, \exp, default: 1),
+        \portamento->ControlSpec(0, 5, 6)
       ],
       inChannels: 0,
       outChannels: 1
@@ -177,10 +177,10 @@ MIDIdef.cc(\knobs, { |val, num|
   ],
 
   patches: [
-    ESThingPatch(from: -1->0, to: \verb->0), amp: 1),  //mic in to verb
-    ESThingPatch(from: \sinNote->0, to: \verb->0, amp: 0.9),  // oscillator to verb
-    ESThingPatch(from: \sinNote->0, to: -1->0, amp: 0.2), // oscillator to left out
-    ESThingPatch(from: \verb->, to: -1->1, amp: 0.2), // verb to right out
+    (-1->0 : \verb->0, amp: 1),  // mic in to verb
+    (\sinNote->0 : \verb->0, amp: 0.9),  // oscillator to verb
+    (\sinNote->0 : -1->0, amp: 0.2), // oscillator to left out
+    (\verb-> : -1->1, amp: 0.2), // verb to right out
   ]
 );
 ~play.();
@@ -201,11 +201,11 @@ MIDIdef.cc(\knobs, { |val, num|
       defName: \sinNote,
       args: [],
       params: [
-        ESThingParam(\pregain, ControlSpec(1, 300, 4)),
-        ESThingParam(\modAmt, ControlSpec(0, 100, 8, default: 0.01)),
-        ESThingParam(\modFreq, ControlSpec(1, 1000, \exp, default: 4)),
-        ESThingParam(\amAmt, ControlSpec(0, 100, 8, default: 0.01)),
-        ESThingParam(\amFreq, ControlSpec(0.1, 100, \exp, default: 1))
+        \pregain->ControlSpec(1, 300, 4),
+        \modAmt->ControlSpec(0, 100, 8, default: 0.01),
+        \modFreq->ControlSpec(1, 1000, \exp, default: 4),
+        \amAmt->ControlSpec(0, 100, 8, default: 0.01),
+        \amFreq->ControlSpec(0.1, 100, \exp, default: 1)
       ],
       inChannels: 0,
       outChannels: 1
@@ -223,10 +223,10 @@ MIDIdef.cc(\knobs, { |val, num|
   ],
 
   patches: [
-    ESThingPatch(from: -1->0, to: \verb->0), amp: 1),  //mic in to verb
-    ESThingPatch(from: \sinNote->0, to: \verb->0, amp: 0.9),  // oscillator to verb
-    ESThingPatch(from: \sinNote->0, to: -1->0, amp: 0.2), // oscillator to left out
-    ESThingPatch(from: \verb->, to: -1->1, amp: 0.2), // verb to right out
+    (-1->0 : \verb->0, amp: 1),  // mic in to verb
+    (\sinNote->0 : \verb->0, amp: 0.9),  // oscillator to verb
+    (\sinNote->0 : -1->0, amp: 0.2), // oscillator to left out
+    (\verb-> : -1->1, amp: 0.2), // verb to right out
   ]
 );
 ~play.();
