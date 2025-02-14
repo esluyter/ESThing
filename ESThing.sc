@@ -35,7 +35,7 @@ ESThingPatch {
     };
   }
   storeArgs { ^[name, from, to, amp] }
-  *new { |name, from, to, amp|
+  *new { |name, from, to, amp = 1|
     if (from.class == Association) {
       from = (thingIndex: from.key, index: from.value);
     };
@@ -92,7 +92,7 @@ ESThing {
   }
 
   storeArgs { ^[name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width] }
-  *new { |name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 0, outChannels = 2, midicpsFunc, velampFunc, defName, args, func, top = 50, left = 0, width = 1|
+  *new { |name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 0, outChannels = 2, midicpsFunc, velampFunc, defName, args, func, top = 0, left = 0, width = 1|
     midicpsFunc = midicpsFunc ? defaultMidicpsFunc;
     velampFunc = velampFunc ? defaultVelampFunc;
     params = params.asArray.collect { |param|
@@ -221,7 +221,7 @@ ESThingSpace {
           patch.to = patch.to.asArray;
         };
         patch = max(patch.from.size, patch.to.size).collect { |i|
-          ESThingPatch(patch.name, patch.from.wrapAt(i), patch.to.wrapAt(i), patch.amp)
+          ESThingPatch(patch.name, patch.from.wrapAt(i), patch.to.wrapAt(i), patch.amp ?? 1)
         };
       };
       patch
