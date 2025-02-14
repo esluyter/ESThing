@@ -30,6 +30,10 @@ A container for any possible SC code that can be played, with built-in routing, 
 
 ### hello world
 read a buffer, make two sound generators, and patch outputs
+
+<img width="1112" alt="Screen Shot 2025-02-14 at 05 49 29" src="https://github.com/user-attachments/assets/ef523439-725b-4d31-a21b-28f7dc40d149" />
+
+
 ```
 (
 ~ts = ESThingSpace(
