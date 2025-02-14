@@ -241,7 +241,8 @@ MIDIdef.cc(\knobs, { |val, num|
 
 some dirty working code showing latest practice
 
-<img width="1112" alt="Screen Shot 2025-02-14 at 05 31 14" src="https://github.com/user-attachments/assets/dfedf3b1-6bcd-4522-a979-3aec0fda8f87" />
+<img width="1112" alt="Screen Shot 2025-02-14 at 06 00 48" src="https://github.com/user-attachments/assets/801f6852-9797-4555-967f-c5862cfa9aa2" />
+
 
 ```
 ( // server and general prep
@@ -426,7 +427,7 @@ var adc = ~ts.inChannels.collect { |i| 0@(i * 50 + 25) };
 var dac = ~ts.outChannels.collect { |i| 1000@(i * 50 + 25) };
 
 Window.closeAll;
-w = Window("Space", Rect(0, 40, 1000, 800)).front;
+w = Window("Space", Rect(0, 40, 1000, 800)).background_(Color.gray(0.95)).front;
 
 ~patchView = UserView(w, w.bounds.copy.origin_(0@0)).drawFunc_({
   ~ts.patches.collect { |patch|
@@ -442,6 +443,7 @@ w = Window("Space", Rect(0, 40, 1000, 800)).front;
     
     Pen.moveTo(p1);
     Pen.curveTo(p2, p1 + sideoffset, p2 - sideoffset);
+    Pen.color_(Color.gray(1 - (patch.amp.curvelin(0, 10, 0.1, 1, 4))));
     Pen.stroke;
     
     //Pen.line(fromPoint, toPoint);
@@ -457,7 +459,7 @@ dac.do { |point|
 };
 
 ~thingView = { |thing, parentView, left|  
-  var top = thing.top + 50;
+  var top = thing.top + 50 + (50 * thing.index);
   var width = 90 * thing.width;
   var height = thing.params.size / thing.width * 75 + 30;
   var view = View(parentView, Rect(left, top, width, height)).background_(Color.gray(1));
