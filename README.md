@@ -31,19 +31,19 @@ A container for any possible SC code that can be played, with built-in routing, 
 ### hello world
 read a buffer, make two sound generators, and patch outputs
 
-<img width="1112" alt="Screen Shot 2025-02-14 at 05 49 29" src="https://github.com/user-attachments/assets/ef523439-725b-4d31-a21b-28f7dc40d149" />
+<img width="762" alt="Screen Shot 2025-02-14 at 06 59 39" src="https://github.com/user-attachments/assets/d3e0e6c5-f072-4d19-b973-3c3210b5ec80" />
 
 
 ```
 (
 ~ts = ESThingSpace(
   things: [
-    // give things names to reference them later
-    ESThing.playFuncSynth(\osc, { SinOsc.ar }),
+    // give things names to reference them later, add a frequency knob
+    ESThing.playFuncSynth(\osc, { SinOsc.ar(\freq.kr(440)) }, [\freq]),
     // wrap func in a func to access the thing's environment
     ESThing.playFuncSynth(\playbuf, { |thing|
-      { PlayBuf.ar(1, thing[\buf], BufRateScale.kr(thing[\buf]), loop: 1) }
-    })
+      { PlayBuf.ar(1, thing[\buf], BufRateScale.kr(thing[\buf]) * \rate.kr(1), loop: 1) }
+    }, [\rate])
   ],
 
   patches: [
@@ -70,12 +70,15 @@ s.waitForBoot {
   s.sync;
   ~ts.play;
 };
-)
 
+// show GUI
+~win = ~ts.makeWindow;
+)
 
 // stop it and free resources
 ~ts.stop;
 ~ts.free;
+~win.close;
 ```
 
 ### monophony and polyphony with midi
@@ -251,11 +254,16 @@ some dirty working code showing latest practice
     ~ts.init;
     s.sync;
     ~ts.play;
+    ~win = ~ts.makeWindow(~winBounds);
   };
 };
 ~stop = {
   ~ts.stop;
   ~ts.free;
+  ~win !? {
+    ~winBounds = ~win.bounds;
+    ~win.close
+  };
 };
 
 MIDIClient.init;
@@ -332,6 +340,7 @@ s.waitForBoot {
 )
 
 
+s.record
 ( // main
 ~stop.();
 ~ts = ESThingSpace(
@@ -394,7 +403,7 @@ s.waitForBoot {
     (\sinesyn->[0, 1] : -1->[0, 1], amp: 0),
 
     (\laughsyn->[0, 1] : \verb->[0, 1]),
-    (-1->[0] : \verb->[0, 1]),
+    (-1->[0] : \verb->[0, 1], amp: 0.1),
     (\verb->[0, 1] : -1->[0, 1]),
   ],
 
