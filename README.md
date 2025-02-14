@@ -93,7 +93,14 @@ s.waitForBoot {
     amp = amp * touch.lag2(0.05).linexp(0, 1, 1, 10);
     sig = (sig * amp * pregain.lag2(0.05) * amod).fold(-10, 10).tanh;
     Out.ar(out, sig * amp * gaincomp);
-  }).add;
+  }, metadata: (specs: (
+    pregain: ControlSpec(1, 300, 4),
+    modAmt: ControlSpec(0, 100, 8, default: 0.01),
+    modFreq: ControlSpec(1, 1000, \exp, default: 4),
+    amAmt: ControlSpec(0, 100, 8, default: 0.01),
+    amFreq: ControlSpec(0.1, 100, \exp, default: 1),
+    portamento: ControlSpec(0, 5, 6)
+  ))).add;
 };
 
 MIDIClient.init;
@@ -152,15 +159,6 @@ MIDIdef.cc(\knobs, { |val, num|
   things: [
     ESThing.monoSynth(\sinNote,
       defName: \sinNote,
-      args: [],
-      params: [
-        \pregain->ControlSpec(1, 300, 4),
-        \modAmt->ControlSpec(0, 100, 8, default: 0.01),
-        \modFreq->ControlSpec(1, 1000, \exp, default: 4),
-        \amAmt->ControlSpec(0, 100, 8, default: 0.01),
-        \amFreq->ControlSpec(0.1, 100, \exp, default: 1),
-        \portamento->ControlSpec(0, 5, 6)
-      ],
       inChannels: 0,
       outChannels: 1
     ),
@@ -169,10 +167,12 @@ MIDIdef.cc(\knobs, { |val, num|
         FreeVerb.ar(In.ar(in), \size.kr(1), 0.7)
       },
       params: [
-        ESThingParam(\size)
+        \size->ControlSpec(0, 10, default: 1)
       ],
       inChannels: 1,
-      outChannels: 1
+      outChannels: 1,
+      top: 50,
+      left: 50
     )
   ],
 
@@ -180,7 +180,7 @@ MIDIdef.cc(\knobs, { |val, num|
     (-1->0 : \verb->0, amp: 1),  // mic in to verb
     (\sinNote->0 : \verb->0, amp: 0.9),  // oscillator to verb
     (\sinNote->0 : -1->0, amp: 0.2), // oscillator to left out
-    (\verb-> : -1->1, amp: 0.2), // verb to right out
+    (\verb->0 : -1->1, amp: 0.2), // verb to right out
   ]
 );
 ~play.();
@@ -197,28 +197,22 @@ MIDIdef.cc(\knobs, { |val, num|
 ~stop.();
 ~ts = ESThingSpace(
   things: [
-    ESThing.polySynth(
+    ESThing.polySynth(\sinNote,
       defName: \sinNote,
-      args: [],
-      params: [
-        \pregain->ControlSpec(1, 300, 4),
-        \modAmt->ControlSpec(0, 100, 8, default: 0.01),
-        \modFreq->ControlSpec(1, 1000, \exp, default: 4),
-        \amAmt->ControlSpec(0, 100, 8, default: 0.01),
-        \amFreq->ControlSpec(0.1, 100, \exp, default: 1)
-      ],
       inChannels: 0,
       outChannels: 1
     ),
-    ESThing.playFuncSynth(
+    ESThing.playFuncSynth(\verb,
       func: { |in|
         FreeVerb.ar(In.ar(in), \size.kr(1), 0.7)
       },
       params: [
-        ESThingParam(\size)
+        \size->ControlSpec(0, 10, default: 1)
       ],
       inChannels: 1,
-      outChannels: 1
+      outChannels: 1,
+      top: 50,
+      left: 50
     )
   ],
 
@@ -226,7 +220,7 @@ MIDIdef.cc(\knobs, { |val, num|
     (-1->0 : \verb->0, amp: 1),  // mic in to verb
     (\sinNote->0 : \verb->0, amp: 0.9),  // oscillator to verb
     (\sinNote->0 : -1->0, amp: 0.2), // oscillator to left out
-    (\verb-> : -1->1, amp: 0.2), // verb to right out
+    (\verb->0 : -1->1, amp: 0.2), // verb to right out
   ]
 );
 ~play.();
@@ -234,6 +228,9 @@ MIDIdef.cc(\knobs, { |val, num|
 
 ~stop.();
 ```
+
+<img width="1112" alt="Screen Shot 2025-02-14 at 05 43 52" src="https://github.com/user-attachments/assets/af4d06fa-1b2f-4d27-9739-d33ccbb5a896" />
+
 
 ### sinmod : knobs keep their value when you change and reevaluate the space
 
