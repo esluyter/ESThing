@@ -78,6 +78,9 @@ s.waitForBoot {
 
 with portamento, note on / off, pitch bend, aftertouch, and full parameter control
 
+<img width="1112" alt="Screen Shot 2025-02-14 at 05 43 52" src="https://github.com/user-attachments/assets/af4d06fa-1b2f-4d27-9739-d33ccbb5a896" />
+
+
 ```
 /*
        1. Prep: SynthDefs, MIDI, overall on/off switch
@@ -190,7 +193,7 @@ MIDIdef.cc(\knobs, { |val, num|
 
 
 /*
-      2b. polyphonic synth with note on / off, pitch bend, aftertouch, and full parameter control
+      2b. polyphonic synth
 */
 
 (
@@ -228,8 +231,6 @@ MIDIdef.cc(\knobs, { |val, num|
 
 ~stop.();
 ```
-
-<img width="1112" alt="Screen Shot 2025-02-14 at 05 43 52" src="https://github.com/user-attachments/assets/af4d06fa-1b2f-4d27-9739-d33ccbb5a896" />
 
 
 ### sinmod : knobs keep their value when you change and reevaluate the space
