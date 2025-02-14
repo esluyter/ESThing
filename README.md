@@ -241,6 +241,8 @@ MIDIdef.cc(\knobs, { |val, num|
 
 some dirty working code showing latest practice
 
+<img width="1112" alt="Screen Shot 2025-02-14 at 05 31 14" src="https://github.com/user-attachments/assets/dfedf3b1-6bcd-4522-a979-3aec0fda8f87" />
+
 ```
 ( // server and general prep
 ~play = {
@@ -486,8 +488,6 @@ dac.do { |point|
 };
 )
 ```
-
-<img width="1112" alt="Screen Shot 2025-02-14 at 05 31 14" src="https://github.com/user-attachments/assets/dfedf3b1-6bcd-4522-a979-3aec0fda8f87" />
 
 ### saving presets
 
