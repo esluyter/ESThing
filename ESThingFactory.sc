@@ -1,5 +1,5 @@
 + ESThing {
-  *playFuncSynth { |name, func, params, inChannels = 0, outChannels = 1, top = 50, left = 0|
+  *playFuncSynth { |name, func, params, inChannels = 0, outChannels = 1, top = 50, left = 0, width = 1|
     ^ESThing(name,
       playFunc: { |thing|
         var funcToPlay = if (thing.func.def.argNames.first == \thing) {
@@ -17,11 +17,38 @@
       outChannels: outChannels,
       func: func,
       top: top,
-      left: left
+      left: left,
+      width: width
     )
   }
 
-  *polySynth { |name, defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc, top = 50, left = 0|
+  *prMakeParams { |defName|
+    var synthDesc = SynthDescLib.global[defName];
+    var params = synthDesc.controls.select { |control|
+      var name = control.name.asSymbol;
+      // filter out the controls used internally by mono/poly synths
+      var exposeControl = ['?', \gate, \bend, \touch, \freq, \in, \out, \amp].indexOf(name).isNil;
+      // filter out any arrayed controls
+      var isArray = control.defaultValue.isArray;
+      // TODO: have different sort of param and GUI element for arrays
+      exposeControl and: isArray.not
+    } .collect({ |control|
+      var spec;
+      // look for spec in metadata, otherwise use name.asSpec
+      if ((spec = synthDesc.metadata.tryPerform(\at, \specs).tryPerform(\at, control.name)).notNil) {
+        spec = spec.asSpec
+      } {
+        spec = control.name.asSpec;
+      };
+      // filter out nils
+      spec = spec ?? { ControlSpec() };
+      spec = spec.copy.default_(control.defaultValue);
+      ESThingParam(control.name, spec);
+    });
+    ^params;
+  }
+
+  *polySynth { |name, defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc, top = 50, left = 0, width = 1|
     ^ESThing(name,
       playFunc: { |thing|
         thing[\synths] = ();
@@ -50,7 +77,7 @@
       stopFunc: { |thing|
         thing[\group].free;
       },
-      params: params.asArray,
+      params: params ?? { this.prMakeParams(defName) },
       inChannels: inChannels,
       outChannels: outChannels,
       midicpsFunc: midicpsFunc,
@@ -58,11 +85,12 @@
       defName: defName,
       args: args,
       top: top,
-      left: left
+      left: left,
+      width: width
     )
   }
 
-  *monoSynth { |name, defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc, top = 50, left = 0|
+  *monoSynth { |name, defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc, top = 50, left = 0, width = 1|
     ^ESThing(name,
       initFunc: { |thing|
         thing[\noteStack] = [];
@@ -100,7 +128,7 @@
       stopFunc: { |thing|
         thing[\synth].free;
       },
-      params: params.asArray,
+      params: params ?? { this.prMakeParams(defName) },
       inChannels: inChannels,
       outChannels: outChannels,
       midicpsFunc: midicpsFunc,
@@ -108,7 +136,8 @@
       defName: defName,
       args: args,
       top: top,
-      left: left
+      left: left,
+      width: width
     )
   }
 }
