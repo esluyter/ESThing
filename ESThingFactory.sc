@@ -141,3 +141,88 @@
     )
   }
 }
+
+
+
+
++ESThingSpace {
+  makeWindow { |winBounds|
+    var bounds = winBounds ?? { Rect(0, 80, 650, 800) };
+    var winWidth = bounds.width;
+    var left = 50;
+    var inlets = [];
+    var outlets = [];
+    var adc = inChannels.collect { |i| i * 50 + 25 };
+    var dac = outChannels.collect { |i| i * 50 + 25 };
+
+    var w = Window("Space", bounds).background_(Color.gray(0.95)).front;
+
+    var patchView = UserView(w, w.bounds.copy.origin_(0@0)).drawFunc_({ |v|
+      patches.collect { |patch|
+        var fromI = this.(patch.from.thingIndex).tryPerform(\index);
+        var toI = this.(patch.to.thingIndex).tryPerform(\index);
+        var fromPoint = if (fromI.isNil) { 0@adc[patch.from.index] } { outlets[fromI][patch.from.index] };
+        var toPoint = if (toI.isNil) { v.bounds.width@dac[patch.to.index] } { inlets[toI][patch.to.index] };
+
+        var p1 = fromPoint;
+        var p2 = toPoint;
+        var offset = Point(0, max(((p2.y - p1.y) / 2), max((p1.y - p2.y) / 3, if (p2.y < p1.y) { 80 } { 40 })));
+        var sideoffset = Point(max((p2.x - p1.x) / 2, max((p1.x - p2.x) / 4, 80)), 0);
+
+        Pen.moveTo(p1);
+        Pen.curveTo(p2, p1 + sideoffset, p2 - sideoffset);
+        Pen.color_(Color.gray(1 - (patch.amp.curvelin(0, 10, 0.1, 1, 4))));
+        Pen.stroke;
+      };
+    }).resize_(5);
+
+    var thingView = { |thing, parentView, left|
+      var top = thing.top + 50 + (50 * thing.index);
+      var width = 90 * thing.width;
+      var height = thing.params.size / thing.width * 75 + 30;
+      var view = View(parentView, Rect(left, top, width, height)).background_(Color.gray(1));
+      var newInlets = [];
+      var newOutlets = [];
+      if (thing.name.notNil) {
+        StaticText(view, Rect(2, 0, width, 20)).string_(thing.name).font_(Font.sansSerif(14, true));
+      };
+      thing.params.do { |param, i|
+        var knob = EZKnob(view, Rect(2 + (90 * (i % thing.width)), 75 * (i / thing.width).floor + 20, 80, 70), param.name, param.spec, { |knob| thing.set(param.name, knob.value) }, param.val, labelWidth: 100, labelHeight: 15);
+        var dependantFunc = { |param, val|
+          defer { knob.value = val };
+        };
+        param.addDependant(dependantFunc);
+        knob.onClose = { param.removeDependant(dependantFunc) };
+      };
+      thing.inChannels.do { |i|
+        var thisLeft = left - 5;
+        var thisTop = top + (i * 30) + 15;
+        newInlets = newInlets.add(left@thisTop);
+        View(parentView, Rect(thisLeft, thisTop, 5, 3)).background_(Color.black);
+      };
+      thing.outChannels.do { |i|
+        var thisLeft = left + width;
+        var thisTop = top + (i * 30) + 15;
+        newOutlets = newOutlets.add(thisLeft@thisTop);
+        View(parentView, Rect(thisLeft, thisTop, 5, 3)).background_(Color.black);
+      };
+      inlets = inlets.add(newInlets);
+      outlets = outlets.add(newOutlets);
+      view;
+    };
+
+    adc.do { |y|
+      View(w, Rect(0, y - 2, 7, 5)).background_(Color.black);
+    };
+    dac.do { |y|
+      View(w, Rect(winWidth - 7, y - 2, 7, 5)).background_(Color.black).resize_(3);
+    };
+    things.do { |thing|
+      left = left + thing.left.postln;
+      thingView.(thing, w, left);
+      left = left + (90 * thing.width) + 10;
+    };
+
+    ^w;
+  }
+}

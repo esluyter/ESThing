@@ -15,6 +15,7 @@ ESThingParam {
     val = argval;
     //[name, val].postln;
     func.value(name, val, parentThing);
+    this.changed(val);
   }
   val127_ { |midival|
     this.val_(spec.map(midival / 127));
@@ -67,6 +68,7 @@ ESThingPatch {
   amp_ { |val|
     amp = val;
     synth.set(\amp, val);
+    this.changed(\amp, val);
   }
   amp127_ { |midival|
     this.amp_(\amp.asSpec.map(midival / 127));
@@ -108,7 +110,9 @@ ESThing {
   }
   prInit {
     environment = ();
-    params.do({|param| param.parentThing_(this) });
+    params.do {| param|
+      param.parentThing_(this);
+    };
   }
 
   init {
@@ -161,6 +165,10 @@ ESThing {
     ^this;
   }
 
+  // syntactic sugar
+  value { |sym|
+    ^this.paramAt(sym);
+  }
   paramAt { |name|
     params.do { |param|
       if (param.name == name) { ^param }
