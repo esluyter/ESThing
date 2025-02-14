@@ -410,6 +410,11 @@ s.waitForBoot {
 )
 ```
 
+
+<details>
+
+<summary>Proofs of concept</summary>
+
 ### fledgling GUI
 
 ```
@@ -513,13 +518,8 @@ preset;
   'sat': 1.0, 'grainFreq': 0.59216264354641, 'mod': 0.60668461069361 ) )
 */
 ```
-
-
-<details>
-
-<summary>Proof of concept</summary>
   
-### continuous synths with patching between them and midi knob control of parameters
+### original proof of concept: continuous synths with patching between them and midi knob control of parameters
 
 ```
 /*
