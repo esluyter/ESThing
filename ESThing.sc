@@ -201,6 +201,7 @@ ESThingSpace {
     things = things ? [];
     // syntactic sugar
     patches = patches.asArray.collect { |patch|
+      var n;
       if (patch.isKindOf(Dictionary)) {
         patch.keysValuesDo({ |k, v|
           if (k.class == Association) {
@@ -208,10 +209,23 @@ ESThingSpace {
             patch.to = v;
           };
         });
-        patch = ESThingPatch(patch.name, patch.from, patch.to, patch.amp);
+        // accept arrays of indices
+        if (patch.from.value.isArray) {
+          patch.from = patch.from.value.collect { |index| patch.from.key->index };
+        } {
+          patch.from = patch.from.asArray;
+        };
+        if (patch.to.value.isArray) {
+          patch.to = patch.to.value.collect { |index| patch.to.key->index };
+        } {
+          patch.to = patch.to.asArray;
+        };
+        patch = max(patch.from.size, patch.to.size).collect { |i|
+          ESThingPatch(patch.name, patch.from.wrapAt(i), patch.to.wrapAt(i), patch.amp)
+        };
       };
       patch
-    };
+    } .flat;
     target = target ?? { Server.default };
     ^super.newCopyArgs(things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, useADC, useDAC, target).prInit(oldSpace);
   }
