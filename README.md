@@ -24,7 +24,7 @@ A container for any possible SC code that can be played, with built-in routing, 
 - Hooks for
   - init/free
   - play/stop
-- Allows you to define `patches`, i.e. 1x1 connections between a specific output of one thing and a specific input of another, with gain control
+- Allows you to define `patches`, i.e. connections between outputs of one thing and inputs of another, with gain control
 
 ## working examples
 
@@ -313,7 +313,16 @@ s.waitForBoot {
     sig = XFade2.ar(sig, sig.tanh, -1 + (sat * 10));
     LocalOut.ar(sig);
     Out.ar(\out.kr(0), sig * \amp.kr(0.1));
-  }).add;
+  }, metadata: (specs: (
+    \grainFreq: ControlSpec(0, 10, 10),
+    \grainFreqKbd: ControlSpec(default: 0.5),
+    \grainAtk: ControlSpec(0, 0.5, default: 0.3),
+    \grainRel: ControlSpec(0, 0.7, default: 0.5),
+    \atk: ControlSpec(0, 5, 4, default: 2),
+    \dec: ControlSpec(0, 5, 4, default: 5),
+    \sus: ControlSpec(0, 1, default: 0.5),
+    \rel: ControlSpec(0, 10, default: 2),
+  ))).add;
 };
 )
 
@@ -324,20 +333,9 @@ s.waitForBoot {
   things: [
     ESThing.polySynth(\sinmod,
       defName: \sinmod,
-      args: [],
-      params: [
-        \mod,
-        \grainFreq->ControlSpec(0, 10, 10),
-        \grainFreqKbd->ControlSpec(default: 0.5),
-        \grainAtk->ControlSpec(0, 0.5, default: 0.3),
-        \grainRel->ControlSpec(0, 0.7, default: 0.5),
-        \atk->ControlSpec(0, 5, 4, default: 2),
-        \dec->ControlSpec(0, 5, 4, default: 5),
-        \sus->ControlSpec(0, 1, default: 0.5),
-        \rel->ControlSpec(0, 10, default: 2),
-      ],
       inChannels: 0,
-      outChannels: 2
+      outChannels: 2,
+      width: 2
     ),
 
     ESThing.playFuncSynth(\sinesyn, { |in|
@@ -356,7 +354,7 @@ s.waitForBoot {
       \freq,
       \grainFreq->ControlSpec(0, 10, 10),
       \grainFreqKbd->ControlSpec(default: 0.5)
-    ], inChannels: 2, outChannels: 2, top: 0, left: 20),
+    ], inChannels: 2, outChannels: 2, top: 250, left: 20),
 
     ESThing.playFuncSynth(\laughsyn, { |thing|
       var buf = thing[\laughbuf];
@@ -377,22 +375,22 @@ s.waitForBoot {
     }, [
       \mod,
       \freq
-    ], inChannels: 2, outChannels: 2),
+    ], inChannels: 2, outChannels: 2, top:50),
 
-    ESThing()
+    ESThing.playFuncSynth(\verb, { |in| NHHall.ar(In.ar(in, 2), \size.kr(5)) }, [\size->ControlSpec(0, 10, default: 5)], inChannels: 2, outChannels: 2, top: 350),
   ],
 
   patches: [
-    (\sinmod->0 : -1->0, amp: 0.2),
-    (\sinmod->1 : -1->1, amp: 0.2),
+    (\sinmod->[0, 1] : -1->[0, 1], amp: 0.2),
 
-    (\laughsyn->0 : \sinesyn->0, amp: 10),
-    (\laughsyn->1 : \sinesyn->1, amp: 10),
-    (\sinesyn->0 : \laughsyn->0, amp: 10),
-    (\sinesyn->1 : \laughsyn->1, amp: 10),
+    (\laughsyn->[0, 1] : \sinesyn->[0, 1], amp: 10),
+    (\sinesyn->[0, 1] : \laughsyn->[0, 1], amp: 10),
 
-    (\sinesyn->0 : -1->0, amp: 0.2),
-    (\laughsyn->0 : -1->1, amp: 0.2),
+    (\sinesyn->[0, 1] : -1->[0, 1], amp: 0),
+
+    (\laughsyn->[0, 1] : \verb->[0, 1]),
+    (-1->[0] : \verb->[0, 1]),
+    (\verb->[0, 1] : -1->[0, 1]),
   ],
 
   initFunc: { |space|
@@ -412,32 +410,107 @@ s.waitForBoot {
 
 ```
 (
-var left = 0;
+var left = 50;
+var inlets = [];
+var outlets = [];
+var adc = ~ts.inChannels.collect { |i| 0@(i * 50 + 25) };
+var dac = ~ts.outChannels.collect { |i| 1000@(i * 50 + 25) };
 
 Window.closeAll;
 w = Window("Space", Rect(0, 40, 1000, 800)).front;
 
+~patchView = UserView(w, w.bounds.copy.origin_(0@0)).drawFunc_({
+  ~ts.patches.collect { |patch|
+    var fromI = ~ts.(patch.from.thingIndex).tryPerform(\index);
+    var toI = ~ts.(patch.to.thingIndex).tryPerform(\index);
+    var fromPoint = if (fromI.isNil) { adc[patch.from.index] } { outlets[fromI][patch.from.index] };
+    var toPoint = if (toI.isNil) { dac[patch.to.index] } { inlets[toI][patch.to.index] };
+    
+    var p1 = fromPoint;
+    var p2 = toPoint;
+    var offset = Point(0, max(((p2.y - p1.y) / 2), max((p1.y - p2.y) / 3, if (p2.y < p1.y) { 80 } { 40 })));
+    var sideoffset = Point(max((p2.x - p1.x) / 2, max((p1.x - p2.x) / 4, 80)), 0);
+    
+    Pen.moveTo(p1);
+    Pen.curveTo(p2, p1 + sideoffset, p2 - sideoffset);
+    Pen.stroke;
+    
+    //Pen.line(fromPoint, toPoint);
+    //Pen.stroke;
+  }
+});
+
+adc.do { |point|
+  View(w, Rect(point.x, point.y - 2, 7, 5)).background_(Color.black);
+};
+dac.do { |point|
+  View(w, Rect(point.x - 7, point.y - 2, 7, 5)).background_(Color.black);
+};
+
 ~thingView = { |thing, parentView, left|  
-  var width = 90;
-  var height = thing.params.size * 75 + 30;
-  var view = View(parentView, Rect(left + 50, thing.top, width, height)).background_(Color.gray(1));
+  var top = thing.top + 50;
+  var width = 90 * thing.width;
+  var height = thing.params.size / thing.width * 75 + 30;
+  var view = View(parentView, Rect(left, top, width, height)).background_(Color.gray(1));
+  var newInlets = [];
+  var newOutlets = [];
   if (thing.name.notNil) {
     StaticText(view, Rect(2, 0, width, 20)).string_(thing.name).font_(Font.sansSerif(14, true));
   };
   thing.params.do { |param, i|
-    EZKnob(view, Rect(2, 75*i + 20, 80, 70), param.name, labelWidth: 100, labelHeight: 15)
+    EZKnob(view, Rect(2 + (90 * (i % thing.width)), 75 * (i / thing.width).floor + 20, 80, 70), param.name, param.spec, { |knob| thing.set(param.name, knob.value) }, param.val, labelWidth: 100, labelHeight: 15)
   };
+  thing.inChannels.do { |i|
+    var thisLeft = left - 5;
+    var thisTop = top + (i * 30) + 15;
+    newInlets = newInlets.add(left@thisTop);
+    View(parentView, Rect(thisLeft, thisTop, 5, 3)).background_(Color.black);
+  };
+  thing.outChannels.do { |i|
+    var thisLeft = left + width;
+    var thisTop = top + (i * 30) + 15;
+    newOutlets = newOutlets.add(thisLeft@thisTop);
+    View(parentView, Rect(thisLeft, thisTop, 5, 3)).background_(Color.black);
+  };
+  inlets = inlets.add(newInlets);
+  outlets = outlets.add(newOutlets);
   view;
 };
 
 ~thingViews = ~ts.things.collect { |thing| 
   left = left + thing.left.postln;
   ~thingView.(thing, w, left); 
-  left = left + 100;
+  left = left + (90 * thing.width) + 10;
 };
 )
 ```
-<img width="1112" alt="Screen Shot 2025-02-13 at 05 36 15" src="https://github.com/user-attachments/assets/d37af6a9-11ae-4cd3-bb80-48978d571bff" />
+
+<img width="1112" alt="Screen Shot 2025-02-14 at 05 31 14" src="https://github.com/user-attachments/assets/dfedf3b1-6bcd-4522-a979-3aec0fda8f87" />
+
+### saving presets
+
+proof of concept
+
+```
+(
+var preset = ();
+~ts.things.do  { |thing|
+  if (thing.name.notNil) {
+    preset[thing.name] = ();
+    thing.params.do { |param|
+      preset[thing.name][param.name] = param.val;
+    };
+  };
+};
+preset;
+)
+
+/*
+( 'sinmod': ( 'sus': 0.5, 'rel': 1.2267136495451, 'atk': 0.0, 'dec': 0.41654477973629,
+  'grainTilt': 0.48412119436425, 'modDecay': 0.99482871683896, 'grainRel': 0.089130044531846, 'grainFreqKbd': 0.5, 'grainAtk': 0.039954377691494,
+  'sat': 1.0, 'grainFreq': 0.59216264354641, 'mod': 0.60668461069361 ) )
+*/
+```
 
 
 <details>
