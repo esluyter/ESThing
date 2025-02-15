@@ -10,22 +10,22 @@ ESThingPlayer {
   initMidi {
     MIDIClient.init;
     MIDIIn.connectAll;
-    MIDIdef.noteOn(\noteOn, { |vel, num|
-      ts.things[0].noteOn(num, vel.postln);
+    noteOnMf = MIDIFunc.noteOn({ |vel, num|
+      ts.things.do(_.noteOn(num, vel.postln));
     });
-    MIDIdef.noteOff(\noteOff, { |vel, num|
-      ts.things[0].noteOff(num, vel);
+    noteOffMf = MIDIFunc.noteOff({ |vel, num|
+      ts.things.do(_.noteOff(num, vel));
     });
-    MIDIdef.bend(\bend, { |val|
-      ts.things[0].bend(val);
+    bendMf = MIDIFunc.bend({ |val|
+      ts.things.do(_.bend(val));
     });
-    MIDIdef.touch(\touch, { |val|
-      ts.things[0].touch(val);
+    touchMf = MIDIFunc.touch({ |val|
+      ts.things.do(_.touch(val));
     });
-    MIDIdef.polytouch(\polytouch, { |val, num|
-      ts.things[0].polytouch(val, num);
+    polytouchMf = MIDIFunc.polytouch({ |val, num|
+      ts.things.do(_.polytouch(val, num));
     });
-    MIDIdef.cc(\knobs, { |val, num| knobFunc.(val, num, ts) });
+    ccMf = MIDIFunc.cc({ |val, num| knobFunc.(val, num, ts) });
   }
 
   play {
@@ -44,5 +44,9 @@ ESThingPlayer {
       winBounds = win.bounds;
       win.close
     };
+  }
+
+  free {
+    [noteOnMf, noteOffMf, bendMf, touchMf, polytouchMf, ccMf].do(_.free);
   }
 }
