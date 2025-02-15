@@ -90,7 +90,7 @@ with portamento, note on / off, pitch bend, aftertouch, and full parameter contr
 
 ```
 /*
-       1. Prep: SynthDefs, MIDI, overall on/off switch
+       1. Prep: SynthDefs, thing player (handles MIDI etc.)
 */
 (
 s.waitForBoot {
@@ -113,48 +113,19 @@ s.waitForBoot {
   ))).add;
 };
 
-MIDIClient.init;
-MIDIIn.connectAll;
-MIDIdef.noteOn(\noteOn, { |vel, num|
-  ~ts.things[0].noteOn(num, vel.postln);
-});
-MIDIdef.noteOff(\noteOff, { |vel, num|
-  ~ts.things[0].noteOff(num, vel);
-});
-MIDIdef.bend(\bend, { |val|
-  ~ts.things[0].bend(val);
-});
-MIDIdef.touch(\touch, { |val|
-  ~ts.things[0].touch(val);
-});
-MIDIdef.polytouch(\polytouch, { |val, num|
-  ~ts.things[0].polytouch(val, num);
-});
-MIDIdef.cc(\knobs, { |val, num|
+~tp = ESThingPlayer(knobFunc: { |val, num, ts|
   switch (num)
-  { 0 } { ~ts.things[0].set127(\pregain, val) }
-  { 1 } { ~ts.things[0].set127(\modAmt, val) }
-  { 2 } { ~ts.things[0].set127(\modFreq, val) }
-  { 3 } { ~ts.things[0].set127(\amAmt, val) }
-  { 4 } { ~ts.things[0].set127(\amFreq, val) }
-  { 5 } { ~ts.things[0].set127(\portamento, val) }
+  { 0 } { ts.things[0].set127(\pregain, val) }
+  { 1 } { ts.things[0].set127(\modAmt, val) }
+  { 2 } { ts.things[0].set127(\modFreq, val) }
+  { 3 } { ts.things[0].set127(\amAmt, val) }
+  { 4 } { ts.things[0].set127(\amFreq, val) }
+  { 5 } { ts.things[0].set127(\portamento, val) }
 
-  { 7 } { ~ts.things[1].set127(\size, val) }
+  { 7 } { ts.things[1].set127(\size, val) }
 
-  { 15 } { ~ts.patches[2..3].do { |patch| patch.amp127_(val) } }
-});
-
-~play = {
-  s.waitForBoot {
-    ~ts.init;
-    s.sync;
-    ~ts.play;
-  };
-};
-~stop = {
-  ~ts.stop;
-  ~ts.free;
-};
+  { 15 } { ts.patches[2..3].do { |patch| patch.amp127_(val) } }
+})
 )
 
 
@@ -164,8 +135,8 @@ MIDIdef.cc(\knobs, { |val, num|
 */
 
 (
-~stop.();
-~ts = ESThingSpace(
+~tp.stop;
+~tp.ts = ESThingSpace(
   things: [
     ESThing.monoSynth(\sinNote,
       defName: \sinNote,
@@ -193,19 +164,19 @@ MIDIdef.cc(\knobs, { |val, num|
     (\verb->0 : -1->1, amp: 0.2), // verb to right out
   ]
 );
-~play.();
+~tp.play;
 )
 
-~stop.();
+~tp.stop;
 
 
 /*
-      2b. polyphonic synth
+      2b. polyphonic synth with note on / off, pitch bend, aftertouch, and full parameter control
 */
 
 (
-~stop.();
-~ts = ESThingSpace(
+~tp.stop;
+~tp.ts = ESThingSpace(
   things: [
     ESThing.polySynth(\sinNote,
       defName: \sinNote,
@@ -233,10 +204,10 @@ MIDIdef.cc(\knobs, { |val, num|
     (\verb->0 : -1->1, amp: 0.2), // verb to right out
   ]
 );
-~play.();
+~tp.play;
 )
 
-~stop.();
+~tp.stop;
 ```
 
 
@@ -249,53 +220,6 @@ some dirty working code showing latest practice
 
 ```
 ( // server and general prep
-~play = {
-  s.waitForBoot {
-    ~ts.init;
-    s.sync;
-    ~ts.play;
-    ~win = ~ts.makeWindow(~winBounds);
-  };
-};
-~stop = {
-  ~ts.stop;
-  ~ts.free;
-  ~win !? {
-    ~winBounds = ~win.bounds;
-    ~win.close
-  };
-};
-
-MIDIClient.init;
-MIDIIn.connectAll;
-MIDIdef.noteOn(\noteOn, { |vel, num|
-  ~ts.things[0].noteOn(num, vel.postln);
-});
-MIDIdef.noteOff(\noteOff, { |vel, num|
-  ~ts.things[0].noteOff(num, vel);
-});
-MIDIdef.bend(\bend, { |val|
-  ~ts.things[0].bend(val);
-});
-MIDIdef.touch(\touch, { |val|
-  ~ts.things[0].touch(val);
-});
-MIDIdef.polytouch(\polytouch, { |val, num|
-  ~ts.things[0].polytouch(val, num);
-});
-MIDIdef.cc(\knobs, { |val, num|
-  switch (num)
-  { 1 } { ~ts.(\sinmod).set127(\mod, val); ~ts.(\sinesyn).set127(\mod, val); ~ts.(\laughsyn).set127(\mod, val) }
-  { 24 } { ~ts.(\sinmod).set127(\grainFreq, val); ~ts.(\sinesyn).set127(\grainFreq, val) }
-  { 25 } { ~ts.(\sinmod).set127(\grainFreqKbd, val); ~ts.(\sinesyn).set127(\grainFreqKbd, val) }
-  { 26 } { /*~ts.(\sinmod).set127(\grainAtk, val);*/ }
-  { 27 } { /*~ts.(\sinmod).set127(\grainRel, val);*/ }
-  { 28 } { /*~ts.(\sinmod).set127(\atk, val);*/ }
-  { 29 } { /*~ts.(\sinmod).set127(\dec, val);*/ }
-  { 30 } { /*~ts.(\sinmod).set127(\sus, val);*/ }
-  { 31 } { /*~ts.(\sinmod).set127(\rel, val);*/ }
-});
-
 s.waitForBoot {
   SynthDef(\sinmod, {
     var freq = \freq.kr(140) * \bend.kr(0, 0.1).midiratio + [0, 1];
@@ -337,13 +261,19 @@ s.waitForBoot {
     \rel: ControlSpec(0, 10, default: 2),
   ))).add;
 };
+
+~tp = ESThingPlayer(knobFunc: { |val, num, ts|
+  switch (num)
+  { 1 } { ts.(\sinmod).set127(\mod, val); ts.(\sinesyn).set127(\mod, val); ts.(\laughsyn).set127(\mod, val) }
+  { 24 } { ts.(\sinmod).set127(\grainFreq, val); ts.(\sinesyn).set127(\grainFreq, val) }
+  { 25 } { ts.(\sinmod).set127(\grainFreqKbd, val); ts.(\sinesyn).set127(\grainFreqKbd, val) }
+});
 )
 
 
-s.record
 ( // main
-~stop.();
-~ts = ESThingSpace(
+~tp.stop;
+~tp.ts = ~ts = ESThingSpace(
   things: [
     ESThing.polySynth(\sinmod,
       defName: \sinmod,
@@ -400,7 +330,8 @@ s.record
     (\laughsyn->[0, 1] : \sinesyn->[0, 1], amp: 10),
     (\sinesyn->[0, 1] : \laughsyn->[0, 1], amp: 10),
 
-    (\sinesyn->[0, 1] : -1->[0, 1], amp: 0),
+    (\sinesyn->[0, 1] : -1->[0, 1], amp: 0.2),
+    (\sinesyn->[0, 1] : \verb->[0, 1], amp: 0.15),
 
     (\laughsyn->[0, 1] : \verb->[0, 1]),
     (-1->[0] : \verb->[0, 1], amp: 0.1),
@@ -414,9 +345,9 @@ s.record
     space[\laughbuf].free;
   },
 
-  oldSpace: ~ts // comment out to refresh all values
+  oldSpace: ~tp.ts // comment out to refresh all values
 );
-~play.();
+~tp.play;
 )
 ```
 
