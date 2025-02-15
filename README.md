@@ -26,6 +26,10 @@ A container for any possible SC code that can be played, with built-in routing, 
   - play/stop
 - Allows you to define `patches`, i.e. connections between outputs of one thing and inputs of another, with gain control
 
+<br />
+<br />
+<br />
+
 ## working examples
 
 ### hello world
@@ -80,6 +84,9 @@ s.waitForBoot {
 ~ts.free;
 ~win.close;
 ```
+
+<br />
+<br />
 
 ### monophony and polyphony with midi
 
@@ -210,6 +217,8 @@ s.waitForBoot {
 ~tp.stop;
 ```
 
+<br />
+<br />
 
 ### sinmod : knobs keep their value when you change and reevaluate the space
 
@@ -351,6 +360,9 @@ s.waitForBoot {
 )
 ```
 
+<br />
+<br />
+<br />
 
 <details>
 
