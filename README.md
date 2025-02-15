@@ -32,6 +32,10 @@ A container for any possible SC code that can be played, with built-in routing, 
 
 ## working examples
 
+The idea is that you build these spaces iteratively by reevaluating your code, the GUI shows you what's going on and gives you knobs, and it's possible to maintain the state of all these knobs when you reevaluate your code for better jams.
+
+Trying to abstract away all the boring repetitive stuff like MIDI and signal routing without limiting creativity.
+
 ### hello world
 read a buffer, make two sound generators, and patch outputs
 
@@ -91,6 +95,8 @@ s.waitForBoot {
 ### monophony and polyphony with midi
 
 with portamento, note on / off, pitch bend, aftertouch, and full parameter control
+
+all parameter values will persist through code reevaluations
 
 <img width="1112" alt="Screen Shot 2025-02-14 at 05 43 52" src="https://github.com/user-attachments/assets/af4d06fa-1b2f-4d27-9739-d33ccbb5a896" />
 
@@ -169,12 +175,12 @@ s.waitForBoot {
     (\sinNote->0 : \verb->0, amp: 0.9),  // oscillator to verb
     (\sinNote->0 : -1->0, amp: 0.2), // oscillator to left out
     (\verb->0 : -1->1, amp: 0.2), // verb to right out
-  ]
+  ],
+
+  oldSpace: ~tp.ts // comment out to refresh all values
 );
 ~tp.play;
 )
-
-~tp.stop;
 
 
 /*
@@ -209,7 +215,9 @@ s.waitForBoot {
     (\sinNote->0 : \verb->0, amp: 0.9),  // oscillator to verb
     (\sinNote->0 : -1->0, amp: 0.2), // oscillator to left out
     (\verb->0 : -1->1, amp: 0.2), // verb to right out
-  ]
+  ],
+
+  oldSpace: ~tp.ts // comment out to refresh all values
 );
 ~tp.play;
 )
@@ -220,7 +228,7 @@ s.waitForBoot {
 <br />
 <br />
 
-### sinmod : knobs keep their value when you change and reevaluate the space
+### sinmod
 
 some dirty working code showing latest practice
 
