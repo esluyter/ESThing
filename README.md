@@ -267,12 +267,6 @@ s.waitForBoot {
   { 1 } { ts.(\sinmod).set127(\mod, val); ts.(\sinesyn).set127(\mod, val); ts.(\laughsyn).set127(\mod, val) }
   { 24 } { ts.(\sinmod).set127(\grainFreq, val); ts.(\sinesyn).set127(\grainFreq, val) }
   { 25 } { ts.(\sinmod).set127(\grainFreqKbd, val); ts.(\sinesyn).set127(\grainFreqKbd, val) }
-  { 26 } { /*~ts.(\sinmod).set127(\grainAtk, val);*/ }
-  { 27 } { /*~ts.(\sinmod).set127(\grainRel, val);*/ }
-  { 28 } { /*~ts.(\sinmod).set127(\atk, val);*/ }
-  { 29 } { /*~ts.(\sinmod).set127(\dec, val);*/ }
-  { 30 } { /*~ts.(\sinmod).set127(\sus, val);*/ }
-  { 31 } { /*~ts.(\sinmod).set127(\rel, val);*/ }
 });
 )
 
