@@ -36,6 +36,42 @@ The idea is that you build these spaces iteratively by reevaluating your code, t
 
 Trying to abstract away all the boring repetitive stuff like MIDI and signal routing without limiting creativity.
 
+<br />
+<br />
+
+### starting template
+
+```
+// prep
+(
+s.waitForBoot {
+  // synthdefs
+  
+  ~tp.stop;
+  ~tp.free; 
+  0.1.wait; // necessary to prevent hanging?
+  ~tp = ESThingPlayer(knobFunc: { |ts, val, num|
+    switch (num)
+    { 1 } {  } // mod wheel
+  });
+};
+)
+
+// main
+(
+~tp.stop;
+~tp.ts = ~ts = ESThingSpace(
+  things: [],
+  patches: [],
+  
+  oldSpace: ~tp.ts // comment out to refresh all values
+);
+~tp.play;
+)
+```
+
+<br />
+
 ### hello world
 read a buffer, make two sound generators, and patch outputs
 
