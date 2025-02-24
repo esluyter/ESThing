@@ -20,18 +20,25 @@ ESThingParam {
   val127_ { |midival|
     this.val_(spec.map(midival / 127));
   }
+  setModulator { |modVal|
+    Server.default.bind {
+      func.value(name, spec.map(spec.unmap(val) + modVal), parentThing);
+    };
+  }
   value { ^val }
 }
 
 ESThingPatch {
   var <name, <from, <to, <amp;
-  var <synth;
+  var <synth, <oscFunc;
   var <>parentSpace;
   *initClass {
     ServerBoot.add {
       SynthDef(\ESThingPatch, { |in, out, amp|
-        // TODO: change to InFeedback when ready
         Out.ar(out, InFeedback.ar(in) * amp);
+      }).add;
+      SynthDef(\ESThingReply, { |in, freq = 100, id|
+        SendReply.ar(Impulse.ar(freq), '/ESThingReply', InFeedback.ar(in), id);
       }).add;
     };
   }
@@ -56,14 +63,26 @@ ESThingPatch {
       (inbus: parentSpace.outbus);
     };
     var target = toThing.asTarget ?? { addAction = \addAfter; things.last.asTarget };
-    synth = Synth(\ESThingPatch, [
-      in: fromThing.outbus.index + from.index,
-      out: toThing.inbus.index + to.index,
-      amp: amp
-    ], target, addAction);
+    if (to.index.isSymbol) {
+      synth = Synth(\ESThingReply, [
+        in: fromThing.outbus.index + from.index,
+        id: this.index
+      ], target, addAction);
+      oscFunc = OSCFunc({ |msg|
+        var modVal = msg[3] * amp;
+        toThing.(to.index).setModulator(modVal);
+      }, '/ESThingReply');
+    } {
+      synth = Synth(\ESThingPatch, [
+        in: fromThing.outbus.index + from.index,
+        out: toThing.inbus.index + to.index,
+        amp: amp
+      ], target, addAction);
+    }
   }
   stop {
     synth.free;
+    oscFunc.free;
   }
   amp_ { |val|
     amp = val;
@@ -72,6 +91,10 @@ ESThingPatch {
   }
   amp127_ { |midival|
     this.amp_(\amp.asSpec.map(midival / 127));
+  }
+
+  index {
+    ^parentSpace.patches.indexOf(this);
   }
 }
 
@@ -83,7 +106,7 @@ ESThingPatch {
 
 
 ESThing {
-  var <>name, <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <>params, <inChannels, <outChannels, <>midicpsFunc, <>velampFunc, <>defName, <>args, <>func, <>top, <>left, <>width;
+  var <>name, <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <>params, <inChannels, <outChannels, <>midicpsFunc, <>velampFunc, <>defName, <>args, <>func, <>top, <>left, <>width, <>midiChannel, <>srcID;
   var <>inbus, <>outbus, <>group;
   var <>environment, <>parentSpace;
 
@@ -93,8 +116,8 @@ ESThing {
     defaultVelampFunc = { |vel| vel.linexp(0, 1, 0.05, 1) };
   }
 
-  storeArgs { ^[name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width] }
-  *new { |name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 0, outChannels = 2, midicpsFunc, velampFunc, defName, args, func, top = 0, left = 0, width = 1|
+  storeArgs { ^[name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID] }
+  *new { |name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 0, outChannels = 2, midicpsFunc, velampFunc, defName, args, func, top = 0, left = 0, width = 1, midiChannel, srcID|
     midicpsFunc = midicpsFunc ? defaultMidicpsFunc;
     velampFunc = velampFunc ? defaultVelampFunc;
     params = params.asArray.collect { |param|
@@ -106,7 +129,7 @@ ESThing {
       };
       param
     };
-    ^super.newCopyArgs(name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width).prInit;
+    ^super.newCopyArgs(name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID).prInit;
   }
   prInit {
     environment = ();

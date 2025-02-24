@@ -8,24 +8,35 @@ ESThingPlayer {
   }
 
   initMidi {
+    var checkChans = { |chan, src, func|
+      ts.things.do({ |thing|
+        if (thing.midiChannel.isNil or: (chan == thing.midiChannel)) {
+          if (thing.srcID.isNil or: (thing.srcID == src)) {
+            func.(thing);
+          };
+        };
+      });
+    };
     MIDIClient.init;
     MIDIIn.connectAll;
-    noteOnMf = MIDIFunc.noteOn({ |vel, num|
-      ts.things.do(_.noteOn(num, vel.postln));
+    noteOnMf = MIDIFunc.noteOn({ |vel, num, chan, src|
+      checkChans.(chan, src, { |thing| thing.noteOn(num, vel); });
     });
-    noteOffMf = MIDIFunc.noteOff({ |vel, num|
-      ts.things.do(_.noteOff(num, vel));
+    noteOffMf = MIDIFunc.noteOff({ |vel, num, chan, src|
+      checkChans.(chan, src, { |thing| thing.noteOff(num, vel); });
     });
-    bendMf = MIDIFunc.bend({ |val|
-      ts.things.do(_.bend(val));
+    bendMf = MIDIFunc.bend({ |val, num, chan, src|
+      checkChans.(chan, src, { |thing| thing.bend(val); });
     });
-    touchMf = MIDIFunc.touch({ |val|
-      ts.things.do(_.touch(val));
+    touchMf = MIDIFunc.touch({ |val, num, chan, src|
+      checkChans.(chan, src, { |thing| thing.touch(val) });
     });
-    polytouchMf = MIDIFunc.polytouch({ |val, num|
-      ts.things.do(_.polytouch(val, num));
+    polytouchMf = MIDIFunc.polytouch({ |val, num, chan, src|
+      checkChans.(chan, src, { |thing| thing.polytouch(val); });
     });
-    ccMf = MIDIFunc.cc({ |val, num| knobFunc.(val, num, ts) });
+    ccMf = MIDIFunc.cc({ |val, num, chan, src|
+      knobFunc.(ts, val, num, chan, src)
+    });
   }
 
   play {

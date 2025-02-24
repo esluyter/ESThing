@@ -1,5 +1,5 @@
 + ESThing {
-  *playFuncSynth { |name, func, params, inChannels = 0, outChannels = 1, top = 0, left = 0, width = 1|
+  *playFuncSynth { |name, func, params, inChannels = 0, outChannels = 1, top = 0, left = 0, width = 1, midiChannel, srcID|
     ^ESThing(name,
       playFunc: { |thing|
         var funcToPlay = if (thing.func.def.argNames.first == \thing) {
@@ -18,7 +18,9 @@
       func: func,
       top: top,
       left: left,
-      width: width
+      width: width,
+      midiChannel: midiChannel,
+      srcID: srcID
     )
   }
 
@@ -48,7 +50,7 @@
     ^params;
   }
 
-  *polySynth { |name, defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc, top = 0, left = 0, width = 1|
+  *polySynth { |name, defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
     ^ESThing(name,
       playFunc: { |thing|
         thing[\synths] = ();
@@ -86,11 +88,13 @@
       args: args,
       top: top,
       left: left,
-      width: width
+      width: width,
+      midiChannel: midiChannel,
+      srcID: srcID
     )
   }
 
-  *monoSynth { |name, defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc, top = 0, left = 0, width = 1|
+  *monoSynth { |name, defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
     ^ESThing(name,
       initFunc: { |thing|
         thing[\noteStack] = [];
@@ -137,7 +141,9 @@
       args: args,
       top: top,
       left: left,
-      width: width
+      width: width,
+      midiChannel: midiChannel,
+      srcID: srcID
     )
   }
 }
@@ -152,6 +158,7 @@
     var left = 50;
     var inlets = [];
     var outlets = [];
+    var knobPoints = [];
     var adc = inChannels.collect { |i| i * 50 + 25 };
     var dac = outChannels.collect { |i| i * 50 + 25 };
 
@@ -161,8 +168,12 @@
       patches.collect { |patch|
         var fromI = this.(patch.from.thingIndex).tryPerform(\index);
         var toI = this.(patch.to.thingIndex).tryPerform(\index);
+        var toPoint = if (patch.to.index.isSymbol) {
+          knobPoints[toI][patch.to.index];
+        } {
+          if (toI.isNil) { v.bounds.width@dac[patch.to.index] } { inlets[toI][patch.to.index] };
+        };
         var fromPoint = if (fromI.isNil) { 0@adc[patch.from.index] } { outlets[fromI][patch.from.index] };
-        var toPoint = if (toI.isNil) { v.bounds.width@dac[patch.to.index] } { inlets[toI][patch.to.index] };
 
         var p1 = fromPoint;
         var p2 = toPoint;
@@ -180,19 +191,22 @@
       var top = thing.top + 50 + (50 * thing.index);
       var width = 90 * thing.width;
       var height = thing.params.size / thing.width * 75 + 30;
-      var view = View(parentView, Rect(left, top, width, height)).background_(Color.gray(1));
+      var view = View(parentView, Rect(left, top, width, height)).background_(Color.gray(1, 0.95));
       var newInlets = [];
       var newOutlets = [];
+      var newKnobPoints = ();
       if (thing.name.notNil) {
         StaticText(view, Rect(2, 0, width, 20)).string_(thing.name).font_(Font.sansSerif(14, true));
       };
       thing.params.do { |param, i|
+        var point = (left + 42 + (90 * (i % thing.width)))@(75 * (i / thing.width).floor + 50 + top);
         var knob = EZKnob(view, Rect(2 + (90 * (i % thing.width)), 75 * (i / thing.width).floor + 20, 80, 70), param.name, param.spec, { |knob| thing.set(param.name, knob.value) }, param.val, labelWidth: 100, labelHeight: 15);
         var dependantFunc = { |param, val|
           defer { knob.value = val };
         };
         param.addDependant(dependantFunc);
         knob.onClose = { param.removeDependant(dependantFunc) };
+        newKnobPoints[param.name] = point;
       };
       thing.inChannels.do { |i|
         var thisLeft = left - 5;
@@ -208,6 +222,7 @@
       };
       inlets = inlets.add(newInlets);
       outlets = outlets.add(newOutlets);
+      knobPoints = knobPoints.add(newKnobPoints);
       view;
     };
 
