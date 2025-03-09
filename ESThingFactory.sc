@@ -24,16 +24,17 @@
     )
   }
 
-  *prMakeParams { |defName|
+  *prMakeParams { |defName, hideMidiControls = true|
     var synthDesc = SynthDescLib.global[defName];
     var params = synthDesc.controls.select { |control|
       var name = control.name.asSymbol;
       // filter out the controls used internally by mono/poly synths
-      var exposeControl = ['?', \gate, \bend, \touch, \freq, \in, \out, \amp].indexOf(name).isNil;
+      var isQ = ['?', \in, \out].indexOf(name).notNil;
+      var exposeControl = [\gate, \bend, \touch, \freq, \amp].indexOf(name).isNil;
       // filter out any arrayed controls
       var isArray = control.defaultValue.isArray;
       // TODO: have different sort of param and GUI element for arrays
-      exposeControl and: isArray.not
+      (exposeControl or: hideMidiControls.not) and: isArray.not and: isQ.not
     } .collect({ |control|
       var spec;
       // look for spec in metadata, otherwise use name.asSpec
@@ -136,6 +137,61 @@
         thing[\synth].free;
       },
       params: params ?? { this.prMakeParams(defName) },
+      inChannels: inChannels,
+      outChannels: outChannels,
+      midicpsFunc: midicpsFunc,
+      velampFunc: velampFunc,
+      defName: defName,
+      args: args,
+      top: top,
+      left: left,
+      width: width,
+      midiChannel: midiChannel,
+      srcID: srcID
+    )
+  }
+
+  *droneSynth { |name, defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
+    ^ESThing(name,
+      initFunc: { |thing|
+        thing[\noteStack] = [];
+      },
+      playFunc: { |thing|
+        var defaults = thing.params.collect({ |param| [param.name, param.val] }).flat;
+        thing[\synth] = Synth(thing.defName, [out: thing.outbus, in: thing.inbus, bend: thing[\bend]] ++ thing.args ++ defaults, thing.group);
+      },
+      stopFunc: { |thing|
+        thing[\synth].free;
+      },
+      noteOnFunc: { |thing, num, vel| // note: vel is mapped 0-1
+        var freq = thing.midicpsFunc.(num);
+        var amp = thing.velampFunc.(vel);
+        thing[\synth].set(\freq, freq);
+        thing[\noteStack] = thing[\noteStack].add(num);
+      },
+      noteOffFunc: { |thing, num, vel|
+        thing[\noteStack].remove(num);
+        if (thing[\noteStack].size > 0) {
+          thing[\synth].set(\freq, thing.midicpsFunc.(thing[\noteStack].last));
+        } {
+        };
+      },
+      bendFunc: { |thing, val| // note: val is mapped -1 to 1
+        thing[\bend] = val;
+        thing[\synth].set(\bend, val);
+      },
+      touchFunc: { |thing, val|
+        thing[\synth].set(\touch, val);
+      },
+      polytouchFunc: { |thing, val, num|
+        //if (num == thing[\noteStack].last) {
+          thing[\synth].set(\touch, val);
+        //};
+      },
+      stopFunc: { |thing|
+        thing[\synth].free;
+      },
+      params: params ?? { this.prMakeParams(defName, false) },
       inChannels: inChannels,
       outChannels: outChannels,
       midicpsFunc: midicpsFunc,
