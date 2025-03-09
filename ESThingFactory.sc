@@ -60,7 +60,7 @@
         var freq = thing.midicpsFunc.(num);
         var amp = thing.velampFunc.(vel);
         thing[\synths][num].free;
-        thing[\synths][num] = Synth(thing.defName, [out: thing.outbus, in: thing.inbus, freq: freq, amp: amp, bend: thing[\bend]] ++ thing.args ++ defaults, thing.group);
+        thing[\synths][num] = Synth(thing.defName, [out: thing.outbus, in: thing.inbus, doneAction: 2, freq: freq, amp: amp, bend: thing[\bend]] ++ thing.args ++ defaults, thing.group);
       },
       noteOffFunc: { |thing, num, vel|
         thing[\synths][num].release;
@@ -101,12 +101,15 @@
       },
       playFunc: { |thing|
         var defaults = thing.params.collect({ |param| [param.name, param.val] }).flat;
-        thing[\synth] = Synth(thing.defName, [out: thing.outbus, in: thing.inbus, freq: 440, amp: 0, bend: thing[\bend]] ++ thing.args ++ defaults, thing.group);
+        thing[\synth] = Synth(thing.defName, [out: thing.outbus, in: thing.inbus, doneAction: 0, amp: 0, gate: 0, bend: thing[\bend]] ++ thing.args ++ defaults, thing.group);
+      },
+      stopFunc: { |thing|
+        thing[\synth].free;
       },
       noteOnFunc: { |thing, num, vel| // note: vel is mapped 0-1
         var freq = thing.midicpsFunc.(num);
         var amp = thing.velampFunc.(vel);
-        thing[\synth].set(\freq, freq, \amp, amp);
+        thing[\synth].set(\freq, freq, \amp, amp, \gate, 1);
         thing[\noteStack] = thing[\noteStack].add(num);
       },
       noteOffFunc: { |thing, num, vel|
@@ -114,7 +117,7 @@
         if (thing[\noteStack].size > 0) {
           thing[\synth].set(\freq, thing.midicpsFunc.(thing[\noteStack].last));
         } {
-          thing[\synth].set(\amp, 0)
+          thing[\synth].set(\gate, 0)
         };
       },
       bendFunc: { |thing, val| // note: val is mapped -1 to 1
@@ -125,9 +128,9 @@
         thing[\synth].set(\touch, val);
       },
       polytouchFunc: { |thing, val, num|
-        if (num == thing[\noteStack].last) {
+        //if (num == thing[\noteStack].last) {
           thing[\synth].set(\touch, val);
-        };
+        //};
       },
       stopFunc: { |thing|
         thing[\synth].free;
@@ -174,6 +177,12 @@
           if (toI.isNil) { v.bounds.width@dac[patch.to.index] } { inlets[toI][patch.to.index] };
         };
         var fromPoint = if (fromI.isNil) { 0@adc[patch.from.index] } { outlets[fromI][patch.from.index] };
+        var colorVal = (patch.amp.curvelin(0, 10, 0.1, 1, 4));
+        var color = if (patch.to.index.isSymbol) {
+          Color.red(1, colorVal)
+        } {
+          Color.gray(1 - colorVal)
+        };
 
         var p1 = fromPoint;
         var p2 = toPoint;
@@ -182,7 +191,7 @@
 
         Pen.moveTo(p1);
         Pen.curveTo(p2, p1 + sideoffset, p2 - sideoffset);
-        Pen.color_(Color.gray(1 - (patch.amp.curvelin(0, 10, 0.1, 1, 4))));
+        Pen.color_(color);
         Pen.stroke;
       };
     }).resize_(5);
