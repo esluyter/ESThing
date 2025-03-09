@@ -3,7 +3,7 @@ ESThingParam {
   var <>parentThing;
   storeArgs { ^[name, spec, func, val] }
   *new { |name, spec, func, val|
-    spec = spec ?? { name.asSpec } ?? { ControlSpec() };
+    spec = (spec ?? { name } ?? { ControlSpec() }).asSpec;
     func = func ? { |name, val, thing|
       thing[\synth].set(name, val);
       thing[\synths].do({ |synth| synth.set(name, val) });
@@ -181,10 +181,15 @@ ESThing {
   }
 
   at { |sym|
-    ^environment.at(sym) ?? { if (parentSpace.notNil) { parentSpace.environment.at(sym) } };
+    ^this.paramAt(sym).value ?? { environment.at(sym) ?? { if (parentSpace.notNil) { parentSpace.environment.at(sym) } } };
   }
   put { |key, val|
-    environment.put(key, val);
+    var param = this.paramAt(key);
+    if (param.notNil) {
+      param.val = val;
+    } {
+      environment.put(key, val);
+    };
     ^this;
   }
 
@@ -322,7 +327,7 @@ ESThingSpace {
   }
 
   at { |sym|
-    ^environment.at(sym);
+    ^this.thingAt(sym) ?? environment.at(sym);
   }
   put { |key, val|
     environment.put(key, val);
