@@ -44,29 +44,31 @@ Trying to abstract away all the boring repetitive stuff like MIDI and signal rou
 ```
 // prep
 (
-s.waitForBoot {
-  // synthdefs
-  
-  ~tp.stop;
-  ~tp.free; 
-  0.1.wait; // necessary to prevent hanging?
-  ~tp = ESThingPlayer(knobFunc: { |ts, val, num|
-    switch (num)
-    { 1 } {  } // mod wheel
-  });
-};
+~tp.stop;
+~tp.free;
+~tp = ESThingPlayer();
 )
 
 // main
 (
-~tp.stop;
-~tp.ts = ~ts = ESThingSpace(
-  things: [],
-  patches: [],
+s.waitForBoot {
+  // synthdefs
   
-  oldSpace: ~tp.ts // comment out to refresh all values
-);
-~tp.play;
+
+  ~tp.knobFunc = { |ts, val, num|
+    switch (num)
+    { 1 } {  } // mod wheel
+  };
+
+  ~tp.stop;
+  ~tp.ts = ~ts = ESThingSpace(
+    things: [],
+    patches: [],
+
+    oldSpace: ~tp.ts // comment out to refresh all values
+  );
+  ~tp.play;
+};
 )
 ```
 
