@@ -35,7 +35,11 @@ ESThingPlayer {
       checkChans.(chan, src, { |thing| thing.polytouch(val, num); });
     });
     ccMf = MIDIFunc.cc({ |val, num, chan, src|
-      knobFunc.(ts, val, num, chan, src)
+      // mod wheel
+      if (num == 1) {
+        checkChans.(chan, src, { |thing| thing.set127(\mod, val) });
+      };
+      knobFunc.(ts, val, num, chan, src);
     });
   }
 
