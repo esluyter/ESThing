@@ -269,8 +269,12 @@ ESThingSpace {
         } {
           patch.to = patch.to.asArray;
         };
-        patch = max(patch.from.size, patch.to.size).collect { |i|
-          ESThingPatch(patch.name, patch.from.wrapAt(i), patch.to.wrapAt(i), patch.amp ?? 1)
+        if (patch.from.value.isNil or: patch.to.value.isNil) {
+          patch = []
+        } {
+          patch = max(patch.from.size, patch.to.size).collect { |i|
+            ESThingPatch(patch.name, patch.from.wrapAt(i), patch.to.wrapAt(i), patch.amp ?? 1)
+          };
         };
       };
       patch
