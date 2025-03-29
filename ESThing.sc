@@ -52,16 +52,17 @@ ESThingPatch {
     };
     ^super.newCopyArgs(name, from, to, amp);
   }
+  prGetThing { |thingIndex|
+    ^parentSpace.thingAt(thingIndex) ?? {
+      (inbus: parentSpace.outbus, outbus: parentSpace.inbus, inChannels: parentSpace.outbus.numChannels, outChannels: parentSpace.inbus.numChannels)
+    }
+  }
   play {
     var things = parentSpace.things;
     var addAction = \addBefore;
     // if fromThing or toThing is nil, make a dummy to direct to this space's input or output
-    var fromThing = parentSpace.thingAt(from.thingIndex) ?? {
-      (outbus: parentSpace.inbus)
-    };
-    var toThing = parentSpace.thingAt(to.thingIndex) ?? {
-      (inbus: parentSpace.outbus);
-    };
+    var fromThing = this.prGetThing(from.thingIndex);
+    var toThing = this.prGetThing(to.thingIndex);
     var target = toThing.asTarget ?? { addAction = \addAfter; things.last.asTarget };
     if (to.index.isSymbol) {
       synth = Synth(\ESThingReply, [
@@ -239,12 +240,24 @@ ESThingSpace {
     patches = patches.asArray.collect { |patch|
       var n;
       if (patch.isKindOf(Dictionary)) {
-        patch.keysValuesDo({ |k, v|
-          if (k.class == Association) {
-            patch.from = k;
-            patch.to = v;
+        var amp = patch.removeAt(\amp) ?? 1;
+        if (patch.size == 1) {
+          var arr = patch.asKeyValuePairs;
+          patch.from = arr[0];
+          patch.to = arr[1];
+        };
+        if ((patch.from.class == Symbol) or: (patch.from.class == Integer)) {
+          var fromThing = this.thingAt(patch.from, things) ?? {
+            (outChannels: inChannels)
           };
-        });
+          patch.from = patch.from->(fromThing.outChannels.collect{ |n| n });
+        };
+        if ((patch.to.class == Symbol) or: (patch.to.class == Integer)) {
+          var toThing = this.thingAt(patch.to, things) ?? {
+            (inChannels: outChannels)
+          };
+          patch.to = patch.to->(toThing.inChannels.collect{ |n| n });
+        };
         // accept arrays of indices
         if (patch.from.value.isArray) {
           patch.from = patch.from.value.collect { |index| patch.from.key->index };
@@ -334,6 +347,18 @@ ESThingSpace {
     ^this;
   }
 
+  *thingAt { |sym, things|
+    things = things.asArray;
+    if (sym.isInteger) {
+      ^things[sym]
+    };
+    things.do { |thing|
+      if (thing.name == sym) {
+        ^thing
+      };
+    };
+    ^nil;
+  }
   thingAt { |sym|
     if (sym.isInteger) {
       ^things[sym]

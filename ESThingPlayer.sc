@@ -32,7 +32,7 @@ ESThingPlayer {
       checkChans.(chan, src, { |thing| thing.touch(val) });
     });
     polytouchMf = MIDIFunc.polytouch({ |val, num, chan, src|
-      checkChans.(chan, src, { |thing| thing.polytouch(val); });
+      checkChans.(chan, src, { |thing| thing.polytouch(val, num); });
     });
     ccMf = MIDIFunc.cc({ |val, num, chan, src|
       knobFunc.(ts, val, num, chan, src)
