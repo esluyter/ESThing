@@ -1,18 +1,18 @@
 + ESThing {
-  *playFuncSynth { |name, func, params, inChannels = 0, outChannels = 1, top = 0, left = 0, width = 1, midiChannel, srcID|
+  *playFuncSynth { |name, func, params, inChannels = 2, outChannels = 2, top = 0, left = 0, width = 1, midiChannel, srcID|
     ^ESThing(name,
       playFunc: { |thing|
-        var funcToPlay = if (thing.func.def.argNames.first == \thing) {
-          thing.func.value(thing)
+        var funcToPlay = if (func.def.argNames.first == \thing) {
+          func.value(thing)
         } {
-          thing.func
+          func
         };
+        thing.params = params ?? { this.prMakeParams(funcToPlay.asSynthDef.allControlNames) };
         thing[\synth] = funcToPlay.play(thing.group, thing.outbus, fadeTime: 0, args: [in: thing.inbus]);
       },
       stopFunc: { |thing|
         thing[\synth].free;
       },
-      params: params.asArray,
       inChannels: inChannels,
       outChannels: outChannels,
       func: func,
@@ -24,12 +24,11 @@
     )
   }
 
-  *prMakeParams { |defName, hideMidiControls = true|
-    var synthDesc = SynthDescLib.global[defName];
-    var params = synthDesc.controls.select { |control|
-      var name = control.name.asSymbol;
+  *prMakeParams { |controls, hideMidiControls = true, synthDesc|
+    var params = controls.select { |control|
+      var name = control.name;
       // filter out the controls used internally by mono/poly synths
-      var isQ = ['?', \in, \out].indexOf(name).notNil;
+      var isQ = ['?', \in, \out, \i_out].indexOf(name).notNil;
       var exposeControl = [\gate, \bend, \touch, \freq, \amp].indexOf(name).isNil;
       // filter out any arrayed controls
       var isArray = control.defaultValue.isArray;
@@ -38,7 +37,7 @@
     } .collect({ |control|
       var spec;
       // look for spec in metadata, otherwise use name.asSpec
-      if ((spec = synthDesc.metadata.tryPerform(\at, \specs).tryPerform(\at, control.name)).notNil) {
+      if (synthDesc.notNil and: { (spec = synthDesc.metadata.tryPerform(\at, \specs).tryPerform(\at, control.name)).notNil }) {
         spec = spec.asSpec
       } {
         spec = control.name.asSpec;
@@ -51,7 +50,13 @@
     ^params;
   }
 
-  *polySynth { |name, defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
+  *prMakeParamsDefName { |defName, hideMidiControls = true|
+    var synthDesc = SynthDescLib.global[defName];
+    var params = this.prMakeParams(synthDesc.controls, hideMidiControls, synthDesc);
+    ^params;
+  }
+
+  *polySynth { |name, defName, args, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
     ^ESThing(name,
       playFunc: { |thing|
         thing[\synths] = ();
@@ -80,7 +85,7 @@
       stopFunc: { |thing|
         thing[\group].free;
       },
-      params: params ?? { this.prMakeParams(defName) },
+      params: params ?? { this.prMakeParamsDefName(defName) },
       inChannels: inChannels,
       outChannels: outChannels,
       midicpsFunc: midicpsFunc,
@@ -95,7 +100,7 @@
     )
   }
 
-  *monoSynth { |name, defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
+  *monoSynth { |name, defName, args, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
     ^ESThing(name,
       initFunc: { |thing|
         thing[\noteStack] = [];
@@ -136,7 +141,7 @@
       stopFunc: { |thing|
         thing[\synth].free;
       },
-      params: params ?? { this.prMakeParams(defName) },
+      params: params ?? { this.prMakeParamsDefName(defName) },
       inChannels: inChannels,
       outChannels: outChannels,
       midicpsFunc: midicpsFunc,
@@ -151,7 +156,7 @@
     )
   }
 
-  *droneSynth { |name, defName, args, params, inChannels = 0, outChannels = 1, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
+  *droneSynth { |name, defName, args, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
     ^ESThing(name,
       initFunc: { |thing|
         thing[\noteStack] = [];
@@ -191,7 +196,7 @@
       stopFunc: { |thing|
         thing[\synth].free;
       },
-      params: params ?? { this.prMakeParams(defName, false) },
+      params: params ?? { this.prMakeParamsDefName(defName, false) },
       inChannels: inChannels,
       outChannels: outChannels,
       midicpsFunc: midicpsFunc,

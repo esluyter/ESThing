@@ -107,7 +107,8 @@ ESThingPatch {
 
 
 ESThing {
-  var <>name, <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <>params, <inChannels, <outChannels, <>midicpsFunc, <>velampFunc, <>defName, <>args, <>func, <>top, <>left, <>width, <>midiChannel, <>srcID;
+  var <>name, <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <inChannels, <outChannels, <>midicpsFunc, <>velampFunc, <>defName, <>args, <>func, <>top, <>left, <>width, <>midiChannel, <>srcID;
+  var <params;
   var <>inbus, <>outbus, <>group;
   var <>environment, <>parentSpace;
 
@@ -118,10 +119,16 @@ ESThing {
   }
 
   storeArgs { ^[name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID] }
-  *new { |name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 0, outChannels = 2, midicpsFunc, velampFunc, defName, args, func, top = 0, left = 0, width = 1, midiChannel, srcID|
+  *new { |name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, defName, args, func, top = 0, left = 0, width = 1, midiChannel, srcID|
     midicpsFunc = midicpsFunc ? defaultMidicpsFunc;
     velampFunc = velampFunc ? defaultVelampFunc;
-    params = params.asArray.collect { |param|
+    ^super.newCopyArgs(name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID).prInit.params_(params);
+  }
+  prInit {
+    environment = ();
+  }
+  params_ { |arr|
+    params = arr.asArray.collect { |param|
       if (param.isSymbol) {
         param = ESThingParam(param, param.asSpec ?? { ControlSpec() })
       };
@@ -130,10 +137,6 @@ ESThing {
       };
       param
     };
-    ^super.newCopyArgs(name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID).prInit;
-  }
-  prInit {
-    environment = ();
     params.do {| param|
       param.parentThing_(this);
     };
@@ -146,7 +149,7 @@ ESThing {
   }
   play {
     group = Group(parentSpace.group);
-    fork {
+    forkIfNeeded {
       // do whatever the playfunc says
       playFunc.value(this);
       // then activate all parameters
@@ -324,7 +327,7 @@ ESThingSpace {
   }
   play {
     group = Group(target);
-    fork {
+    forkIfNeeded {
       playFunc.value(this);
       Server.default.sync;
       things.reverse.do(_.play); // assumes they each add to head

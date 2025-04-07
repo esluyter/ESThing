@@ -1,9 +1,11 @@
 ESThingPlayer {
-  var <>ts, <>knobFunc;
+  var <ts, <>knobFunc;
   var <noteOnMf, <noteOffMf, <bendMf, <touchMf, <polytouchMf, <ccMf;
   var <win, <winBounds;
+  var <isPlaying = false;
 
   *new { |ts, knobFunc|
+    ts = ts ?? { ESThingSpace() };
     ^super.newCopyArgs(ts, knobFunc).initMidi;
   }
 
@@ -49,6 +51,7 @@ ESThingPlayer {
       Server.default.sync;
       ts.play;
       win = ts.makeWindow(winBounds);
+      isPlaying = true;
     };
   }
 
@@ -59,9 +62,20 @@ ESThingPlayer {
       winBounds = win.bounds;
       win.close
     };
+    isPlaying = false;
   }
 
   free {
     [noteOnMf, noteOffMf, bendMf, touchMf, polytouchMf, ccMf].do(_.free);
+  }
+
+  ts_ { |val|
+    if (isPlaying) {
+      this.stop;
+      ts = val;
+      this.play;
+    } {
+      ts = val;
+    }
   }
 }
