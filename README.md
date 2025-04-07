@@ -44,35 +44,52 @@ Trying to abstract away all the boring repetitive stuff like MIDI and signal rou
 ```
 // prep
 (
-~tp.stop;
-~tp.free;
 ~tp = ESThingPlayer();
+~tp.play;
 )
 
-// main
+// main (reevaluate to update graph, thing parameters will remember their current values)
 (
-s.waitForBoot {
-  // synthdefs
-  
+// add synthdefs here
 
-  ~tp.knobFunc = { |ts, val, num|
-    switch (num)
-    { 1 } {  } // mod wheel
-  };
-
-  ~tp.stop;
-  ~tp.ts = ~ts = ESThingSpace(
-    things: [],
-    patches: [],
-
-    oldSpace: ~tp.ts // comment out to refresh all values
-  );
-  ~tp.play;
+~tp.knobFunc = { |ts, val, num|
+  switch (num)
+  { 24 } {  }
 };
+
+~tp.ts = ~ts = ESThingSpace(
+  things: [
+    ESThing.playFuncSynth(\gain, { |thing|
+      { |in| 
+        In.ar(in, 2) * \gain.kr(0.1) 
+      }
+    })
+  ],
+  patches: [
+    (\in->0 : \gain),
+    (\gain : \out)
+  ],
+  initFunc: { |space|
+    space[\buf] = Buffer.read(s, Platform.resourceDir +/+ "sounds/a11wlk01.wav");
+  },
+  freeFunc: { |space|
+    space[\buf].free;
+  },
+  
+  oldSpace: ~tp.ts // comment out to refresh all values
+);
+)
+
+// stop it
+(
+~tp.stop;
+~tp.free;
 )
 ```
 
 <br />
+
+<details>
 
 ### hello world
 read a buffer, make two sound generators, and patch outputs
@@ -405,6 +422,8 @@ s.waitForBoot {
 ~tp.play;
 )
 ```
+
+</details>
 
 <br />
 <br />
