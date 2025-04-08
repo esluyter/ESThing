@@ -14,7 +14,7 @@
         thing[\synth].free;
       },
       noteOnFunc: { |thing, num, vel| // note: vel is mapped 0-1
-        var freq = thing.midicpsFunc.(num).postln;
+        var freq = thing.midicpsFunc.(num);
         var amp = thing.velampFunc.(vel);
         thing.set(\freq, freq);
         thing[\noteStack] = thing[\noteStack].add(num);
