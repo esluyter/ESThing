@@ -214,10 +214,10 @@ ESThing {
     ^nil;
   }
   set { |what, val|
-    this.paramAt(what).val_(val);
+    this.paramAt(what).tryPerform('val_', val);
   }
   set127 { |what, val|
-    this.paramAt(what).val127_(val)
+    this.paramAt(what).tryPerform('val127_', val);
   }
 
   index {
