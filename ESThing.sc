@@ -108,7 +108,7 @@ ESThingPatch {
 
 ESThing {
   var <>name, <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <inChannels, <outChannels, <>midicpsFunc, <>velampFunc, <>defName, <>args, <>func, <>top, <>left, <>width, <>midiChannel, <>srcID;
-  var <params;
+  var <params, <oldParams;
   var <>inbus, <>outbus, <>group;
   var <>environment, <>parentSpace;
 
@@ -126,6 +126,7 @@ ESThing {
   }
   prInit {
     environment = ();
+    oldParams = ();
   }
   params_ { |arr|
     params = arr.asArray.collect { |param|
@@ -137,9 +138,14 @@ ESThing {
       };
       param
     };
-    params.do {| param|
+    // to catch params created late i.e. playFuncSynth
+    params.do { |param|
       param.parentThing_(this);
+      if (oldParams[param.name].notNil) {
+        param.val = oldParams[param.name].val;
+      };
     };
+    oldParams = ();
   }
 
   init {
@@ -238,8 +244,39 @@ ESThingSpace {
 
   storeArgs { ^[things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, useADC, useDAC, target]}
   *new { |things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels = 2, outChannels = 2, useADC = true, useDAC = true, target, oldSpace|
-    things = things ? [];
     // syntactic sugar
+    things = things.asArray.collect { |thing|
+      if (thing.isKindOf(ESThing)) {
+        thing
+      } {
+        if (thing.isKindOf(Association)) {
+          var name = thing.key;
+          var value = thing.value;
+          var ret;
+          if (value.isKindOf(Function)) {
+            ret = ESThing.playFuncSynth(name, value);
+          };
+          if (value.isKindOf(Dictionary)) {
+            var thisKey = value.keys.select(_.isSymbol.not).pop;
+            var thisValue = value[thisKey];
+            var inChannels = 2, outChannels = 2;
+            if (thisValue.isInteger) {
+              inChannels = outChannels = thisValue
+            };
+            if (thisValue.isArray) {
+              #inChannels, outChannels = thisValue
+            };
+            if (thisKey.isKindOf(Function)) {
+              ret = ESThing.playFuncSynth(name, thisKey, value[\params], inChannels, outChannels, value[\top] ? 0, value[\left] ? 0, value[\width] ? 1, value[\midiChannel], value[\srcID])
+            };
+          };
+          ret;
+        } {
+          // don't know what to do with this
+          thing
+        };
+      };
+    };
     patches = patches.asArray.collect { |patch|
       var n;
       if (patch.isKindOf(Dictionary)) {
@@ -313,6 +350,11 @@ ESThingSpace {
               if (newParam.notNil and: {newParam.val != oldParam.val}) {
                 [oldParam.name, oldParam.value].postln;
                 newParam.val_(oldParam.val);
+              };
+              if (newParam.isNil) {
+                // to catch params created after thing is created
+                // i.e. playFuncSynth
+                thisThing.oldParams[oldParam.name] = oldParam;
               };
             };
           };
