@@ -55,9 +55,9 @@ Trying to abstract away all the boring repetitive stuff like MIDI and signal rou
 (
 // add synthdefs here
 
-~tp.knobDict = (
-  0: \gain->\gain
-);
+~tp.knobArr = [
+  //0: \thing->\param
+];
 
 ~tp.ts = ~ts = ESThingSpace(
   things: [
@@ -79,6 +79,9 @@ Trying to abstract away all the boring repetitive stuff like MIDI and signal rou
   oldSpace: ~tp.ts // comment out to refresh all values
 );
 )
+
+// sequentially assign midi ccs to every parameter
+~tp.assignAllKnobs;
 
 // stop it
 (
@@ -177,7 +180,7 @@ SynthDef(\sinNote, { |out, amp=0.1, freq=440, bend=0, touch=0, gate=1, pregain=4
   portamento: ControlSpec(0, 5, 6)
 ))).add;
 
-~tp.knobDict = (
+~tp.knobArr = [
   0: \sinNote->\pregain,
   1: \sinNote->\modAmt,
   2: \sinNote->\modFreq,
@@ -186,7 +189,7 @@ SynthDef(\sinNote, { |out, amp=0.1, freq=440, bend=0, touch=0, gate=1, pregain=4
   5: \sinNote->\portamento,
   6: \verb->\size,
   7: \verb->\amp
-);
+];
 
 ~tp.ts = ~ts = ESThingSpace(
   things: [
