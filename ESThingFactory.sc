@@ -13,6 +13,31 @@
       stopFunc: { |thing|
         thing[\synth].free;
       },
+      noteOnFunc: { |thing, num, vel| // note: vel is mapped 0-1
+        var freq = thing.midicpsFunc.(num).postln;
+        var amp = thing.velampFunc.(vel);
+        thing.set(\freq, freq);
+        thing[\noteStack] = thing[\noteStack].add(num);
+      },
+      noteOffFunc: { |thing, num, vel|
+        thing[\noteStack].remove(num);
+        if (thing[\noteStack].size > 0) {
+          thing.set(\freq, thing.midicpsFunc.(thing[\noteStack].last));
+        } {
+        };
+      },
+      bendFunc: { |thing, val| // note: val is mapped -1 to 1
+        thing[\bend] = val;
+        thing.set(\bend, val);
+      },
+      touchFunc: { |thing, val|
+        thing.set(\touch, val);
+      },
+      polytouchFunc: { |thing, val, num|
+        //if (num == thing[\noteStack].last) {
+          thing.set(\touch, val);
+        //};
+      },
       inChannels: inChannels,
       outChannels: outChannels,
       func: func,
@@ -138,9 +163,6 @@
           thing[\synth].set(\touch, val);
         //};
       },
-      stopFunc: { |thing|
-        thing[\synth].free;
-      },
       params: params ?? { this.prMakeParamsDefName(defName) },
       inChannels: inChannels,
       outChannels: outChannels,
@@ -192,9 +214,6 @@
         //if (num == thing[\noteStack].last) {
           thing[\synth].set(\touch, val);
         //};
-      },
-      stopFunc: { |thing|
-        thing[\synth].free;
       },
       params: params ?? { this.prMakeParamsDefName(defName, false) },
       inChannels: inChannels,
