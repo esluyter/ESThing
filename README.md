@@ -116,8 +116,8 @@ read a buffer, make two sound generators, and patch outputs
     // syntax is terse so this hopefully won't get tiresome
     // (fromThingName->outletNumber : toThingName->inletNumber)
     // -1 or any unused symbol means adc/dac
-    (\osc->0 : \out->0, amp: 0.2),
-    (\playbuf->0 : \out->1, amp: 0.2),
+    (\osc : \out->0, amp: 0.2),
+    (\playbuf : \out->1, amp: 0.2),
   ],
   
   // allocate and free shared resources for the space
@@ -144,7 +144,7 @@ with portamento, note on / off, pitch bend, aftertouch, and full parameter contr
 
 all parameter values will persist through code reevaluations
 
-<img width="1112" alt="Screen Shot 2025-02-14 at 05 43 52" src="https://github.com/user-attachments/assets/af4d06fa-1b2f-4d27-9739-d33ccbb5a896" />
+<img width="762" alt="Screen Shot 2025-04-07 at 23 52 52" src="https://github.com/user-attachments/assets/4d2175f5-2927-43b4-8103-ccbf92ffac71" />
 
 
 ```
@@ -212,7 +212,38 @@ SynthDef(\sinNote, { |out, amp=0.1, freq=440, bend=0, touch=0, gate=1, pregain=4
 <br />
 <br />
 
+<br />
+<br />
+<br />
+
 <details>
+
+<summary>Proofs of concept</summary>
+
+### saving presets
+
+proof of concept
+
+```
+(
+var preset = ();
+~ts.things.do  { |thing|
+  if (thing.name.notNil) {
+    preset[thing.name] = ();
+    thing.params.do { |param|
+      preset[thing.name][param.name] = param.val;
+    };
+  };
+};
+preset;
+)
+
+/*
+( 'sinmod': ( 'sus': 0.5, 'rel': 1.2267136495451, 'atk': 0.0, 'dec': 0.41654477973629,
+  'grainTilt': 0.48412119436425, 'modDecay': 0.99482871683896, 'grainRel': 0.089130044531846, 'grainFreqKbd': 0.5, 'grainAtk': 0.039954377691494,
+  'sat': 1.0, 'grainFreq': 0.59216264354641, 'mod': 0.60668461069361 ) )
+*/
+```
 
 ### sinmod
 
@@ -354,16 +385,6 @@ s.waitForBoot {
 )
 ```
 
-</details>
-
-<br />
-<br />
-<br />
-
-<details>
-
-<summary>Proofs of concept</summary>
-
 ### fledgling GUI
 
 ```
@@ -442,31 +463,6 @@ dac.do { |point|
   left = left + (90 * thing.width) + 10;
 };
 )
-```
-
-### saving presets
-
-proof of concept
-
-```
-(
-var preset = ();
-~ts.things.do  { |thing|
-  if (thing.name.notNil) {
-    preset[thing.name] = ();
-    thing.params.do { |param|
-      preset[thing.name][param.name] = param.val;
-    };
-  };
-};
-preset;
-)
-
-/*
-( 'sinmod': ( 'sus': 0.5, 'rel': 1.2267136495451, 'atk': 0.0, 'dec': 0.41654477973629,
-  'grainTilt': 0.48412119436425, 'modDecay': 0.99482871683896, 'grainRel': 0.089130044531846, 'grainFreqKbd': 0.5, 'grainAtk': 0.039954377691494,
-  'sat': 1.0, 'grainFreq': 0.59216264354641, 'mod': 0.60668461069361 ) )
-*/
 ```
   
 ### original proof of concept: continuous synths with patching between them and midi knob control of parameters
