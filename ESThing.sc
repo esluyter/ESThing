@@ -437,6 +437,9 @@ ESThingSpace {
     };
     ^nil;
   }
+  params {
+    ^things.collect(_.params).flat;
+  }
   //syntactic sugar
   value { |sym| ^this.thingAt(sym) }
 

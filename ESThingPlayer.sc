@@ -1,12 +1,12 @@
 ESThingPlayer {
-  var <ts, <>knobFunc, <>knobDict;
+  var <ts, <>knobFunc, <>knobArr;
   var <noteOnMf, <noteOffMf, <bendMf, <touchMf, <polytouchMf, <ccMf;
   var <win, <winBounds;
   var <isPlaying = false;
 
-  *new { |ts, knobFunc, knobDict = (())|
+  *new { |ts, knobFunc, knobArr = ([])|
     ts = ts ?? { ESThingSpace() };
-    ^super.newCopyArgs(ts, knobFunc, knobDict).initMidi;
+    ^super.newCopyArgs(ts, knobFunc, knobArr).initMidi;
   }
 
   initMidi {
@@ -42,7 +42,7 @@ ESThingPlayer {
         checkChans.(chan, src, { |thing| thing.set127(\mod, val) });
       };
       knobFunc.(ts, val, num, chan, src);
-      knobDict.keysValuesDo { |key, value|
+      knobArr.pairsDo { |key, value|
         if (num == key) {
           // modulate parameter
           ts.(value.key).set127(value.value, val);
@@ -83,5 +83,13 @@ ESThingPlayer {
     } {
       ts = val;
     }
+  }
+
+  assignAllKnobs { |ccStart = 0|
+    knobArr = ts.params.collect { |param|
+      var ret = [ccStart, param.parentThing.name->param.name];
+      ccStart = ccStart + 1;
+      ret
+    } .flat;
   }
 }
