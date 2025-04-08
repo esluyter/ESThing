@@ -34,7 +34,7 @@ A container for any possible SC code that can be played, with built-in routing, 
 
 The idea is that you build these spaces iteratively by reevaluating your code, the GUI shows you what's going on and gives you knobs, and it's possible to maintain the state of all these knobs when you reevaluate your code for better jams.
 
-Trying to abstract away all the boring repetitive stuff like MIDI and signal routing without limiting creativity.
+Trying to abstract away all the boring repetitive stuff like MIDI and signal routing, with terse syntax.
 
 <br />
 <br />
@@ -59,21 +59,19 @@ Trying to abstract away all the boring repetitive stuff like MIDI and signal rou
 
 ~tp.ts = ~ts = ESThingSpace(
   things: [
-    ESThing.playFuncSynth(\gain, { |thing|
-      { |in| 
-        In.ar(in, 2) * \gain.kr(0.1) 
-      }
-    })
+    \gain->{ |in| 
+      In.ar(in, 2) * \gain.kr(0.1) 
+    }
   ],
   patches: [
     (\in->0 : \gain),
     (\gain : \out)
   ],
   initFunc: { |space|
-    space[\buf] = Buffer.read(s, Platform.resourceDir +/+ "sounds/a11wlk01.wav");
+    //space[\buf] = Buffer.read(s, Platform.resourceDir +/+ "sounds/a11wlk01.wav");
   },
   freeFunc: { |space|
-    space[\buf].free;
+    //space[\buf].free;
   },
   
   oldSpace: ~tp.ts // comment out to refresh all values
