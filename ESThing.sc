@@ -70,8 +70,10 @@ ESThingPatch {
         id: this.index
       ], target, addAction);
       oscFunc = OSCFunc({ |msg|
-        var modVal = msg[3] * amp;
-        toThing.(to.index).setModulator(modVal);
+        if (msg[2] == this.index) {
+          var modVal = msg[3] * amp;
+          toThing.(to.index).setModulator(modVal);
+        };
       }, '/ESThingReply');
     } {
       synth = Synth(\ESThingPatch, [
