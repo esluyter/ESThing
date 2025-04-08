@@ -256,10 +256,21 @@ ESThingSpace {
           if (value.isKindOf(Function)) {
             ret = ESThing.playFuncSynth(name, value);
           };
+          if (value.isKindOf(Ref)) {
+            ret = ESThing.droneSynth(name, value.dereference);
+          };
           if (value.isKindOf(Dictionary)) {
             var thisKey = value.keys.select(_.isSymbol.not).pop;
             var thisValue = value[thisKey];
             var inChannels = 2, outChannels = 2;
+            var kind = \drone;
+            if (thisValue.isSymbol) {
+              kind = thisValue
+            };
+            if (thisValue.isKindOf(Association)) {
+              kind = thisValue.key;
+              thisValue = thisValue.value;
+            };
             if (thisValue.isInteger) {
               inChannels = outChannels = thisValue
             };
@@ -268,6 +279,13 @@ ESThingSpace {
             };
             if (thisKey.isKindOf(Function)) {
               ret = ESThing.playFuncSynth(name, thisKey, value[\params], inChannels, outChannels, value[\top] ? 0, value[\left] ? 0, value[\width] ? 1, value[\midiChannel], value[\srcID])
+            };
+            if (thisKey.isKindOf(Ref)) {
+              var method = switch (kind)
+              { \drone } { \droneSynth }
+              { \mono } { \monoSynth }
+              { \poly } { \polySynth };
+              ret = ESThing.perform(method, name, thisKey.dereference, value[\args], value[\params], inChannels, outChannels, value[\midicpsFunc], value[\velampFunc], value[\top] ? 0, value[\left] ? 0, value[\width] ? 1, value[\midiChannel], value[\srcID]);
             };
           };
           ret;
@@ -313,7 +331,7 @@ ESThingSpace {
           patch = []
         } {
           patch = max(patch.from.size, patch.to.size).collect { |i|
-            ESThingPatch(patch.name, patch.from.wrapAt(i), patch.to.wrapAt(i), patch.amp ?? 1)
+            ESThingPatch(patch.name, patch.from.wrapAt(i), patch.to.wrapAt(i), amp ?? 1)
           };
         };
       };
