@@ -41,6 +41,8 @@ Trying to abstract away all the boring repetitive stuff like MIDI and signal rou
 
 ### starting template
 
+<img width="762" alt="Screen Shot 2025-04-07 at 23 55 13" src="https://github.com/user-attachments/assets/1a1cad8d-88d0-4a82-bafa-5412daa0288d" />
+
 ```
 // prep
 (
