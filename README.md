@@ -2,35 +2,70 @@
 
 A container for any possible SC code that can be played, with built-in routing, parameter control via MIDI, GUI, code, etc.
 
-### ESThing
-- Provides a dedicated environment, group, inbus, and outbus.
-- Hooks for
-  - init/free
-  - play/stop
-  - noteOn/noteOff/bend
-  - touch/polytouch
-- Allows you to define `params` with custom hooks
-  - by default these send `set` messages to whatever is in the environment under `synth` and `synths`
-- Provides special templates
-  - playFuncSynth (similar to {}.play)
-  - Playing a SynthDef with e.g. a midi controller, using `in`, `out`, `freq`, `amp`, `bend`, `touch`, `portamento`/`gate` controls
-    - monoSynth
-    - polySynth
+<br />
 
-### ESThingSpace
-- A container for many ESThings, as well as patched connections between them
-- Provides a dedicated environment inherited by its things, as well as a group
-- Either allocates dedicated inbus and outbus, or uses ADC and DAC
-- Hooks for
-  - init/free
-  - play/stop
-- Allows you to define `patches`, i.e. connections between outputs of one thing and inputs of another, with gain control
+<img width="800" alt="Screen Shot 2025-04-08 at 21 30 06" src="https://github.com/user-attachments/assets/cb0c8a95-14d3-4e93-a6d5-0e28a02b5c35" />
+
+
+<details>
+<summary>code</summary>
+  
+```
+// prep
+(
+~tp = ESThingPlayer();
+~tp.play;
+~bufs = ESBufList('bufs', [ ( 'name': 'testing', 'buf': "/Users/.../casio samba 0.wav" ) ]).makeWindow;
+)
+
+// main (reevaluate to update graph, thing parameters will remember their current values)
+(
+// add synthdefs here
+
+~tp.ts = ~ts = ESThingSpace(
+  things: [
+    \lfo->({
+      SinOsc.ar(\lofreq.kr(29.45))
+    }: [0, 1]),
+    \lfo2->({
+      SinOsc.ar(\lofreq.kr(0.45))
+    }: [0, 1]),
+    \osc->({
+      Pan2.ar(SinOsc.ar(\freq.ar(440, 0.1)), \pan.kr(0, 0.1), \amp.kr)
+    }: [0, 2]),
+    \pb->({
+      var buf = ~bufs[\testing];
+      PlayBuf.ar(2, buf, BufRateScale.kr(buf) * \rate.kr(0.27), loop:1) * \amp.kr(0.5);
+    }: [0, 2]),
+    \verb->{ |in|
+      in = In.ar(in, 2);
+      NHHall.ar(in, \size.kr(4.12, spec: [1, 10])) * \amp.kr(0.24)
+    }
+  ],
+  patches: [
+    (\lfo: \osc->\freq, amp: 0.1),
+    (\lfo2: \osc->\pan, amp: 1),
+    (\osc : \out),
+    (\pb : \out),
+    (\osc : \verb),
+    (\pb : \verb),
+    (\verb : \out),
+    (\lfo : \pb->\rate, amp: 0.1),
+    (\lfo2 : \lfo->\lofreq, amp: 0.35)
+  ],
+
+  oldSpace: ~tp.ts // comment out to refresh all values
+);
+)
+
+// automatically assign all parameters to MIDI knobs
+~tp.assignAllKnobs;
+```
+
+</details>
 
 <br />
 <br />
-<br />
-
-## working examples
 
 The idea is that you build these spaces iteratively by reevaluating your code, the GUI shows you what's going on and gives you knobs, and it's possible to maintain the state of all these knobs when you reevaluate your code for better jams.
 
@@ -38,11 +73,12 @@ Trying to abstract away all the boring repetitive stuff like MIDI and signal rou
 
 <br />
 <br />
+<br />
+<br />
 
-### starting template
 
-<img width="762" alt="Screen Shot 2025-04-07 at 23 56 31" src="https://github.com/user-attachments/assets/dc15bba4-fae9-4996-b1a9-3d20ba01bccb" />
-
+## starting template 
+gain knob
 
 ```
 // prep
@@ -55,10 +91,6 @@ Trying to abstract away all the boring repetitive stuff like MIDI and signal rou
 (
 // add synthdefs here
 
-~tp.knobArr = [
-  //0: \thing->\param
-];
-
 ~tp.ts = ~ts = ESThingSpace(
   things: [
     \gain->{ |in| 
@@ -66,22 +98,24 @@ Trying to abstract away all the boring repetitive stuff like MIDI and signal rou
     }
   ],
   patches: [
+    // (fromThingName->outletNumber : toThingName->inletNumber, amp: 1)
     (\in->0 : \gain),
     (\gain : \out)
   ],
-  initFunc: { |space|
-
-  },
-  freeFunc: { |space|
-
-  },
   
   oldSpace: ~tp.ts // comment out to refresh all values
 );
+
+// assign knob cc#s to parameters
+~tp.knobArr = [
+  //cc#: \thing->\param
+];
 )
 
-// sequentially assign midi ccs to every parameter
+// .. or, sequentially assign midi ccs to every parameter
 ~tp.assignAllKnobs;
+
+
 
 // stop it
 (
@@ -90,14 +124,21 @@ Trying to abstract away all the boring repetitive stuff like MIDI and signal rou
 )
 ```
 
+
+<img width="762" alt="Screen Shot 2025-04-07 at 23 56 31" src="https://github.com/user-attachments/assets/dc15bba4-fae9-4996-b1a9-3d20ba01bccb" />
+
+
+<br />
+<br />
+
+## more working examples
+
+
 <br />
 <br />
 
 ### hello world
-read a buffer, make two sound generators, and patch outputs
-
-<img width="762" alt="Screen Shot 2025-02-14 at 06 59 39" src="https://github.com/user-attachments/assets/d3e0e6c5-f072-4d19-b973-3c3210b5ec80" />
-
+read a buffer, make sound, and patch outputs
 
 ```
 // prep
@@ -111,19 +152,18 @@ read a buffer, make two sound generators, and patch outputs
   things: [
     // wrap func in an event to specify num channels etc
     \osc->({ SinOsc.ar(\freq.kr(440)) }: [0, 1]),
-    // wrap func in a func to access the thing's environment
+    // wrap func in a func to access buffer from the thing's environment
     \playbuf->({ |thing|
       { PlayBuf.ar(1, thing[\buf], BufRateScale.kr(thing[\buf]) * \rate.kr(1), loop: 1) }
-    }: [0, 1])
+    }: [0, 1]),
+    // use backtick to specify SynthDef name
+    \synth->`\default
   ],
 
   patches: [
-    // patch each thing to one speaker
-    // syntax is terse so this hopefully won't get tiresome
-    // (fromThingName->outletNumber : toThingName->inletNumber)
-    // -1 or any unused symbol means adc/dac
     (\osc : \out->0, amp: 0.2),
     (\playbuf : \out->1, amp: 0.2),
+    (\synth : \out)
   ],
   
   // allocate and free shared resources for the space
@@ -135,11 +175,9 @@ read a buffer, make two sound generators, and patch outputs
   }
 );
 )
-
-// stop it and free resources
-~tp.stop;
-~tp.free;
 ```
+
+<img width="762" alt="Screen Shot 2025-04-08 at 22 06 14" src="https://github.com/user-attachments/assets/17f7582c-1594-4bff-a552-1b5c15a544de" />
 
 <br />
 <br />
@@ -149,9 +187,6 @@ read a buffer, make two sound generators, and patch outputs
 with portamento, note on / off, pitch bend, aftertouch, and full parameter control
 
 all parameter values will persist through code reevaluations
-
-<img width="762" alt="Screen Shot 2025-04-07 at 23 52 52" src="https://github.com/user-attachments/assets/4d2175f5-2927-43b4-8103-ccbf92ffac71" />
-
 
 ```
 // prep
@@ -180,17 +215,6 @@ SynthDef(\sinNote, { |out, amp=0.1, freq=440, bend=0, touch=0, gate=1, pregain=4
   portamento: ControlSpec(0, 5, 6)
 ))).add;
 
-~tp.knobArr = [
-  0: \sinNote->\pregain,
-  1: \sinNote->\modAmt,
-  2: \sinNote->\modFreq,
-  3: \sinNote->\amAmt,
-  4: \sinNote->\amFreq,
-  5: \sinNote->\portamento,
-  6: \verb->\size,
-  7: \verb->\amp
-];
-
 ~tp.ts = ~ts = ESThingSpace(
   things: [
     \sinNote->(`\sinNote: \poly->[0, 1]),
@@ -208,15 +232,44 @@ SynthDef(\sinNote, { |out, amp=0.1, freq=440, bend=0, touch=0, gate=1, pregain=4
 );
 )
 
-// stop it
-(
-~tp.stop;
-~tp.free;
-)
+// automatically assign all parameters to MIDI knobs
+~tp.assignAllKnobs;
 ```
+
+<img width="762" alt="Screen Shot 2025-04-07 at 23 52 52" src="https://github.com/user-attachments/assets/4d2175f5-2927-43b4-8103-ccbf92ffac71" />
+
 
 <br />
 <br />
+
+<br />
+<br />
+<br />
+
+### ESThing
+- Provides a dedicated environment, group, inbus, and outbus.
+- Hooks for
+  - init/free
+  - play/stop
+  - noteOn/noteOff/bend
+  - touch/polytouch
+- Allows you to define `params` with custom hooks, or auto-generate them from synth controls
+  - by default these send `set` messages to whatever is in the environment under `synth` and `synths`
+- Provides special templates
+  - playFuncSynth (similar to {}.play)
+  - Playing a SynthDef with e.g. a midi controller, using `in`, `out`, `freq`, `amp`, `bend`, `touch`, `portamento`/`gate` controls
+    - droneSynth
+    - monoSynth
+    - polySynth
+
+### ESThingSpace
+- A container for many ESThings, as well as patched connections between them
+- Provides a dedicated environment inherited by its things, as well as a group
+- Either allocates dedicated inbus and outbus, or uses ADC and DAC
+- Hooks for
+  - init/free
+  - play/stop
+- Allows you to define `patches`, i.e. connections between outputs of one thing and inputs of another, with gain control
 
 <br />
 <br />
