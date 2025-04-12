@@ -308,9 +308,10 @@
               patchKnob.value = spec.unmap(val);
               patchView.refresh;
               knob.setColors(stringColor: Color.hsv(0, 0.8, 0.4), background: Color.hsv(0, 0.5, 1, patch.amp.curvelin(0, 10, 0.02, 0.4, 4)));
+              patchKnob.color_([Color.red(1, patch.amp.curvelin(0, 10, 0.1, 0.3, 4)), Color.red(0.8, 0.5), Color.blue(1, 0.3)]);
             };
           };
-          patchKnob = Knob(view, Rect(knobBounds.left + 60, knobBounds.top, 20, 20)).centered_(false).color_([Color.red(1, 0.3), Color.red, Color.blue(1, 0.3)]).action_{
+          patchKnob = Knob(view, Rect(knobBounds.left + 60, knobBounds.top, 20, 20)).action_{
             patch.amp = spec.map(patchKnob.value);
           };
           patch.addDependant(dependantFunc);
@@ -346,7 +347,7 @@
       View(w, Rect(winWidth - 7, y - 2, 7, 5)).background_(Color.black).resize_(3);
     };
     things.do { |thing|
-      left = left + thing.left.postln;
+      left = left + thing.left;
       thingView.(thing, w, left);
       left = left + (90 * thing.width) + 10;
     };

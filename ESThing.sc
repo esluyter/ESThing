@@ -403,6 +403,10 @@ ESThingSpace {
           };
         };
       };
+      // post the mod patches, in case we forgot to save them
+      // TODO: simply restore values
+      "Restoring mod amps not yet figured out... meanwhile:".postln;
+      oldSpace.postModPatches;
     };
   }
 
