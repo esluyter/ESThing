@@ -57,12 +57,18 @@ ESThingPatch {
       (inbus: parentSpace.outbus, outbus: parentSpace.inbus, inChannels: parentSpace.outbus.numChannels, outChannels: parentSpace.inbus.numChannels)
     }
   }
+  fromThing {
+    ^this.prGetThing(from.thingIndex);
+  }
+  toThing {
+    ^this.prGetThing(to.thingIndex);
+  }
   play {
     var things = parentSpace.things;
     var addAction = \addBefore;
     // if fromThing or toThing is nil, make a dummy to direct to this space's input or output
-    var fromThing = this.prGetThing(from.thingIndex);
-    var toThing = this.prGetThing(to.thingIndex);
+    var fromThing = this.fromThing;
+    var toThing = this.toThing;
     var target = toThing.asTarget ?? { addAction = \addAfter; things.last.asTarget };
     if (to.index.isSymbol) {
       synth = Synth(\ESThingReply, [

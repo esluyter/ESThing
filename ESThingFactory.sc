@@ -247,6 +247,10 @@
 
     var w = Window("Space", bounds).background_(Color.gray(0.95)).front;
 
+    // for knobs later
+    var redPatches = patches.select { |patch| patch.to.index.isSymbol };
+    var redParams = redPatches.collect { |patch| patch.toThing.(patch.to.index) };
+
     var patchView = UserView(w, w.bounds.copy.origin_(0@0)).drawFunc_({ |v|
       patches.collect { |patch|
         var fromI = this.(patch.from.thingIndex).tryPerform(\index);
@@ -259,7 +263,7 @@
         var fromPoint = if (fromI.isNil) { 0@adc[patch.from.index] } { outlets[fromI][patch.from.index] };
         var colorVal = (patch.amp.curvelin(0, 10, 0.1, 1, 4));
         var color = if (patch.to.index.isSymbol) {
-          Color.red(1, colorVal)
+          Color.red(1, colorVal);
         } {
           Color.gray(1 - colorVal)
         };
@@ -267,7 +271,7 @@
         var p1 = fromPoint;
         var p2 = toPoint;
         var offset = Point(0, max(((p2.y - p1.y) / 2), max((p1.y - p2.y) / 3, if (p2.y < p1.y) { 80 } { 40 })));
-        var sideoffset = Point(max((p2.x - p1.x) / 2, max((p1.x - p2.x) / 4, 80)), 0);
+        var sideoffset = Point(max((p2.x - p1.x) / 4, max((p1.x - p2.x) / 8, 5)), 0);
 
         Pen.moveTo(p1);
         Pen.curveTo(p2, p1 + sideoffset, p2 - sideoffset);
@@ -289,25 +293,45 @@
       };
       thing.params.do { |param, i|
         var point = (left + 42 + (90 * (i % thing.width)))@(75 * (i / thing.width).floor + 50 + top);
-        var knob = EZKnob(view, Rect(2 + (90 * (i % thing.width)), 75 * (i / thing.width).floor + 20, 80, 70), param.name, param.spec, { |knob| thing.set(param.name, knob.value) }, param.val, labelWidth: 100, labelHeight: 15);
+        var knobBounds = Rect(2 + (90 * (i % thing.width)), 75 * (i / thing.width).floor + 20, 80, 70);
+        var knob = EZKnob(view, knobBounds, param.name, param.spec, { |knob| thing.set(param.name, knob.value) }, param.val, labelWidth: 100, labelHeight: 15);
         var dependantFunc = { |param, val|
           defer { knob.value = val };
+        };
+        var redIndex = redParams.indexOf(param);
+        var patchKnob;
+        if (redIndex.notNil) {
+          var patch = redPatches[redIndex];
+          var spec = \amp.asSpec;
+          var dependantFunc = { |patch, what, val|
+            defer {
+              patchKnob.value = spec.unmap(val);
+              patchView.refresh;
+              knob.setColors(stringColor: Color.hsv(0, 0.8, 0.4), background: Color.hsv(0, 0.5, 1, patch.amp.curvelin(0, 10, 0.02, 0.4, 4)));
+            };
+          };
+          patchKnob = Knob(view, Rect(knobBounds.left + 60, knobBounds.top, 20, 20)).centered_(false).color_([Color.red(1, 0.3), Color.red, Color.blue(1, 0.3)]).action_{
+            patch.amp = spec.map(patchKnob.value);
+          };
+          patch.addDependant(dependantFunc);
+          patchKnob.onClose = { patch.removeDependant(dependantFunc) };
+          dependantFunc.(patch, \amp, patch.amp);
         };
         param.addDependant(dependantFunc);
         knob.onClose = { param.removeDependant(dependantFunc) };
         newKnobPoints[param.name] = point;
       };
       thing.inChannels.do { |i|
-        var thisLeft = left - 5;
+        var thisLeft = left - 1;
         var thisTop = top + (i * 30) + 15;
         newInlets = newInlets.add(left@thisTop);
-        View(parentView, Rect(thisLeft, thisTop, 5, 3)).background_(Color.black);
+        View(parentView, Rect(thisLeft, thisTop - 1.5, 4, 3)).background_(Color.black);
       };
       thing.outChannels.do { |i|
         var thisLeft = left + width;
         var thisTop = top + (i * 30) + 15;
         newOutlets = newOutlets.add(thisLeft@thisTop);
-        View(parentView, Rect(thisLeft, thisTop, 5, 3)).background_(Color.black);
+        View(parentView, Rect(thisLeft - 3, thisTop - 1.5, 4, 3)).background_(Color.black);
       };
       inlets = inlets.add(newInlets);
       outlets = outlets.add(newOutlets);
