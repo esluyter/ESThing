@@ -253,17 +253,18 @@ ESThingSpace {
   storeArgs { ^[things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, useADC, useDAC, target]}
   postModPatches {
     patches.do { |patch|
+      // this doesn't work with backslash directly, so use question mark temp
       if (patch.to.index.isSymbol) {
-        "(% : %->%, amp: %)".format(
+        "(?% : ?%->?%, amp: %)".format(
           if (patch.fromThing.outChannels == 1) {
-            patch.from.thingIndex.asCompileString
+            patch.from.thingIndex
           } {
-            "%->%".format(patch.from.thingIndex.asCompileString, patch.from.index.asCompileString)
+            "%->?%".format(patch.from.thingIndex, patch.from.index)
           },
-          patch.to.thingIndex.asCompileString,
-          patch.to.index.asCompileString,
+          patch.to.thingIndex,
+          patch.to.index,
           patch.amp
-        ).postln;
+        ).tr($?, $\\).postln;
       };
     };
   }
