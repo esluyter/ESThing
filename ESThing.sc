@@ -251,6 +251,22 @@ ESThingSpace {
   var <>environment;
 
   storeArgs { ^[things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, useADC, useDAC, target]}
+  postModPatches {
+    patches.do { |patch|
+      if (patch.to.index.isSymbol) {
+        "(% : %->%, amp: %)".format(
+          if (patch.fromThing.outChannels == 1) {
+            patch.from.thingIndex.asCompileString
+          } {
+            "%->%".format(patch.from.thingIndex.asCompileString, patch.from.index.asCompileString)
+          },
+          patch.to.thingIndex.asCompileString,
+          patch.to.index.asCompileString,
+          patch.amp
+        ).postln;
+      };
+    };
+  }
   *new { |things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels = 2, outChannels = 2, useADC = true, useDAC = true, target, oldSpace|
     // syntactic sugar
     things = things.asArray.collect { |thing|
