@@ -21,8 +21,6 @@ A container for any possible SC code that can be played, with built-in routing, 
 
 // main (reevaluate to update graph, thing parameters will remember their current values)
 (
-// add synthdefs here
-
 ~tp.ts = ~ts = ESThingSpace(
   things: [
     \lfo->({
@@ -68,7 +66,12 @@ A container for any possible SC code that can be played, with built-in routing, 
 <br />
 <br />
 
-The idea is that you build these spaces iteratively by reevaluating your code, the GUI shows you what's going on and gives you knobs, and it's possible to maintain the state of all these knobs when you reevaluate your code for better jams.
+The idea is that you build these spaces iteratively by reevaluating your code, the GUI shows you what's going on and gives you knobs which maintain their state when you reevaluate your code.
+
+Adjust parameters using MIDI knobs, with GUI, or like so:
+```
+~ts.(\lfo).set(\lofreq, 10);
+```
 
 Trying to abstract away all the boring repetitive stuff like MIDI and signal routing, with terse syntax.
 
