@@ -17,8 +17,17 @@ ESThingParam {
     func.value(name, val, parentThing);
     this.changed(val);
   }
+  valNorm_ { |argval|
+    this.val_(spec.map(argval));
+  }
   val127_ { |midival|
-    this.val_(spec.map(midival / 127));
+    this.valNorm_(midival / 127);
+  }
+  valNorm {
+    ^spec.unmap(val);
+  }
+  val127 {
+    ^this.valNorm * 127;
   }
   setModulator { |modVal|
     Server.default.bind {
@@ -119,11 +128,14 @@ ESThing {
   var <params, <oldParams;
   var <>inbus, <>outbus, <>group;
   var <>environment, <>parentSpace;
+  var <>hue;
 
+  classvar <>hueList, <>hueIndex = 0;
   classvar <>defaultMidicpsFunc, <>defaultVelampFunc;
   *initClass {
     defaultMidicpsFunc = { |num| num.midicps };
     defaultVelampFunc = { |vel| vel.linexp(0, 1, 0.05, 1) };
+    hueList = [ 0.9, 0.4, 0.8, 0.2, 0.7, 0.0, 0.5, 0.3, 0.6, 0.1 ];
   }
 
   storeArgs { ^[name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID] }
@@ -135,6 +147,8 @@ ESThing {
   prInit {
     environment = ();
     oldParams = ();
+    hue = hueList[hueIndex];
+    hueIndex = hueIndex + 1 % hueList.size;
   }
   params_ { |arr|
     params = arr.asArray.collect { |param|
@@ -270,6 +284,7 @@ ESThingSpace {
   }
   *new { |things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels = 2, outChannels = 2, useADC = true, useDAC = true, target, oldSpace|
     // syntactic sugar
+    ESThing.hueIndex = 0;
     things = things.asArray.collect { |thing|
       if (thing.isKindOf(ESThing)) {
         thing
