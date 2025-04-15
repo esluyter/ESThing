@@ -248,21 +248,21 @@
     var w = Window("Space", bounds).background_(Color.gray(0.95)).front;
 
     // for knobs later
-    var redPatches = patches.select { |patch| patch.to.index.isSymbol };
+    var redPatches = patches.select { |patch| patch.to.index.isKindOf(Symbol) };
     var redParams = redPatches.collect { |patch| patch.toThing.(patch.to.index) };
 
     var patchView = UserView(w, w.bounds.copy.origin_(0@0)).drawFunc_({ |v|
       patches.collect { |patch|
         var fromI = this.(patch.from.thingIndex).tryPerform(\index);
         var toI = this.(patch.to.thingIndex).tryPerform(\index);
-        var toPoint = if (patch.to.index.isSymbol) {
+        var toPoint = if (patch.to.index.isKindOf(Symbol)) {
           knobPoints[toI][patch.to.index];
         } {
           if (toI.isNil) { v.bounds.width@dac[patch.to.index] } { inlets[toI][patch.to.index] };
         };
         var fromPoint = if (fromI.isNil) { 0@adc[patch.from.index] } { outlets[fromI][patch.from.index] };
         var colorVal = (patch.amp.curvelin(0, 10, 0.1, 1, 4));
-        var color = if (patch.to.index.isSymbol) {
+        var color = if (patch.to.index.isKindOf(Symbol)) {
           Color.red(1, colorVal);
         } {
           Color.gray(1 - colorVal)

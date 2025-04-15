@@ -105,7 +105,7 @@ ESBufList {
   at { |index|
     var res;
     if (index.isInteger) { res = bufs[index] };
-    if (index.isSymbol) { res = bufs.select { |buf| buf.name == index } [0] };
+    if (index.isKindOf(Symbol)) { res = bufs.select { |buf| buf.name == index } [0] };
     if (res.isNil) {
       ^nil;
     } {

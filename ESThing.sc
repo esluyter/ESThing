@@ -70,7 +70,7 @@ ESThingPatch {
     var fromThing = this.fromThing;
     var toThing = this.toThing;
     var target = toThing.asTarget ?? { addAction = \addAfter; things.last.asTarget };
-    if (to.index.isSymbol) {
+    if (to.index.isKindOf(Symbol)) {
       synth = Synth(\ESThingReply, [
         in: fromThing.outbus.index + from.index,
         id: this.index
@@ -138,7 +138,7 @@ ESThing {
   }
   params_ { |arr|
     params = arr.asArray.collect { |param|
-      if (param.isSymbol) {
+      if (param.isKindOf(Symbol)) {
         param = ESThingParam(param, param.asSpec ?? { ControlSpec() })
       };
       if (param.class == Association) {
@@ -254,7 +254,7 @@ ESThingSpace {
   postModPatches {
     patches.do { |patch|
       // this doesn't work with backslash directly, so use question mark temp
-      if (patch.to.index.isSymbol) {
+      if (patch.to.index.isKindOf(Symbol)) {
         "(?% : ?%->?%, amp: %)".format(
           if (patch.fromThing.outChannels == 1) {
             patch.from.thingIndex
@@ -285,11 +285,11 @@ ESThingSpace {
             ret = ESThing.droneSynth(name, value.dereference);
           };
           if (value.isKindOf(Dictionary)) {
-            var thisKey = value.keys.select(_.isSymbol.not).pop;
+            var thisKey = value.keys.select(_.isKindOf(Symbol).not).pop;
             var thisValue = value[thisKey];
             var inChannels = 2, outChannels = 2;
             var kind = \drone;
-            if (thisValue.isSymbol) {
+            if (thisValue.isKindOf(Symbol)) {
               kind = thisValue
             };
             if (thisValue.isKindOf(Association)) {
