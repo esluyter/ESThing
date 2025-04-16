@@ -4,8 +4,7 @@ A container for any possible SC code that can be played, with built-in routing, 
 
 <br />
 
-<img width="800" alt="Screen Shot 2025-04-12 at 00 16 28" src="https://github.com/user-attachments/assets/a1986da4-ee38-4e4a-a7b2-bcc0b070c9ea" />
-
+<img width="1048" alt="Screen Shot 2025-04-15 at 20 57 43" src="https://github.com/user-attachments/assets/e2b6c8b8-396c-47c7-8f26-10c619740f91" />
 
 
 <details>
@@ -16,7 +15,7 @@ A container for any possible SC code that can be played, with built-in routing, 
 (
 ~tp = ESThingPlayer();
 ~tp.play;
-~bufs = ESBufList('bufs', [ ( 'name': 'testing', 'buf': "/Users/.../casio samba 0.wav" ) ]).makeWindow;
+~bufs = ESBufList('bufs', [ ( 'name': 'testing', 'buf': Platform.resourceDir +/+ "sounds/a11wlk01.wav" ) ]).makeWindow;
 )
 
 // main (reevaluate to update graph, thing parameters will remember their current values)
@@ -28,20 +27,28 @@ A container for any possible SC code that can be played, with built-in routing, 
     }: [0, 1]),
     \lfo2->({
       SinOsc.ar(\lofreq.kr(0.45))
-    }: [0, 1]),
+    }: [0, 1], top: 100, left: -90),
     \osc->({
       Pan2.ar(SinOsc.ar(\freq.ar(440, 0.1)), \pan.kr(0, 0.1), \amp.kr)
-    }: [0, 2]),
+    }: [1, 2], left: 10, top: -20),
     \pb->({
       var buf = ~bufs[\testing];
-      PlayBuf.ar(2, buf, BufRateScale.kr(buf) * \rate.kr(0.27), loop:1) * \amp.kr(0.5);
-    }: [0, 2]),
-    \verb->{ |in|
+      PlayBuf.ar(1, buf, BufRateScale.kr(buf) * \rate.kr(0.27), loop:1) * \amp.kr(0.5);
+    }: [0, 1], top: 250, left: -120),
+    \verb->({ |in|
       in = In.ar(in, 2);
       NHHall.ar(in, \size.kr(4.12, spec: [1, 10])) * \amp.kr(0.24)
-    }
+    }: [2, 2], left: 30),
+    /* testing colors
+    \blah->{\knob.ar},
+    \di->{\knob.ar},
+    \dah->{\knob.ar},
+    \ba->{\knob.ar},
+    \doo->{\knob.ar},
+    */
   ],
   patches: [
+    (\in->0: \osc),
     (\lfo: \osc->\freq, amp: 0.1),
     (\lfo2: \osc->\pan, amp: 1),
     (\osc : \out),
@@ -58,7 +65,18 @@ A container for any possible SC code that can be played, with built-in routing, 
 )
 
 // automatically assign all parameters to MIDI knobs
+(
 ~tp.assignAllKnobs;
+
+t.free;
+t = MFTwister();
+t.knobs[0].do(_.color_(Color.black));
+
+~ts.params.do { |param, i|
+  t[i].color = Color.hsv(param.parentThing.hue, 1, 1);
+  t[i].val = param.val127
+};
+)
 ```
 
 </details>
