@@ -238,7 +238,7 @@
   makeWindow { |winBounds|
     var bounds = winBounds ?? { Rect(0, 80, 650, 800) };
     var winWidth = bounds.width;
-    var left = 50;
+    var left = 20;
     var inlets = [];
     var outlets = [];
     var knobPoints = [];
@@ -251,41 +251,81 @@
     var redPatches = patches.select { |patch| patch.to.index.isKindOf(Symbol) };
     var redParams = redPatches.collect { |patch| patch.toThing.(patch.to.index) };
 
-    var patchView = UserView(w, w.bounds.copy.origin_(0@0)).resize_(5);
+    var patchView = UserView(w, w.bounds.copy.origin_(0@0)).resize_(5).drawFunc_({ |v|
+      patches.collect { |patch|
+        var fromI = this.(patch.from.thingIndex).tryPerform(\index);
+        var toI = this.(patch.to.thingIndex).tryPerform(\index);
+        var toPoint = if (patch.to.index.isKindOf(Symbol)) {
+          knobPoints[toI][patch.to.index];
+        } {
+          if (toI.isNil) { v.bounds.width@dac[patch.to.index] } { inlets[toI][patch.to.index] };
+        };
+        var fromPoint = if (fromI.isNil) { 0@adc[patch.from.index] } { outlets[fromI][patch.from.index] };
+        var colorVal = (patch.amp.curvelin(0, 10, 0.1, 1, 4));
+        var hue = patch.fromThing.hue;
+        var color = if (patch.to.index.isKindOf(Symbol)) {
+          Pen.lineDash = FloatArray[3, 1];
+          Pen.width = 1.5;
+          // default to red if hue is nil
+          Color.hsv(hue ?? 0, 1, 0.5, colorVal);
+        } {
+          Pen.lineDash = FloatArray[2, 0];
+          // wider for input
+          Pen.width = if (hue.notNil) { 2 } { 3 };
+          // black if hue is nil (i.e. input)
+          Color.hsv(hue ?? 0, 1, if (hue.notNil) { 0.5 } { 0 }, colorVal)
+        };
+
+        var p1 = fromPoint;
+        var p2 = toPoint;
+        var offset = Point(0, max(((p2.y - p1.y) / 2), max((p1.y - p2.y) / 3, if (p2.y < p1.y) { 80 } { 40 })));
+        var sideoffset = Point(max((p2.x - p1.x) / 4, max((p1.x - p2.x) / 8, 5)), 0);
+
+        Pen.moveTo(p1);
+        Pen.curveTo(p2, p1 + sideoffset, p2 - sideoffset);
+        Pen.color_(color);
+        Pen.stroke;
+      };
+    });
 
     var thingView = { |thing, parentView, left|
-      var top = thing.top + 50 + (50 * thing.index);
+      var top = thing.top + 20 + (30 * thing.index);
       var width = 90 * thing.width;
       var height = thing.params.size / thing.width * 75 + 40;
-      var view = UserView(parentView, Rect(left, top, width, height)).background_(Color.gray(1, 0.95)/*Color.hsv(thing.hue, 0.025, 1)*/).drawFunc_({ |view|
-        Pen.addRect(view.bounds.copy.origin_(0@0));
-        Pen.color = Color.gray(0, 0.1);//Color.hsv(thing.hue, 1, 1);
-        Pen.stroke;
+      var view = UserView(parentView, Rect(left, top, width, height)).background_(Color.hsv(thing.hue, 0.025, 1, 0.85)).drawFunc_({ |view|
+        Pen.use {
+          Pen.addRect(view.bounds.copy.origin_(0@0));
+          Pen.color = Color.hsv(thing.hue, 1, 0.5);
+          Pen.width = 2;
+          Pen.stroke;
+        };
       });
       var newInlets = [];
       var newOutlets = [];
       var newKnobPoints = ();
       if (thing.name.notNil) {
-        StaticText(view, Rect(2, 0, width, 20)).string_(thing.name).font_(Font.sansSerif(14, true)).stringColor_(Color.hsv(thing.hue, 1, 0.5));
+        StaticText(view, Rect(5, 3, width, 20)).string_(thing.name).font_(Font.sansSerif(14, true)).stringColor_(Color.hsv(thing.hue, 1, 0.5));
       };
       thing.params.do { |param, i|
-        var point = (left + 42 + (90 * (i % thing.width)))@(75 * (i / thing.width).floor + 60 + top);
-        var knobBounds = Rect(2 + (90 * (i % thing.width)), 75 * (i / thing.width).floor + 30, 80, 70);
-        var knob = EZKnob(view, knobBounds, param.name, param.spec, { |knob| thing.set(param.name, knob.value) }, param.val, labelWidth: 100, labelHeight: 15).setColors(knobColors: [Color.hsv(thing.hue, 0.5, 1), Color.hsv(thing.hue, 1, 0.675), Color.gray(0.5, 0.1), Color.black]);
+        var point = (left + 72 + (90 * (i % thing.width)))@(75 * (i / thing.width).floor + 40 + top);
+        var knobBounds = Rect(5 + (90 * (i % thing.width)), 75 * (i / thing.width).floor + 30, 80, 70);
+        var knob = EZKnob(view, knobBounds, param.name, param.spec, { |knob| thing.set(param.name, knob.value) }, param.val, labelWidth: 100, labelHeight: 15).setColors(knobColors: [Color.hsv(thing.hue, 0.4, 1), Color.hsv(thing.hue, 1, 0.675), Color.gray(0.5, 0.1), Color.black]);
         var dependantFunc = { |param, val|
           defer { knob.value = val };
         };
+        // they won't be red anymore, unless modulated by an input
         var redIndex = redParams.indexOf(param);
         var patchKnob;
         if (redIndex.notNil) {
           var patch = redPatches[redIndex];
           var spec = \amp.asSpec;
+          var hue = patch.fromThing.hue ?? 0;
           var dependantFunc = { |patch, what, val|
             defer {
               patchKnob.value = spec.unmap(val);
               patchView.refresh;
-              knob.setColors(stringColor: Color.hsv(0, 0.8, 0.4), background: Color.hsv(0, 0.5, 1, patch.amp.curvelin(0, 10, 0.02, 0.4, 4)));
-              patchKnob.color_([Color.red(1, patch.amp.curvelin(0, 10, 0.1, 0.3, 4)), Color.red(0.8, 0.5), Color.blue(1, 0.3)]);
+              knob.setColors(background: Color.hsv(hue, 0.5, 1, patch.amp.curvelin(0, 10, 0.02, 0.4, 4)));
+              patchKnob.color_([Color.hsv(hue, 1, 1, patch.amp.curvelin(0, 10, 0.1, 0.3, 4)), Color.hsv(hue, 0.8, 0.5), Color.gray(0.5, 0.1)]);
             };
           };
           patchKnob = Knob(view, Rect(knobBounds.left + 60, knobBounds.top, 20, 20)).action_{
@@ -317,39 +357,6 @@
       view;
     };
 
-    patchView.drawFunc_({ |v|
-      patches.collect { |patch|
-        var fromI = this.(patch.from.thingIndex).tryPerform(\index);
-        var toI = this.(patch.to.thingIndex).tryPerform(\index);
-        var toPoint = if (patch.to.index.isKindOf(Symbol)) {
-          knobPoints[toI][patch.to.index];
-        } {
-          if (toI.isNil) { v.bounds.width@dac[patch.to.index] } { inlets[toI][patch.to.index] };
-        };
-        var fromPoint = if (fromI.isNil) { 0@adc[patch.from.index] } { outlets[fromI][patch.from.index] };
-        var colorVal = (patch.amp.curvelin(0, 10, 0.1, 1, 4));
-        var color = if (patch.to.index.isKindOf(Symbol)) {
-          Pen.lineDash = FloatArray[2, 2];
-          Pen.width = 1;
-          Color.red(1, colorVal);
-        } {
-          Pen.lineDash = FloatArray[2, 0];
-          Pen.width = 1.5;
-          Color.hsv(patch.fromThing.hue, 1, 0.5, colorVal)
-        };
-
-        var p1 = fromPoint;
-        var p2 = toPoint;
-        var offset = Point(0, max(((p2.y - p1.y) / 2), max((p1.y - p2.y) / 3, if (p2.y < p1.y) { 80 } { 40 })));
-        var sideoffset = Point(max((p2.x - p1.x) / 4, max((p1.x - p2.x) / 8, 5)), 0);
-
-        Pen.moveTo(p1);
-        Pen.curveTo(p2, p1 + sideoffset, p2 - sideoffset);
-        Pen.color_(color);
-        Pen.stroke;
-      };
-    });
-
     adc.do { |y|
       View(w, Rect(0, y - 2, 7, 5)).background_(Color.black);
     };
@@ -359,7 +366,7 @@
     things.do { |thing|
       left = left + thing.left;
       thingView.(thing, w, left);
-      left = left + (90 * thing.width) + 10;
+      left = left + (90 * thing.width) + 15;
     };
 
     ^w;

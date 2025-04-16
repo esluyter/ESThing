@@ -135,7 +135,7 @@ ESThing {
   *initClass {
     defaultMidicpsFunc = { |num| num.midicps };
     defaultVelampFunc = { |vel| vel.linexp(0, 1, 0.05, 1) };
-    hueList = [ 0.9, 0.4, 0.8, 0.2, 0.7, 0.0, 0.5, 0.3, 0.6, 0.1 ];
+    hueList = [ 0.55, 0.3, 0.0, 0.8, 0.5, 0.1, 0.65, 0.35, 0.9, 0.2 ];
   }
 
   storeArgs { ^[name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID] }
