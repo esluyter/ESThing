@@ -1,12 +1,12 @@
 ESThingPlayer {
-  var <ts, <>knobFunc, <>knobArr, <>ccExclude;
+  var <ts, <>knobFunc, <>knobArr, <>ccExclude, <>modExclude;
   var <noteOnMf, <noteOffMf, <bendMf, <touchMf, <polytouchMf, <ccMf;
   var <win, <winBounds;
   var <isPlaying = false;
 
-  *new { |ts, knobFunc, knobArr = ([]), ccExclude = ([])|
+  *new { |ts, knobFunc, knobArr = ([]), ccExclude = ([]), modExclude = ([])|
     ts = ts ?? { ESThingSpace() };
-    ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude).initMidi;
+    ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude, modExclude).initMidi;
   }
 
   initMidi {
@@ -38,11 +38,10 @@ ESThingPlayer {
     });
     ccMf = MIDIFunc.cc({ |val, num, chan, src|
       // mod wheel
-      // TODO set flag to not use this for e.g. mftwister
-      if (num == 1) {
+      if ((num == 1) and: modExclude.indexOf(src).isNil) {
         checkChans.(chan, src, { |thing| thing.set127(\mod, val) });
       };
-      // TODO: check that src is the accepted src, then do the control action
+      // check that src is an accepted src, then do the control action
       if (ccExclude.indexOf(src).isNil) {
         this.control(chan, num, val);
         knobFunc.(ts, val, num, chan, src);
@@ -102,7 +101,13 @@ ESThingPlayer {
     } .flat;
   }
 
-  exclude { |device|
-    ccExclude = ccExclude.add(device.uid)
+  exclude { |device, excludeMod = true, excludeCc = true|
+    var uid = if (device.isInteger) { device } { device.uid };
+    if (excludeCc) {
+      ccExclude = ccExclude.add(device.uid);
+    };
+    if (excludeMod) {
+      modExclude = modExclude.add(device.uid);
+    };
   }
 }
