@@ -1,12 +1,12 @@
 ESThingPlayer {
-  var <ts, <>knobFunc, <>knobArr;
+  var <ts, <>knobFunc, <>knobArr, <>ccExclude;
   var <noteOnMf, <noteOffMf, <bendMf, <touchMf, <polytouchMf, <ccMf;
   var <win, <winBounds;
   var <isPlaying = false;
 
-  *new { |ts, knobFunc, knobArr = ([])|
+  *new { |ts, knobFunc, knobArr = ([]), ccExclude = ([])|
     ts = ts ?? { ESThingSpace() };
-    ^super.newCopyArgs(ts, knobFunc, knobArr).initMidi;
+    ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude).initMidi;
   }
 
   initMidi {
@@ -43,8 +43,10 @@ ESThingPlayer {
         checkChans.(chan, src, { |thing| thing.set127(\mod, val) });
       };
       // TODO: check that src is the accepted src, then do the control action
-      this.control(chan, num, val);
-      knobFunc.(ts, val, num, chan, src);
+      if (ccExclude.indexOf(src).isNil) {
+        this.control(chan, num, val);
+        knobFunc.(ts, val, num, chan, src);
+      };
     });
   }
 
@@ -98,5 +100,9 @@ ESThingPlayer {
       ccStart = ccStart + 1;
       ret
     } .flat;
+  }
+
+  exclude { |device|
+    ccExclude = ccExclude.add(device.uid)
   }
 }
