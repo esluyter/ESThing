@@ -267,7 +267,7 @@
           Pen.lineDash = FloatArray[3, 1];
           Pen.width = 1.5;
           // default to red if hue is nil
-          Color.hsv(hue ?? 0, 1, 0.5, colorVal);
+          Color.hsv(hue ?? 0, 1, 0.5, colorVal * 1.25);
         } {
           Pen.lineDash = FloatArray[2, 0];
           // wider for input
@@ -292,7 +292,7 @@
       var top = thing.top + 20 + (30 * thing.index);
       var width = 90 * thing.width;
       var height = thing.params.size / thing.width * 75 + 40;
-      var view = UserView(parentView, Rect(left, top, width, height)).background_(Color.hsv(thing.hue, 0.025, 1, 0.85)).drawFunc_({ |view|
+      var view = UserView(parentView, Rect(left, top, width, height)).background_(Color.hsv(thing.hue, 0.05, 1, 0.8)).drawFunc_({ |view|
         Pen.use {
           Pen.addRect(view.bounds.copy.origin_(0@0));
           Pen.color = Color.hsv(thing.hue, 1, 0.5);
@@ -309,7 +309,7 @@
       thing.params.do { |param, i|
         var point = (left + 72 + (90 * (i % thing.width)))@(75 * (i / thing.width).floor + 40 + top);
         var knobBounds = Rect(5 + (90 * (i % thing.width)), 75 * (i / thing.width).floor + 30, 80, 70);
-        var knob = EZKnob(view, knobBounds, param.name, param.spec, { |knob| thing.set(param.name, knob.value) }, param.val, labelWidth: 100, labelHeight: 15).setColors(knobColors: [Color.hsv(thing.hue, 0.4, 1), Color.hsv(thing.hue, 1, 0.675), Color.gray(0.5, 0.1), Color.black]);
+        var knob = EZKnob(view, knobBounds, param.name, param.spec, { |knob| thing.set(param.name, knob.value) }, param.val, labelWidth: 100, labelHeight: 15).setColors(stringColor: Color.hsv(thing.hue, 1, 0.35), knobColors: [Color.hsv(thing.hue, 0.4, 1), Color.hsv(thing.hue, 1, 0.675), Color.gray(0.5, 0.1), Color.black]);
         var dependantFunc = { |param, val|
           defer { knob.value = val };
         };
@@ -366,7 +366,7 @@
     things.do { |thing|
       left = left + thing.left;
       thingView.(thing, w, left);
-      left = left + (90 * thing.width) + 15;
+      left = left + (90 * thing.width) + if (thing.left.isNegative) { 30 } { 15 };
     };
 
     ^w;
