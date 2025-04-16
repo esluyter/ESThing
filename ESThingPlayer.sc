@@ -38,17 +38,24 @@ ESThingPlayer {
     });
     ccMf = MIDIFunc.cc({ |val, num, chan, src|
       // mod wheel
+      // TODO set flag to not use this for e.g. mftwister
       if (num == 1) {
         checkChans.(chan, src, { |thing| thing.set127(\mod, val) });
       };
+      // TODO: check that src is the accepted src, then do the control action
+      this.control(chan, num, val);
       knobFunc.(ts, val, num, chan, src);
-      knobArr.pairsDo { |key, value|
+    });
+  }
+
+  // this is so it can be used as out device by controller...
+  control { |chan = 0, num = 0, val = 0|
+    knobArr.pairsDo { |key, value|
         if (num == key) {
           // modulate parameter
           ts.(value.key).set127(value.value, val);
         };
       };
-    });
   }
 
   play {

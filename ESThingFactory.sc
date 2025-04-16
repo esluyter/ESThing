@@ -366,6 +366,7 @@
     things.do { |thing|
       left = left + thing.left;
       thingView.(thing, w, left);
+      // TODO: add space if thing to left runs into this
       left = left + (90 * thing.width) + if (thing.left.isNegative) { 30 } { 15 };
     };
 
