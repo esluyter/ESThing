@@ -38,6 +38,18 @@ ESThingParam {
   }
   value { ^val }
   moddedVal { ^moddedVal ? val }
+  asPattern { ^Pfunc { this.moddedVal } }
+  embedInStream { arg inval;
+    this.moddedVal.embedInStream(inval);
+    ^inval;
+  }
+  asStream {
+    ^Routine({ arg inval;
+      loop {
+        this.embedInStream(inval)
+      }
+    })
+  }
 }
 
 ESThingPatch {
