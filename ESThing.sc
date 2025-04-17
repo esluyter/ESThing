@@ -143,14 +143,13 @@ ESThing {
   var <params, <oldParams;
   var <>inbus, <>outbus, <>group;
   var <>environment, <>parentSpace;
-  var <>hue;
+  var <>hue = 0.5;
 
-  classvar <>hueList, <>hueIndex = 0;
+
   classvar <>defaultMidicpsFunc, <>defaultVelampFunc;
   *initClass {
     defaultMidicpsFunc = { |num| num.midicps };
     defaultVelampFunc = { |vel| vel.linexp(0, 1, 0.05, 1) };
-    hueList = [ 0.55, 0.3, 0.0, 0.8, 0.5, 0.1, 0.65, 0.35, 0.9, 0.2 ];
   }
 
   storeArgs { ^[name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID] }
@@ -162,8 +161,6 @@ ESThing {
   prInit {
     environment = ();
     oldParams = ();
-    hue = hueList[hueIndex];
-    hueIndex = hueIndex + 1 % hueList.size;
   }
   params_ { |arr|
     params = arr.asArray.collect { |param|
@@ -299,9 +296,9 @@ ESThingSpace {
   }
   *new { |things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels = 2, outChannels = 2, useADC = true, useDAC = true, target, oldSpace|
     // syntactic sugar
-    ESThing.hueIndex = 0;
+    var hueList = [ 0.55, 0.3, 0.0, 0.8, 0.5, 0.1, 0.65, 0.35, 0.9, 0.2 ], hueIndex = 0;
     things = things.asArray.collect { |thing|
-      if (thing.isKindOf(ESThing)) {
+      thing = if (thing.isKindOf(ESThing)) {
         thing
       } {
         if (thing.isKindOf(Association)) {
@@ -349,6 +346,9 @@ ESThingSpace {
           thing
         };
       };
+      thing.hue = hueList[hueIndex];
+      hueIndex = hueIndex + 1 % hueList.size;
+      thing;
     };
     patches = patches.asArray.collect { |patch|
       var n;
