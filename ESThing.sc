@@ -1,6 +1,7 @@
 ESThingParam {
   var <name, <spec, <func, <val;
   var <>parentThing;
+  var moddedVal;
   storeArgs { ^[name, spec, func, val] }
   *new { |name, spec, func, val|
     spec = (spec ?? { name } ?? { ControlSpec() }).asSpec;
@@ -30,11 +31,13 @@ ESThingParam {
     ^this.valNorm * 127;
   }
   setModulator { |modVal|
+    moddedVal = spec.map(spec.unmap(val) + modVal);
     Server.default.bind {
-      func.value(name, spec.map(spec.unmap(val) + modVal), parentThing);
+      func.value(name, moddedVal, parentThing);
     };
   }
   value { ^val }
+  moddedVal { ^moddedVal ? val }
 }
 
 ESThingPatch {
@@ -213,7 +216,7 @@ ESThing {
   }
 
   at { |sym|
-    ^this.paramAt(sym).value ?? { environment.at(sym) ?? { if (parentSpace.notNil) { parentSpace.environment.at(sym) } } };
+    ^this.paramAt(sym).tryPerform(\moddedVal) ?? { environment.at(sym) ?? { if (parentSpace.notNil) { parentSpace.environment.at(sym) } } };
   }
   put { |key, val|
     var param = this.paramAt(key);
