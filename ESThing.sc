@@ -2,6 +2,7 @@ ESThingParam {
   var <name, <spec, <func, <val;
   var <>parentThing;
   var moddedVal;
+  var <modPatch;
   storeArgs { ^[name, spec, func, val] }
   *new { |name, spec, func, val|
     spec = (spec ?? { name } ?? { ControlSpec() }).asSpec;
@@ -30,11 +31,16 @@ ESThingParam {
   val127 {
     ^this.valNorm * 127;
   }
+  setModPatch { |patch|
+    modPatch = patch;
+  }
   setModulator { |modVal|
     moddedVal = spec.map(spec.unmap(val) + modVal);
+    /* TODO: figure out logic for this
     Server.default.bind {
       func.value(name, moddedVal, parentThing);
     };
+    */
   }
   value { ^val }
   moddedVal { ^moddedVal ? val }
@@ -95,6 +101,7 @@ ESThingPatch {
     var toThing = this.toThing;
     var target = toThing.asTarget ?? { addAction = \addAfter; things.last.asTarget };
     if (to.index.isKindOf(Symbol)) {
+      var toParam = toThing.(to.index);
       synth = Synth(\ESThingReply, [
         in: fromThing.outbus.index + from.index,
         id: this.index
@@ -102,9 +109,10 @@ ESThingPatch {
       oscFunc = OSCFunc({ |msg|
         if (msg[2] == this.index) {
           var modVal = msg[3] * amp;
-          toThing.(to.index).setModulator(modVal);
+          toParam.setModulator(modVal);
         };
       }, '/ESThingReply');
+      toParam.setModPatch(this);
     } {
       synth = Synth(\ESThingPatch, [
         in: fromThing.outbus.index + from.index,
@@ -225,7 +233,7 @@ ESThing {
   }
 
   at { |sym|
-    ^this.paramAt(sym).tryPerform(\moddedVal) ?? { environment.at(sym) ?? { if (parentSpace.notNil) { parentSpace.environment.at(sym) } } };
+    ^this.paramAt(sym) ?? { environment.at(sym) ?? { if (parentSpace.notNil) { parentSpace.environment.at(sym) } } };
   }
   put { |key, val|
     var param = this.paramAt(key);
@@ -486,15 +494,7 @@ ESThingSpace {
     ^nil;
   }
   thingAt { |sym|
-    if (sym.isInteger) {
-      ^things[sym]
-    };
-    things.do { |thing|
-      if (thing.name == sym) {
-        ^thing
-      };
-    };
-    ^nil;
+    ^this.class.thingAt(sym, this.things);
   }
   params {
     ^things.collect(_.params).flat;
