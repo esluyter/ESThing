@@ -72,6 +72,11 @@ ESThingParam {
       }
     })
   }
+  free {
+    modBus.free;
+    modSynth.free;
+    this.release;
+  }
 }
 
 ESThingPatch {
@@ -300,6 +305,7 @@ ESThing {
     freeFunc.value(this);
     inbus.free;
     outbus.free;
+    params.do(_.free);
   }
 
   at { |sym|
