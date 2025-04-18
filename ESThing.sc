@@ -2,21 +2,29 @@ ESThingParam {
   var <name, <spec, <func, <val;
   var <>parentThing;
   var moddedVal;
-  var <modPatch;
+  var <modPatch, <modSynth, <modBus;
   storeArgs { ^[name, spec, func, val] }
   *new { |name, spec, func, val|
     spec = (spec ?? { name } ?? { ControlSpec() }).asSpec;
-    func = func ? { |name, val, thing|
-      thing[\synth].set(name, val);
-      thing[\synths].do({ |synth| synth.set(name, val) });
+    func = func ? { |name, val, synthVal, thing|
+      thing[\synth].set(name, synthVal);
+      thing[\synths].do({ |synth| synth.set(name, synthVal) });
     };
     val = val ?? { spec.default };
     ^super.newCopyArgs(name, spec, func, val);
   }
+  synthVal {
+    ^if (modBus.notNil) {
+      modBus.asMap;
+    } {
+      val;
+    }
+  }
   val_ { |argval|
     val = argval;
+    if (modSynth.notNil) { modSynth.set(\val, val) };
     //[name, val].postln;
-    func.value(name, val, parentThing);
+    func.value(name, val, this.synthVal, parentThing);
     this.changed(val);
   }
   valNorm_ { |argval|
@@ -31,8 +39,16 @@ ESThingParam {
   val127 {
     ^this.valNorm * 127;
   }
-  setModPatch { |patch|
+  setModPatch { |patch, inBus|
+    var args;
     modPatch = patch;
+    modBus = Bus.audio(Server.default);
+    args = [out: modBus, in: inBus, amp: patch.amp, val: val, minval: spec.minval, maxval: spec.maxval, step: spec.step];
+    if (spec.warp.class == CurveWarp) {
+      args = args ++ [curve: spec.warp.curve];
+    };
+    modSynth = Synth(("ESmodulate" ++ spec.warp.class.asString).asSymbol, args, patch.synth, \addAfter);
+    this.val_(val);
   }
   setModulator { |modVal|
     moddedVal = spec.map(spec.unmap(val) + modVal);
@@ -64,6 +80,58 @@ ESThingPatch {
   var <>parentSpace;
   *initClass {
     ServerBoot.add {
+      var warpModFuncs = ();
+      [CosineWarp, SineWarp, LinearWarp, ExponentialWarp].do { |warp|
+        warpModFuncs[warp] = { |val, modVal, minval, maxval, step|
+          var spec = ControlSpec(minval, maxval, warp, step);
+          var unmappedVal = spec.unmap(val);
+          var moddedVal = unmappedVal + modVal;
+          spec.map(moddedVal);
+        };
+      };
+      warpModFuncs[DbFaderWarp] = { |val, modVal, minval, maxval, step|
+        var valAmp = val.dbamp;
+        var minvalAmp = minval.dbamp;
+        var rangeAmp = maxval.dbamp - minvalAmp;
+        var unmappedVal = Select.kr(rangeAmp > 0, [
+          1 - sqrt(1 - ((valAmp - minvalAmp) / rangeAmp)),
+          ((valAmp - minvalAmp) / rangeAmp).sqrt
+        ]);
+        var moddedVal = (unmappedVal + modVal).clip(0, 1);
+        Select.ar(K2A.ar(rangeAmp > 0), [
+          (1 - (1 - moddedVal).squared) * rangeAmp + minvalAmp,
+          moddedVal.squared * rangeAmp + minvalAmp
+        ]).ampdb;
+      };
+      warpModFuncs[FaderWarp] = { |val, modVal, minval, maxval, step|
+        var range = maxval - minval;
+        var unmappedVal = Select.kr(range > 0, [
+          1 - sqrt(1 - ((val - minval) / range)),
+          ((val - minval) / range).sqrt
+        ]);
+        var moddedVal = (unmappedVal + modVal).clip(0, 1);
+        Select.ar(K2A.ar(range > 0), [
+          (1 - (1 - moddedVal).squared) * range + minval,
+          moddedVal.squared * range + minval
+        ]);
+      };
+      warpModFuncs.keysValuesDo { |warp, func|
+        var defName = ("ESmodulate" ++ warp.asString).asSymbol;
+        SynthDef(defName, { |out, in, amp, val, minval, maxval, step|
+          var modVal = InFeedback.ar(in) * amp;
+          Out.ar(out, func.(val, modVal, minval, maxval, step));
+        }).add;
+      };
+      SynthDef(\ESmodulateCurveWarp, { |out, in, amp, val, minval, maxval, step, curve|
+        var range = maxval - minval;
+        var grow = exp(curve);
+        var a = range / (1.0 - grow);
+        var b = minval + a;
+        var modVal = InFeedback.ar(in) * amp;
+        var unmappedVal = log((b - val) / a) / curve;
+        var moddedVal = unmappedVal + modVal;
+        Out.ar(out, b - (a * pow(grow, moddedVal)));
+      }).add;
       SynthDef(\ESThingPatch, { |in, out, amp|
         Out.ar(out, InFeedback.ar(in) * amp);
       }).add;
@@ -102,8 +170,9 @@ ESThingPatch {
     var target = toThing.asTarget ?? { addAction = \addAfter; things.last.asTarget };
     if (to.index.isKindOf(Symbol)) {
       var toParam = toThing.(to.index);
+      var inBus = fromThing.outbus.index + from.index;
       synth = Synth(\ESThingReply, [
-        in: fromThing.outbus.index + from.index,
+        in: inBus,
         id: this.index
       ], target, addAction);
       oscFunc = OSCFunc({ |msg|
@@ -112,7 +181,7 @@ ESThingPatch {
           toParam.setModulator(modVal);
         };
       }, '/ESThingReply');
-      toParam.setModPatch(this);
+      toParam.setModPatch(this, inBus);
     } {
       synth = Synth(\ESThingPatch, [
         in: fromThing.outbus.index + from.index,
@@ -128,6 +197,7 @@ ESThingPatch {
   amp_ { |val|
     amp = val;
     synth.set(\amp, val);
+    this.toThing.(to.index).modSynth.set(\amp, val);
     this.changed(\amp, val);
   }
   amp127_ { |midival|

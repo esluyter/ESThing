@@ -87,7 +87,7 @@
         thing[\synths] = ();
       },
       noteOnFunc: { |thing, num, vel| // note: vel is mapped 0-1
-        var defaults = thing.params.collect({ |param| [param.name, param.val] }).flat;
+        var defaults = thing.params.collect({ |param| [param.name, param.synthVal] }).flat;
         var freq = thing.midicpsFunc.(num);
         var amp = thing.velampFunc.(vel);
         thing[\synths][num].free;
@@ -131,7 +131,7 @@
         thing[\noteStack] = [];
       },
       playFunc: { |thing|
-        var defaults = thing.params.collect({ |param| [param.name, param.val] }).flat;
+        var defaults = thing.params.collect({ |param| [param.name, param.synthVal] }).flat;
         thing[\synth] = Synth(thing.defName, [out: thing.outbus, in: thing.inbus, doneAction: 0, amp: 0, gate: 0, bend: thing[\bend]] ++ thing.args ++ defaults, thing.group);
       },
       stopFunc: { |thing|
@@ -184,7 +184,7 @@
         thing[\noteStack] = [];
       },
       playFunc: { |thing|
-        var defaults = thing.params.collect({ |param| [param.name, param.val] }).flat;
+        var defaults = thing.params.collect({ |param| [param.name, param.synthVal] }).flat;
         thing[\synth] = Synth(thing.defName, [out: thing.outbus, in: thing.inbus, bend: thing[\bend]] ++ thing.args ++ defaults, thing.group);
       },
       stopFunc: { |thing|
