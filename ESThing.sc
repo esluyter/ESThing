@@ -3,6 +3,7 @@ ESThingParam {
   var <>parentThing;
   var moddedVal;
   var <modPatch, <modSynth, <modBus;
+  var rout;
   storeArgs { ^[name, spec, func, val] }
   *new { |name, spec, func, val|
     spec = (spec ?? { name } ?? { ControlSpec() }).asSpec;
@@ -20,15 +21,16 @@ ESThingParam {
       val;
     }
   }
-  val_ { |argval|
+  val_ { |argval, stopRout = true|
+    if (stopRout) { rout.stop; rout = nil; };
     val = argval;
     if (modSynth.notNil) { modSynth.set(\val, val) };
     //[name, val].postln;
     func.value(name, val, this.synthVal, parentThing);
     this.changed(val);
   }
-  valNorm_ { |argval|
-    this.val_(spec.map(argval));
+  valNorm_ { |argval, stopRout = true|
+    this.val_(spec.map(argval), stopRout);
   }
   val127_ { |midival|
     this.valNorm_(midival / 127);
@@ -38,6 +40,26 @@ ESThingParam {
   }
   val127 {
     ^this.valNorm * 127;
+  }
+  fadeTo { |value = 0, dur = 1, curve = \sin, hz = 30, clock|
+    var fromValNorm = this.valNorm;
+    var toValNorm = spec.unmap(value);
+    clock = clock ?? SystemClock;
+    rout.stop;
+    rout = nil;
+    if (dur == 0) {
+      this.val_(value, false);
+    } {
+      var waittime = hz.reciprocal;
+      var env = Env([fromValNorm, toValNorm], [dur], curve);
+      var iterations = (dur * hz).floor;
+      rout = {
+        iterations.do { |i|
+          this.valNorm_(env.at((i + 1) * waittime), false);
+          waittime.wait;
+        };
+      }.fork(clock);
+    }
   }
   setModPatch { |patch, inBus|
     var args;
