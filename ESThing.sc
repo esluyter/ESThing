@@ -1,9 +1,10 @@
 ESThingParam {
-  var <name, <spec, <func, <val;
+  var <name, <spec, <>func, <val;
   var <>parentThing;
   var moddedVal;
   var <modPatch, <modSynth, <modBus;
   var rout;
+  var <>hue;
   storeArgs { ^[name, spec, func, val] }
   *new { |name, spec, func, val|
     spec = (spec ?? { name } ?? { ControlSpec() }).asSpec;
@@ -74,11 +75,11 @@ ESThingParam {
   }
   setModulator { |modVal|
     moddedVal = spec.map(spec.unmap(val) + modVal);
-    /* TODO: figure out logic for this
-    Server.default.bind {
-      func.value(name, moddedVal, parentThing);
+    if (parentThing.callFuncOnParamModulate) {
+      Server.default.bind {
+        func.value(name, moddedVal, moddedVal, parentThing);
+      };
     };
-    */
   }
   value { ^val }
   moddedVal { ^moddedVal ? val }
@@ -244,7 +245,7 @@ ESThingPatch {
 
 
 ESThing {
-  var <>name, <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <inChannels, <outChannels, <>midicpsFunc, <>velampFunc, <>defName, <>args, <>func, <>top, <>left, <>width, <>midiChannel, <>srcID;
+  var <>name, <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <inChannels, <outChannels, <>midicpsFunc, <>velampFunc, <>defName, <>args, <>func, <>top, <>left, <>width, <>midiChannel, <>srcID, <>callFuncOnParamModulate;
   var <params, <oldParams;
   var <>inbus, <>outbus, <>group;
   var <>environment, <>parentSpace;
@@ -257,11 +258,11 @@ ESThing {
     defaultVelampFunc = { |vel| vel.linexp(0, 1, 0.05, 1) };
   }
 
-  storeArgs { ^[name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID] }
-  *new { |name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, defName, args, func, top = 0, left = 0, width = 1, midiChannel, srcID|
+  storeArgs { ^[name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID, callFuncOnParamModulate] }
+  *new { |name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, defName, args, func, top = 0, left = 0, width = 1, midiChannel, srcID, callFuncOnParamModulate = false|
     midicpsFunc = midicpsFunc ? defaultMidicpsFunc;
     velampFunc = velampFunc ? defaultVelampFunc;
-    ^super.newCopyArgs(name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID).prInit.params_(params);
+    ^super.newCopyArgs(name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID, callFuncOnParamModulate).prInit.params_(params);
   }
   prInit {
     environment = ();
