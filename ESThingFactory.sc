@@ -243,7 +243,7 @@
 
 
 +ESThingSpace {
-  makeWindow { |winBounds|
+  makeWindow { |winBounds, title = "Space"|
     var bounds = winBounds ?? { Rect(0, 80, 650, 800) };
     var winWidth = bounds.width;
     var left = 20;
@@ -253,7 +253,7 @@
     var adc = inChannels.collect { |i| i * 50 + 25 };
     var dac = outChannels.collect { |i| i * 50 + 25 };
 
-    var w = Window("Space", bounds).background_(Color.gray(0.95)).front;
+    var w = Window(title, bounds).background_(Color.gray(0.95)).front;
 
     // for knobs later
     var redPatches = patches.select { |patch| patch.to.index.isKindOf(Symbol) };
@@ -318,7 +318,7 @@
           if (clickCount == 2) {
             if (thing[\space].class == ESThingSpace) {
               w !? { w.close };
-              w = thing[\space].makeWindow;
+              w = thing[\space].makeWindow(Rect(850, 80, 650, 800), thing.name);
             };
           };
         };
