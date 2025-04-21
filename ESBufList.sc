@@ -107,7 +107,9 @@ ESBufList {
     if (index.isInteger) { res = bufs[index] };
     if (index.isKindOf(Symbol)) { res = bufs.select { |buf| buf.name == index } [0] };
     if (res.isNil) {
-      ^nil;
+      // default to 0
+      // so can be used in play func synth
+      ^0;
     } {
       ^res[\buf];
     };

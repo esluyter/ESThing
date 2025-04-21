@@ -334,7 +334,9 @@ ESThing {
   }
 
   at { |sym|
-    ^this.paramAt(sym) ?? { environment.at(sym) ?? { if (parentSpace.notNil) { parentSpace.environment.at(sym) } } };
+    // default to 0
+    // so it's ok to use thing[\buf] in a play func
+    ^(this.paramAt(sym) ?? { environment.at(sym) ?? { if (parentSpace.notNil) { parentSpace.environment.at(sym) } } }) ? 0;
   }
   put { |key, val|
     var param = this.paramAt(key);
@@ -575,7 +577,9 @@ ESThingSpace {
   }
 
   at { |sym|
-    ^this.thingAt(sym) ?? environment.at(sym);
+    // default to 0 if symbol not found
+    // this is so it's ok to use thing[\buf] in a play func
+    ^(this.thingAt(sym) ? environment.at(sym)) ? 0;
   }
   put { |key, val|
     environment.put(key, val);

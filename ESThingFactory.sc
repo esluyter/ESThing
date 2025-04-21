@@ -312,8 +312,16 @@
       var newOutlets = [];
       var newKnobPoints = ();
       var blah = (thing.params.size / thing.width).ceil.postln;
+      var w;
       if (thing.name.notNil) {
-        StaticText(view, Rect(5, 3, width, 20)).string_(thing.name).font_(Font.sansSerif(14, true)).stringColor_(Color.hsv(thing.hue, 1, 0.5));
+        StaticText(view, Rect(5, 3, width, 20)).string_(thing.name).font_(Font.sansSerif(14, true)).stringColor_(Color.hsv(thing.hue, 1, 0.5)).mouseDownAction_{ |v, x, y, mods, buttNum, clickCount|
+          if (clickCount == 2) {
+            if (thing[\space].class == ESThingSpace) {
+              w !? { w.close };
+              w = thing[\space].makeWindow;
+            };
+          };
+        };
       };
       thing.params.do { |param, i|
         var hue = param.hue ? thing.hue;
