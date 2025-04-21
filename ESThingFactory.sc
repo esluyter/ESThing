@@ -1,13 +1,21 @@
 + ESThing {
   *playFuncSynth { |name, func, params, inChannels = 2, outChannels = 2, top = 0, left = 0, width = 1, midiChannel, srcID|
     ^ESThing(name,
-      playFunc: { |thing|
+      prInitFunc: { |thing|
         var funcToPlay = if (func.def.argNames.first == \thing) {
           func.value(thing)
         } {
           func
         };
         thing.params = params ?? { var def = funcToPlay.asSynthDef; this.prMakeParams(def.allControlNames, false, def) };
+      },
+      playFunc: { |thing|
+        var funcToPlay = if (func.def.argNames.first == \thing) {
+          func.value(thing)
+        } {
+          func
+        };
+        //thing.params = params ?? { var def = funcToPlay.asSynthDef; this.prMakeParams(def.allControlNames, false, def) };
         thing[\synth] = funcToPlay.play(thing.group, thing.outbus, fadeTime: 0, args: [in: thing.inbus]);
       },
       stopFunc: { |thing|
