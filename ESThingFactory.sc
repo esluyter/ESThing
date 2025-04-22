@@ -297,9 +297,11 @@
     });
 
     var thingView = { |thing, parentView, left|
+      var columnSpec = thing.columnSpec;
+      var columnMax = columnSpec.maxItem(_.value);
       var top = thing.top + 20 + (30 * thing.index);
       var width = 90 * thing.width;
-      var height = max((thing.params.size / thing.width).ceil, max(thing.inChannels, thing.outChannels) / 2.5 - 0.5) * 75 + 40;
+      var height = max(columnMax, max(thing.inChannels, thing.outChannels) / 2.5 - 0.5) * 75 + 40;
       var view = UserView(parentView, Rect(left, top, width, height)).background_(Color.hsv(thing.hue, 0.05, 1, 0.8)).drawFunc_({ |view|
         Pen.use {
           Pen.addRect(view.bounds.copy.origin_(0@0));
@@ -311,8 +313,8 @@
       var newInlets = [];
       var newOutlets = [];
       var newKnobPoints = ();
-      var blah = (thing.params.size / thing.width).ceil.postln;
       var w;
+      var x = 0, y = 0;
       if (thing.name.notNil) {
         StaticText(view, Rect(5, 3, width, 20)).string_(thing.name).font_(Font.sansSerif(14, true)).stringColor_(Color.hsv(thing.hue, 1, 0.5)).mouseDownAction_{ |v, x, y, mods, buttNum, clickCount|
           if (clickCount == 2) {
@@ -325,8 +327,8 @@
       };
       thing.params.do { |param, i|
         var hue = param.hue ? thing.hue;
-        var point = (left + 72 + (90 * (i / blah).floor))@(75 * (i % blah) + 40 + top);
-        var knobBounds = Rect(5 + (90 * (i / blah).floor), 75 * (i % blah) + 30, 80, 70);
+        var point = (left + 72 + (90 * x))@((75 * y) + 40 + top);
+        var knobBounds = Rect(5 + (90 * x), (75 * y) + 30, 80, 70);
         var knob = EZKnob(view, knobBounds, param.name, param.spec, { |knob| thing.set(param.name, knob.value) }, param.val, labelWidth: 100, labelHeight: 15).setColors(stringColor: Color.hsv(hue, 1, 0.35), knobColors: [Color.hsv(hue, 0.4, 1), Color.hsv(hue, 1, 0.675), Color.gray(0.5, 0.1), Color.black]);
         var dependantFunc = { |param, val|
           defer { knob.value = val };
@@ -356,6 +358,11 @@
         param.addDependant(dependantFunc);
         knob.onClose = { param.removeDependant(dependantFunc) };
         newKnobPoints[param.name] = point;
+        y = y + 1;
+        if (y >= columnSpec[x]) {
+          y = 0;
+          x = x + 1;
+        };
       };
       thing.inChannels.do { |i|
         var thisLeft = left - 1;

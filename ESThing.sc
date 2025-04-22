@@ -244,19 +244,33 @@ ESThingPatch {
 
 
 
-ESThing {
-  var <>name, <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <inChannels, <outChannels, <>midicpsFunc, <>velampFunc, <>defName, <>args, <>func, <>top, <>left, <>width, <>midiChannel, <>srcID, <>callFuncOnParamModulate, <>prInitFunc;
+ESThing { // n.b. width can be array of knobs per column
+  var <>name, <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <inChannels, <outChannels, <>midicpsFunc, <>velampFunc, <>defName, <>args, <>func, <>top, <>left, >width, <>midiChannel, <>srcID, <>callFuncOnParamModulate, <>prInitFunc;
   var <params, <oldParams;
   var <>inbus, <>outbus, <>group;
   var <>environment, <>parentSpace;
   var <>hue = 0.5;
-
 
   classvar <>defaultMidicpsFunc, <>defaultVelampFunc;
   *initClass {
     defaultMidicpsFunc = { |num| num.midicps };
     defaultVelampFunc = { |vel| vel.linexp(0, 1, 0.05, 1) };
   }
+
+  width { ^if (width.isArray) { width.size } { width } }
+  columnSpec {
+    if (width.isArray) {
+      ^width
+    } {
+      var sizes = 0.dup(width);
+      params.size.do { |i|
+        var indx = i % width;
+        sizes[indx] = sizes[indx] + 1;
+      };
+      ^sizes
+    };
+  }
+
 
   storeArgs { ^[name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID, callFuncOnParamModulate, prInitFunc] }
   *new { |name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, defName, args, func, top = 0, left = 0, width = 1, midiChannel, srcID, callFuncOnParamModulate = false, prInitFunc|
