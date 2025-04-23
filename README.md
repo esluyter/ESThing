@@ -107,6 +107,7 @@ gain knob
 (
 ~tp = ESThingPlayer();
 ~tp.play;
+~bufs = ESBufList('bufs', [ ( 'name': 'testing', 'buf': Platform.resourceDir +/+ "sounds/a11wlk01.wav" ) ]).makeWindow;
 )
 
 // main (reevaluate to update graph, thing parameters will remember their current values)
