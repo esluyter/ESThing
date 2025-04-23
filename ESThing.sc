@@ -9,7 +9,9 @@ ESThingParam {
   *new { |name, spec, func, val|
     spec = (spec ?? { name } ?? { ControlSpec() }).asSpec;
     func = func ? { |name, val, synthVal, thing|
-      thing[\synth].set(name, synthVal);
+      if (thing[\synth].class == Synth) {
+        thing[\synth].set(name, synthVal);
+      };
       thing[\synths].do({ |synth| synth.set(name, synthVal) });
     };
     val = val ?? { spec.default };
@@ -106,6 +108,7 @@ ESThingPatch {
   var <name, <from, <to, <amp;
   var <synth, <oscFunc;
   var <>parentSpace;
+  var rout;
   *initClass {
     ServerBoot.add {
       var warpModFuncs = ();
@@ -228,8 +231,34 @@ ESThingPatch {
     this.toThing.(to.index).modSynth.set(\amp, val);
     this.changed(\amp, val);
   }
+  ampNorm_ { |val|
+    this.amp_(\amp.asSpec.map(val));
+  }
   amp127_ { |midival|
-    this.amp_(\amp.asSpec.map(midival / 127));
+    this.ampNorm_(midival / 127);
+  }
+  ampNorm { ^\amp.asSpec.unmap(amp) }
+  amp127 { ^this.ampNorm * 127 }
+  fadeTo { |value = 0, dur = 1, curve = \sin, hz = 30, clock|
+    var spec = \amp.asSpec;
+    var fromValNorm = this.ampNorm;
+    var toValNorm = spec.unmap(value);
+    clock = clock ?? SystemClock;
+    rout.stop;
+    rout = nil;
+    if (dur == 0) {
+      this.amp_(value, false);
+    } {
+      var waittime = hz.reciprocal;
+      var env = Env([fromValNorm, toValNorm], [dur], curve);
+      var iterations = (dur * hz).floor;
+      rout = {
+        iterations.do { |i|
+          this.ampNorm_(env.at((i + 1) * waittime), false);
+          waittime.wait;
+        };
+      }.fork(clock);
+    }
   }
 
   index {
@@ -402,21 +431,22 @@ ESThingSpace {
   var <>environment;
 
   storeArgs { ^[things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, useADC, useDAC, target]}
+  modPatches {
+    ^patches.select { |patch| patch.to.index.isKindOf(Symbol) };
+  }
   postModPatches {
-    patches.do { |patch|
+    this.modPatches.do { |patch|
       // this doesn't work with backslash directly, so use question mark temp
-      if (patch.to.index.isKindOf(Symbol)) {
-        "(?% : ?%->?%, amp: %)".format(
-          if (patch.fromThing.outChannels == 1) {
-            patch.from.thingIndex
-          } {
-            "%->?%".format(patch.from.thingIndex, patch.from.index)
-          },
-          patch.to.thingIndex,
-          patch.to.index,
-          patch.amp
-        ).tr($?, $\\).postln;
-      };
+      "(?% : ?%->?%, amp: %)".format(
+        if (patch.fromThing.outChannels == 1) {
+          patch.from.thingIndex
+        } {
+          "%->?%".format(patch.from.thingIndex, patch.from.index)
+        },
+        patch.to.thingIndex,
+        patch.to.index,
+        patch.amp
+      ).tr($?, $\\).postln;
     };
   }
   *new { |things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels = 2, outChannels = 2, useADC = true, useDAC = true, target, oldSpace|
