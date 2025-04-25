@@ -1,12 +1,16 @@
 ESThingPlayer {
-  var <ts, <>knobFunc, <>knobArr, <>ccExclude, <>modExclude;
+  var <ts, <>knobFunc, <>knobArr, <>ccExclude, <>modExclude, <presets;
   var <noteOnMf, <noteOffMf, <bendMf, <touchMf, <polytouchMf, <ccMf;
   var <win, <winBounds;
   var <isPlaying = false;
 
   *new { |ts, knobFunc, knobArr = ([]), ccExclude = ([]), modExclude = ([])|
     ts = ts ?? { ESThingSpace() };
-    ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude, modExclude).initMidi;
+    ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude, modExclude).initMidi.initPresets;
+  }
+
+  initPresets {
+    presets = ESThingPresets(this);
   }
 
   initMidi {
