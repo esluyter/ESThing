@@ -555,12 +555,12 @@ ESThingSpace {
     things.do(_.parentSpace_(this));
     patches.do(_.parentSpace_(this));
     if (useADC) {
-      inbus = Server.default.options.numOutputBusChannels.asBus;
+      inbus = Server.default.options.numOutputBusChannels.asBus('audio', inChannels, Server.default);
     } {
       inbus = Bus.audio(Server.default, inChannels);
     };
     if (useDAC) {
-      outbus = 0.asBus;
+      outbus = 0.asBus('audio', outChannels, Server.default);
     } {
       outbus = Bus.audio(Server.default, outChannels);
     };

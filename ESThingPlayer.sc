@@ -3,10 +3,16 @@ ESThingPlayer {
   var <noteOnMf, <noteOffMf, <bendMf, <touchMf, <polytouchMf, <ccMf;
   var <win, <winBounds;
   var <isPlaying = false;
+  var <tsbus, <amp = 1, <synths;
 
   *new { |ts, knobFunc, knobArr = ([]), ccExclude = ([]), modExclude = ([])|
     ts = ts ?? { ESThingSpace() };
-    ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude, modExclude).initMidi.initPresets;
+    ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude, modExclude).initTsbus.initMidi.initPresets;
+  }
+
+  initTsbus {
+    tsbus = Bus.audio(Server.default, ts.outChannels);
+    ts.outbus = tsbus;
   }
 
   initPresets {
@@ -68,14 +74,22 @@ ESThingPlayer {
       ts.init;
       Server.default.sync;
       ts.play;
+      synths = tsbus.numChannels.collect { |i| Synth(\ESThingPatch, [in: tsbus.index + i, out: i, amp: amp], ts.group, \addAfter) };
       win = ts.makeWindow(winBounds);
       isPlaying = true;
     };
   }
 
+  amp_ { |val|
+    amp = val;
+    synths.do(_.set(\amp, amp));
+  }
+
   stop {
     ts.stop;
     ts.free;
+    synths.do(_.free);
+    synths = nil;
     win !? {
       winBounds = win.bounds;
       win.close
@@ -85,12 +99,14 @@ ESThingPlayer {
 
   free {
     [noteOnMf, noteOffMf, bendMf, touchMf, polytouchMf, ccMf].do(_.free);
+    tsbus.free;
   }
 
   ts_ { |val|
     if (isPlaying) {
       this.stop;
       ts = val;
+      ts.outbus = tsbus;
       this.play;
     } {
       ts = val;
