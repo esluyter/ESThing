@@ -186,26 +186,22 @@ ESThingOSCClient {
         if (msg.last == id) {
           client.fade = msg[1].asBoolean;
         };
-      }, "/button_fade");
+      }, "/button_fade"),
       OSCFunc({ |msg|
         if (msg.last == id) {
           client.tp.presets.defaultTime = ControlSpec(0, 120, 6, 0, 1, "sec").map(msg[1]);
         };
-      }, "/fader_fade");
+      }, "/fader_fade"),
+      OSCFunc({ |msg|
+        if (msg.last == id) {
+          client.tp.presets.capture;
+        };
+      }, "/button_capture"),
     ];
     /*
 
 
-    OSCdef(\capture, { |msg|
-      defer {
-        var value = ~list.value - 1 % ~list.items.size;
-        ~list.value = nil;
-        ~captureButt.action.();
-        ~list.value = value + 1;
-        n.sendMsg("/switch_1/values", *~list.items);
-        n.sendMsg("/switch_1", ~list.items[value])
-      }
-    }, "/button_capture");
+    ;
     OSCdef(\undo, { |msg|
       ~undoPreset !? { defer { ~restorePreset.(~undoPreset, if (~fade == 0) { 0 } { ~slider.value }); } };
     }, "/button_undo_preset");
