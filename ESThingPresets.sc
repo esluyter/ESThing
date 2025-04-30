@@ -98,49 +98,49 @@ ESThingPresets {
 
     list = ListView(w, Rect(0, 0, 200, w.bounds.height)).resize_(4).action_({
       if (list.items.size > 0) {
-        setTextViewString.(~tp.presets[list.value]);
+        setTextViewString.(tp.presets[list.value]);
       } {
         textView.string_("");
       };
     });
     populateList = {
       var value = list.value ?? 0;
-      list.items_(~tp.presets.displayNames);
+      list.items_(tp.presets.displayNames);
       list.valueAction = min(value, list.items.size - 1);
     };
     writeButt = Button(w, Rect(210, 5, 130, 20)).string_("Save to file");
     readButt = Button(w, Rect(350, 5, 130, 20)).string_("Open file");
 
-    slider = EZSlider(view, Rect(200, 0, 400, 20), "default time", ControlSpec(0, 120, 6, 0, 1, "sec"), labelWidth: 100, unitWidth: 25).value_(~tp.presets.defaultTime).action_{
-      ~tp.presets.defaultTime = slider.value
+    slider = EZSlider(view, Rect(200, 0, 400, 20), "default time", ControlSpec(0, 120, 6, 0, 1, "sec"), labelWidth: 100, unitWidth: 25).value_(tp.presets.defaultTime).action_{
+      tp.presets.defaultTime = slider.value
     };
     goButt = Button(view, Rect(210, 25, 100, 25)).string_("Fade preset").action_{
-      ~tp.presets.go(list.value);
+      tp.presets.go(list.value);
       list.valueAction_(list.value + 1 % list.items.size);
     };
     goNowButt = Button(view, Rect(320, 25, 130, 25)).string_("Load immediately").action_{
-      ~tp.presets.goNow(list.value);
+      tp.presets.goNow(list.value);
       list.valueAction_(list.value + 1 % list.items.size);
     };
-    modBox = CheckBox(view, Rect(470, 25, 20, 20)).value_(~tp.presets.affectModAmps).action_{
-      ~tp.presets.affectModAmps = modBox.value;
+    modBox = CheckBox(view, Rect(470, 25, 20, 20)).value_(tp.presets.affectModAmps).action_{
+      tp.presets.affectModAmps = modBox.value;
     };
     StaticText(view, Rect(490, 25, 200, 20)).string_("Affect modulation amps");
     saveEditButt = Button(view, Rect(560, view.bounds.height - 30, 80, 25)).resize_(7).string_("Save edit").action_{
-      ~tp.presets[list.value] = textView.string.interpret;
+      tp.presets[list.value] = textView.string.interpret;
     };
     captureButt = Button(view, Rect(210, view.bounds.height - 30, 120, 25)).resize_(7).string_("Capture preset").action_{
-      ~tp.presets.capture;
+      tp.presets.capture;
     };
     deleteButt = Button(view, Rect(340, view.bounds.height - 30, 120, 25)).resize_(7).string_("Delete preset").action_{
-      ~tp.presets.removeAt(list.value);
+      tp.presets.removeAt(list.value);
     };
     moveUpButt = Button(view, Rect(480, view.bounds.height - 30, 35, 25)).resize_(7).string_("⇑").action_{
-      ~tp.presets.move(list.value, list.value - 1);
+      tp.presets.move(list.value, list.value - 1);
       list.valueAction = list.value - 1;
     };
     moveDownButt = Button(view, Rect(515, view.bounds.height - 30, 35, 25)).resize_(7).string_("⇓").action_{
-      ~tp.presets.move(list.value, list.value + 1);
+      tp.presets.move(list.value, list.value + 1);
       list.valueAction = list.value + 1;
     };
     textView = CodeView(view, Rect(210, 55, view.bounds.width - 220, view.bounds.height - 90)).resize_(5).background_(Color.clear);
@@ -159,7 +159,7 @@ ESThingPresets {
         populateList.();
       };
     };
-    ~tp.presets.addDependant(dependantFunc);
-    w.onClose_{ ~tp.presets.removeDependant(dependantFunc); };
+    tp.presets.addDependant(dependantFunc);
+    w.onClose_{ tp.presets.removeDependant(dependantFunc); };
   }
 }
