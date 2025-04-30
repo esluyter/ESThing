@@ -89,6 +89,8 @@ ESThingClient {
 ESThingOSCClient {
   var <osc, <session, <client, <id;
   var <oscfuncs, <dependants;
+  var <presetFunc, <>currentPreset = 0;
+  var <presetOscFuncs;
 
   *new { |osc, session, client, id|
     client = client ?? { ESThingClient(session) };
@@ -98,6 +100,7 @@ ESThingOSCClient {
   init {
     var n = osc.netAddr;
     var map;
+
     map = client.map(osc.maps[client.tpIndex]);
 
     oscfuncs = [];
@@ -152,31 +155,47 @@ ESThingOSCClient {
 
 
     // presets
-    n.sendMsg("/client", id, "/switch_1/values", *client.tp.presets.displayNames);
-    n.sendMsg("/client", id, "/fader_fade", ControlSpec(0, 120, 6, 0, 1, "sec").unmap(client.tp.presets.defaultTime));
-    n.sendMsg("/client", id, "/button_fade", client.fade);
-    n.sendMsg("/client", id, "/button_mod", client.tp.presets.affectModAmps);
-    /*
-    OSCdef(\preset, { |msg|
-      var i = ~list.items.collect(_.asSymbol).indexOf(msg[1]);
-      defer {
-        ~list.value = i;
-        if (~fade == 0) {
-          ~goNowButt.action.()
-        } {
-          ~goButt.action.();
+    presetFunc = {
+      n.sendMsg("/client", id, "/switch_1/values", *client.tp.presets.displayNames);
+      n.sendMsg("/client", id, "/switch_1", client.tp.presets.displayNames[currentPreset]);
+      n.sendMsg("/client", id, "/fader_fade", ControlSpec(0, 120, 6, 0, 1, "sec").unmap(client.tp.presets.defaultTime));
+      n.sendMsg("/client", id, "/button_fade", client.fade);
+      n.sendMsg("/client", id, "/button_mod", client.tp.presets.affectModAmps);
+    };
+    presetFunc.();
+    client.tp.presets.addDependant(presetFunc);
+    presetOscFuncs = [
+      OSCFunc({ |msg|
+        if (msg.last == id) {
+          // change preset
+          var i = client.tp.presets.displayNames.collect(_.asSymbol).indexOf(msg[1]);
+          if (client.fade.asBoolean.not) {
+            client.tp.presets.goNow(i);
+          } {
+            client.tp.presets.go(i);
+          };
+          currentPreset = i;
         };
-      };
-    }, "/switch_1");
-    OSCdef(\modButt, { |msg|
-      defer { ~modBox.value = msg[1] };
-    }, "/button_mod");
-    OSCdef(\fadeButt, { |msg|
-      ~fade = msg[1];
-    }, "/button_fade");
-    OSCdef(\fadeTime, { |msg|
-      defer { ~slider.valueAction = ~slider.controlSpec.map(msg[1]) };
-    }, "/fader_fade");
+      }, "/switch_1"),
+      OSCFunc({ |msg|
+        if (msg.last == id) {
+          client.tp.presets.affectModAmps = msg[1].asBoolean;
+        };
+      }, "/button_mod"),
+      OSCFunc({ |msg|
+        if (msg.last == id) {
+          client.fade = msg[1].asBoolean;
+        };
+      }, "/button_fade");
+      OSCFunc({ |msg|
+        if (msg.last == id) {
+          client.tp.presets.defaultTime = ControlSpec(0, 120, 6, 0, 1, "sec").map(msg[1]);
+        };
+      }, "/fader_fade");
+    ];
+    /*
+
+
     OSCdef(\capture, { |msg|
       defer {
         var value = ~list.value - 1 % ~list.items.size;
@@ -198,6 +217,8 @@ ESThingOSCClient {
     oscfuncs = [];
     dependants.do { |arr| arr[0].removeDependant(arr[1]) };
     dependants = [];
+    client.tp.presets.removeDependant(presetFunc);
+    presetOscFuncs.do(_.free);
   }
 
   doesNotUnderstand { |selector ...args|

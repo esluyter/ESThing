@@ -1,6 +1,16 @@
 ESThingPresets {
-  var <tp, <presetArr, <>defaultTime, <>affectModAmps, <>restoreCallback;
+  var <tp, <presetArr, <defaultTime, <affectModAmps, <>restoreCallback;
   var w;
+
+  defaultTime_ { |val|
+    defaultTime = val;
+    this.changed(\defaultTime, val);
+  }
+
+  affectModAmps_ { |val|
+    affectModAmps = val;
+    this.changed(\affectModAmps, val);
+  }
 
   *new { |tp, presetArr = ([]), defaultTime = 1, affectModAmps = true, restoreCallback|
     ^super.newCopyArgs(tp, presetArr, defaultTime, affectModAmps, restoreCallback);
@@ -156,7 +166,13 @@ ESThingPresets {
 
     dependantFunc = { |obj, what, val|
       if (what == \presets) {
-        populateList.();
+        defer { populateList.() };
+      };
+      if (what == \defaultTime) {
+        defer { slider.value = val };
+      };
+      if (what == \affectModAmps) {
+        defer { modBox.value = val };
       };
     };
     tp.presets.addDependant(dependantFunc);
