@@ -15,7 +15,6 @@
         } {
           func
         };
-        //thing.params = params ?? { var def = funcToPlay.asSynthDef; this.prMakeParams(def.allControlNames, false, def) };
         thing[\synth] = funcToPlay.play(thing.group, thing.outbus, fadeTime: 0, args: [in: thing.inbus]);
       },
       stopFunc: { |thing|
