@@ -460,6 +460,9 @@ ESThingSpace {
           var name = thing.key;
           var value = thing.value;
           var ret;
+          if (value.isKindOf(ESThingSpace)) {
+            ret = ESThing.space(name, value);
+          };
           if (value.isKindOf(Function)) {
             ret = ESThing.playFuncSynth(name, value);
           };
@@ -483,6 +486,9 @@ ESThingSpace {
             };
             if (thisValue.isArray) {
               #inChannels, outChannels = thisValue
+            };
+            if (thisKey.isKindOf(ESThingSpace)) {
+              ret = ESThing.space(name, thisKey, inChannels, outChannels, value[\top] ? 0, value[\left] ? 0, value[\width] ? 1);
             };
             if (thisKey.isKindOf(Function)) {
               ret = ESThing.playFuncSynth(name, thisKey, value[\params], inChannels, outChannels, value[\top] ? 0, value[\left] ? 0, value[\width] ? 1, value[\midiChannel], value[\srcID])

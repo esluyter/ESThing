@@ -1,4 +1,31 @@
 + ESThing {
+  *space { |name, space, inChannels = 2, outChannels = 2, top = 0, left = 0, width = 1|
+    [name, space].postln;
+    ^ESThing(name,
+      initFunc: { |thing|
+        thing[\space] = space;
+        thing[\space].inbus = thing.inbus;
+        thing[\space].outbus = thing.outbus;
+        thing[\space].init;
+      }, playFunc:  { |thing|
+        thing[\space].target = thing.asTarget;
+        thing[\space].play;
+      }, stopFunc: { |thing|
+        thing[\space].stop;
+      }, freeFunc: { |thing|
+        thing[\space].free;
+      },
+      params: space.params.collect { |param|
+        ESThingParam((param.parentThing.index.asCompileString ++ "_" ++ param.name).asSymbol, param.spec, { |name, val| param.parentThing.(param.name).val = val }, param.val).hue_(param.parentThing.hue);
+      },
+      inChannels: inChannels,
+      outChannels: outChannels,
+      top: top,
+      left: left,
+      width: width,
+      callFuncOnParamModulate: true
+    )
+  }
   *playFuncSynth { |name, func, params, inChannels = 2, outChannels = 2, top = 0, left = 0, width = 1, midiChannel, srcID|
     ^ESThing(name,
       prInitFunc: { |thing|

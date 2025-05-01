@@ -1,13 +1,14 @@
 ESThingPlayer {
-  var <ts, <>knobFunc, <>knobArr, <>ccExclude, <>modExclude, <presets;
+  var <ts, <>knobFunc, <>knobArr, <>ccExclude, <>modExclude, <>paramExclude;
+  var <presets;
   var <noteOnMf, <noteOffMf, <bendMf, <touchMf, <polytouchMf, <ccMf;
   var <win, <winBounds;
   var <isPlaying = false;
   var <tsbus, <amp = 1, <synths;
 
-  *new { |ts, knobFunc, knobArr = ([]), ccExclude = ([]), modExclude = ([])|
+  *new { |ts, knobFunc, knobArr = ([]), ccExclude = ([]), modExclude = ([]), paramExclude = ([])|
     ts = ts ?? { ESThingSpace() };
-    ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude, modExclude).initMidi.initPresets;
+    ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude, modExclude, paramExclude).initMidi.initPresets;
   }
 
   initTsbus {
@@ -114,6 +115,10 @@ ESThingPlayer {
       ts = val;
     }
   }
+
+  params { ^ts.params }
+  excludedParams { ^paramExclude.collect { |ass| ts.(ass.key).(ass.value) } }
+  includedParams { var ex = this.excludedParams; ^this.params.reject({ |param| ex.indexOf(param).notNil }) }
 
   assignAllKnobs { |ccStart = 0|
     knobArr = ts.params.collect { |param|
