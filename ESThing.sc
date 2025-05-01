@@ -18,7 +18,7 @@ ESThingParam {
     ^super.newCopyArgs(name, spec, func, val);
   }
   synthVal {
-    ^if (modBus.notNil) {
+    ^if (modBus.notNil and: { modBus.index.notNil }) {
       modBus.asMap;
     } {
       val;

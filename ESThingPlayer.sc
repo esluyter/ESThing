@@ -11,7 +11,7 @@ ESThingPlayer {
   }
 
   initTsbus {
-    tsbus = Bus.audio(Server.default, ts.outChannels);
+    tsbus = tsbus ?? { Bus.audio(Server.default, ts.outChannels) };
     ts.outbus = tsbus;
   }
 
@@ -87,11 +87,10 @@ ESThingPlayer {
   }
 
   stop {
-    ts.stop;
-    ts.free;
     synths.do(_.free);
     synths = nil;
-    tsbus.free;
+    ts.stop;
+    ts.free;
     win !? {
       winBounds = win.bounds;
       win.close
@@ -101,6 +100,8 @@ ESThingPlayer {
 
   free {
     [noteOnMf, noteOffMf, bendMf, touchMf, polytouchMf, ccMf].do(_.free);
+
+    tsbus.free;
   }
 
   ts_ { |val|
