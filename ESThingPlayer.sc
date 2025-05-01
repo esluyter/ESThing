@@ -120,6 +120,19 @@ ESThingPlayer {
   excludedParams { ^paramExclude.collect { |ass| ts.(ass.key).(ass.value) } }
   includedParams { var ex = this.excludedParams; ^this.params.reject({ |param| ex.indexOf(param).notNil }) }
 
+  modPatches { ^ts.modPatches }
+  excludedModPatches {
+    ^this.excludedParams.collect { |param|
+      ts.modPatches.select { |modPatch|
+        (modPatch.toThing == param.parentThing) and: (modPatch.to.index == param.name);
+      };
+    } .flat
+  }
+  includedModPatches {
+    var ex = this.excludedModPatches;
+    ^this.modPatches.reject({ |modPatch| ex.indexOf(modPatch).notNil })
+  }
+
   assignAllKnobs { |ccStart = 0|
     knobArr = ts.params.collect { |param|
       var ret = [ccStart, param.parentThing.name->param.name];
