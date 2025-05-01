@@ -7,7 +7,7 @@ ESThingPlayer {
 
   *new { |ts, knobFunc, knobArr = ([]), ccExclude = ([]), modExclude = ([])|
     ts = ts ?? { ESThingSpace() };
-    ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude, modExclude).initTsbus.initMidi.initPresets;
+    ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude, modExclude).initMidi.initPresets;
   }
 
   initTsbus {
@@ -71,6 +71,7 @@ ESThingPlayer {
 
   play {
     Server.default.waitForBoot {
+      this.initTsbus;
       ts.init;
       Server.default.sync;
       ts.play;
@@ -90,6 +91,7 @@ ESThingPlayer {
     ts.free;
     synths.do(_.free);
     synths = nil;
+    tsbus.free;
     win !? {
       winBounds = win.bounds;
       win.close
@@ -99,7 +101,6 @@ ESThingPlayer {
 
   free {
     [noteOnMf, noteOffMf, bendMf, touchMf, polytouchMf, ccMf].do(_.free);
-    tsbus.free;
   }
 
   ts_ { |val|
