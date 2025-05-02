@@ -1,6 +1,10 @@
 # ESThing
 
-A container for any possible SC code that can be played, with built-in routing, parameter control via MIDI/GUI, buffer management, and presets.
+A container for any possible SC code that can be played, with built-in routing, MIDI keyboard polyphony, parameter control via MIDI, GUI, and Open Stage Control, buffer management, and presets.
+
+<img width="50%" alt="Screenshot 2025-05-02 at 3 56 36 AM" src="https://github.com/user-attachments/assets/2917f52b-9e17-4926-b949-b9ded546001a" /><img width="50%" alt="Screenshot 2025-05-02 at 3 56 06 AM" src="https://github.com/user-attachments/assets/ee428329-a161-4c2f-b221-825d6752f4e9" />
+
+
 
 <img width="1049" alt="Screenshot 2025-04-25 at 3 46 28 AM" src="https://github.com/user-attachments/assets/5c5babfd-a1c8-4715-a900-ba71ea53d2ad" />
 
@@ -14,11 +18,13 @@ A container for any possible SC code that can be played, with built-in routing, 
 ~tp.play;
 ~bufs = ESBufList('bufs', [ ( 'name': 'testing', 'buf': Platform.resourceDir +/+ "sounds/a11wlk01.wav" ) ]).makeWindow;
 ~tp.presets.makeWindow;
+// exclude these params from e.g. randomization
+~tp.paramExclude = [\ADTspace->\gate_4, \ADTspace->\amt_4, \ADTspace->\bypass_0];
 )
 
 // main (reevaluate to update graph, thing parameters will remember their current values)
 (
-/*~tp.ts = */~tsadt = ESThingSpace(
+~tsadt = ESThingSpace(
   things: [
     \dummyIn->({ |thing| { |in, bypass = 1|
       PlayBuf.ar(2, thing[\buf], BufRateScale.kr(thing[\buf].postln), loop: 1)[0] * 0.5 * (1 - bypass) + (In.ar(in) * bypass);
@@ -37,11 +43,11 @@ A container for any possible SC code that can be played, with built-in routing, 
       var inSig = In.ar(in, 1);
       var delSig, delSig2;
       var chain = FFT(LocalBuf(512), inSig, 0.25);
-      //chain = PV_Freezish(chain, amt, amt);
+      chain = PV_Freezish(chain, amt, amt);
       delSig = IFFT(chain);
 
       chain = FFT(LocalBuf(4096), inSig, 0.25);
-      //chain = PV_Freezish(chain, amt2, amt2);
+      chain = PV_Freezish(chain, amt2, amt2);
       delSig2 = IFFT(chain);
 
       delSig * amt + (delSig2 * amt2) + (inSig * (1 - (amt + amt2).clip));
@@ -136,28 +142,7 @@ A container for any possible SC code that can be played, with built-in routing, 
       NHHall.ar(in, \size.kr(4.12, spec: [1, 10])) * \amp.kr(0.24)
     }: [2, 2], left: 0, top: 20),
     \out->({ |in| In.ar(in) }:[2, 2], top: -100, left: -100),
-    ESThing(\ADTspace,
-      initFunc: { |thing|
-        thing[\space] = ~tsadt;
-        thing[\space].inbus = thing.inbus;
-        thing[\space].outbus = thing.outbus;
-        thing[\space].init;
-      }, playFunc:  { |thing|
-        thing[\space].target = thing.asTarget;
-        thing[\space].play;
-      }, stopFunc: { |thing|
-        thing[\space].stop;
-      }, freeFunc: { |thing|
-        thing[\space].free;
-      },
-      params: ~tsadt.params.collect { |param|
-        ESThingParam((param.parentThing.index.asCompileString ++ "->" ++ param.name).asSymbol, param.spec, { |name, val| param.parentThing.(param.name).val = val }, param.val).hue_(param.parentThing.hue);
-      },
-      top: -130,
-      left: -20,
-      width: [4, 3, 2],
-      callFuncOnParamModulate: true
-    )
+    \ADTspace->((~tsadt): [2, 2], top: -130, left: -20, width: [4, 3, 2])
   ],
   patches: [
     (\in->0: \osc),
@@ -175,8 +160,8 @@ A container for any possible SC code that can be played, with built-in routing, 
 
     //(\out : \out2),
     (\out : \ADTspace),
-    (\lfo3->0 : \ADTspace->'4->gate'),
-    (\lfo3->1 : \ADTspace->'4->amt'),
+    (\lfo3->0 : \ADTspace->'gate_4'),
+    (\lfo3->1 : \ADTspace->'amt_4'),
     (\ADTspace : \out2),
   ],
 
@@ -188,7 +173,7 @@ A container for any possible SC code that can be played, with built-in routing, 
 </details>
 
 <br /><br />
-
+<!--
 <img width="600" alt="Screen Shot 2025-04-15 at 20 57 43" src="https://github.com/user-attachments/assets/e2b6c8b8-396c-47c7-8f26-10c619740f91" />
 
 
@@ -268,7 +253,7 @@ t.knobs[0].do(_.color_(Color.black));
 
 <br />
 <br />
-
+-->
 The idea is that you build these spaces iteratively by reevaluating your code, the GUI shows you what's going on and gives you knobs which maintain their state when you reevaluate your code.
 
 Adjust parameters using MIDI knobs, with GUI, or like so:
