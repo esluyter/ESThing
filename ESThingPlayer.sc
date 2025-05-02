@@ -85,6 +85,7 @@ ESThingPlayer {
   amp_ { |val|
     amp = val;
     synths.do(_.set(\amp, amp));
+    this.changed(\amp, amp);
   }
 
   stop {

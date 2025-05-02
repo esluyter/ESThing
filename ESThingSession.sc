@@ -111,7 +111,11 @@ ESThingOSCClient {
       n.sendMsg("/client", id, "/text_" ++ (i + 1), "");
     };
     session.tps.size.do { |i|
-      n.sendMsg("/session_fader_" ++ (i + 1), \amp.asSpec.unmap(session.tps[i].amp));
+      var func = {
+        n.sendMsg("/client", id, "/session_fader_" ++ (i + 1), \amp.asSpec.unmap(session.tps[i].amp));
+      };
+      dependants = dependants.add([session.tps[i], func]);
+      session.tps[i].addDependant(func);
       oscfuncs = oscfuncs.add(OSCFunc({ |msg|
         if (msg.last == id) {
           session[i].amp = \amp.asSpec.map(msg[1]);
@@ -122,9 +126,11 @@ ESThingOSCClient {
     oscfuncs = oscfuncs.add(OSCFunc({ |msg|
       if (msg.last == id) {
         if (msg[1] < session.tps.size) {
-          client.tpIndex = msg[1];
-          this.free;
-          this.init;
+          if (client.tpIndex != msg[1]) {
+            client.tpIndex = msg[1];
+            this.free;
+            this.init;
+          };
         };
       };
     }, "/session_switch"));
