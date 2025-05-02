@@ -110,6 +110,24 @@ ESThingOSCClient {
       n.sendMsg("/client", id, "/knob_" ++ (i + 1) ++ "/show", false);
       n.sendMsg("/client", id, "/text_" ++ (i + 1), "");
     };
+    session.tps.size.do { |i|
+      n.sendMsg("/session_fader_" ++ (i + 1), \amp.asSpec.unmap(session.tps[i].amp));
+      oscfuncs = oscfuncs.add(OSCFunc({ |msg|
+        if (msg.last == id) {
+          session[i].amp = \amp.asSpec.map(msg[1]);
+        };
+      }, "/session_fader_" ++ (i + 1)));
+    };
+    n.sendMsg("/client", id, "/session_switch", client.tpIndex);
+    oscfuncs = oscfuncs.add(OSCFunc({ |msg|
+      if (msg.last == id) {
+        if (msg[1] < session.tps.size) {
+          client.tpIndex = msg[1];
+          this.free;
+          this.init;
+        };
+      };
+    }, "/session_switch"));
     client.ts.params.do { |param, i|
       i = map.indexOf(i);
       if (i.notNil) {
@@ -238,8 +256,14 @@ ESThingOSC {
     oscFuncs.clientIdFunc = OSCFunc({ |msg|
       var id = msg[1].debug("client open");
       if (clientIds.indexOf(id).isNil) {
+        var client = ESThingOSCClient(this, session, id: id);
         clientIds = clientIds.add(id);
-        clients = clients.add(ESThingOSCClient(this, session, id: id));
+        clients = clients.add(client);
+        fork {
+          // make sure interface has loaded
+          1.wait;
+          client.init;
+        };
       };
     }, "/clientId");
     oscFuncs.clientIdCloseFunc = OSCFunc({ |msg|
@@ -247,7 +271,7 @@ ESThingOSC {
       var index = clientIds.indexOf(id);
       if (index.notNil) {
         clientIds.removeAt(index);
-        clients.removeAt(index);
+        clients.removeAt(index).free;
       }
     }, "/clientIdClose");
     oscFuncs.clientFunc = OSCFunc({ |msg|
