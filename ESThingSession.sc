@@ -231,6 +231,8 @@ ESThingOSCClient {
       ~undoPreset !? { defer { ~restorePreset.(~undoPreset, if (~fade == 0) { 0 } { ~slider.value }); } };
     }, "/button_undo_preset");
     */
+
+    // randomize xy pad
     {
       var vals, randVals, modAmps, randModAmps, mulFuncs, distY, distX;
       oscfuncs = oscfuncs.add(OSCFunc({ |msg|

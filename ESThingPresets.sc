@@ -1,5 +1,5 @@
 ESThingPresets {
-  var <tp, <presetArr, <defaultTime, <affectModAmps, <>restoreCallback;
+  var <tp, <presetArr, <defaultTime, <affectModAmps, <>restoreCallback, <>defaultPath;
   var w;
 
   defaultTime_ { |val|
@@ -12,10 +12,22 @@ ESThingPresets {
     this.changed(\affectModAmps, val);
   }
 
+  storeArgs { ^[presetArr, defaultTime, affectModAmps] }
   *new { |tp, presetArr = ([]), defaultTime = 1, affectModAmps = true, restoreCallback|
-    ^super.newCopyArgs(tp, presetArr, defaultTime, affectModAmps, restoreCallback);
+    var defaultPath;
+    if (thisProcess.nowExecutingPath.notNil) {
+      defaultPath = PathName(thisProcess.nowExecutingPath).pathOnly;
+      if (File.exists(defaultPath +/+ "presets")) {
+        defaultPath = defaultPath +/+ "presets";
+      };
+    };
+    ^super.newCopyArgs(tp, presetArr, defaultTime, affectModAmps, restoreCallback, defaultPath);
   }
 
+  presetArr_ { |val|
+    presetArr = val;
+    this.changed(\presets);
+  }
   at { |index|
     ^presetArr.at(index);
   }
@@ -118,8 +130,23 @@ ESThingPresets {
       list.items_(tp.presets.displayNames);
       list.valueAction = min(value, list.items.size - 1);
     };
-    writeButt = Button(w, Rect(210, 5, 130, 20)).string_("Save to file");
-    readButt = Button(w, Rect(350, 5, 130, 20)).string_("Open file");
+    writeButt = Button(w, Rect(210, 5, 130, 20)).string_("Save to file").action_{
+      FileDialog({ |path|
+        var file = File.open(path[0], "w");
+        file.write(this.storeArgs.asCompileString);
+        file.close;
+      }, fileMode: 0, acceptMode: 1, path: defaultPath);
+    };
+    readButt = Button(w, Rect(350, 5, 130, 20)).string_("Open file").action_{
+      FileDialog({ |path|
+        var arr = File.readAllString(path[0]).interpret;
+        if (arr.isArray) {
+          this.presetArr = arr[0];
+          this.defaultTime = arr[1];
+          this.affectModAmps = arr[2];
+        };
+      }, path: defaultPath)
+    };
 
     slider = EZSlider(view, Rect(200, 0, 400, 20), "default time", ControlSpec(0, 120, 6, 0, 1, "sec"), labelWidth: 100, unitWidth: 25).value_(tp.presets.defaultTime).action_{
       tp.presets.defaultTime = slider.value
