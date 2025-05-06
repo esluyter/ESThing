@@ -289,7 +289,7 @@ ESThingOSC {
   var <clients, <clientIds;
   var <oscFuncs;
 
-  *new { |session, maps, netAddr|
+  *new { |session, maps = ([]), netAddr|
     netAddr = netAddr ?? { NetAddr("localhost", 8080) };
     ^super.newCopyArgs(session, netAddr, maps, [], []).init;
   }

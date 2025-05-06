@@ -1,14 +1,14 @@
 ESThingPlayer {
-  var <ts, <>knobFunc, <>knobArr, <>ccExclude, <>modExclude, <>paramExclude;
+  var <ts, <>knobFunc, <>knobArr, <>ccExclude, <>modExclude, <>noteExclude, <>paramExclude;
   var <presets;
   var <noteOnMf, <noteOffMf, <bendMf, <touchMf, <polytouchMf, <ccMf;
   var <win, <winBounds;
   var <isPlaying = false;
   var <tsbus, <amp = 1, <synths;
 
-  *new { |ts, knobFunc, knobArr = ([]), ccExclude = ([]), modExclude = ([]), paramExclude = ([])|
+  *new { |ts, knobFunc, knobArr = ([]), ccExclude = ([]), modExclude = ([]), noteExclude = ([]), paramExclude = ([])|
     ts = ts ?? { ESThingSpace() };
-    ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude, modExclude, paramExclude).initMidi.initPresets;
+    ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude, modExclude, noteExclude, paramExclude).initMidi.initPresets;
   }
 
   initTsbus {
@@ -33,10 +33,14 @@ ESThingPlayer {
     MIDIClient.init;
     MIDIIn.connectAll;
     noteOnMf = MIDIFunc.noteOn({ |vel, num, chan, src|
-      checkChans.(chan, src, { |thing| thing.noteOn(num, vel); });
+      if (noteExclude.indexOf(src).isNil) {
+        checkChans.(chan, src, { |thing| thing.noteOn(num, vel); });
+      };
     });
     noteOffMf = MIDIFunc.noteOff({ |vel, num, chan, src|
-      checkChans.(chan, src, { |thing| thing.noteOff(num, vel); });
+      if (noteExclude.indexOf(src).isNil) {
+        checkChans.(chan, src, { |thing| thing.noteOff(num, vel); });
+      };
     });
     bendMf = MIDIFunc.bend({ |val, num, chan, src|
       checkChans.(chan, src, { |thing| thing.bend(val); });
@@ -142,13 +146,16 @@ ESThingPlayer {
     } .flat;
   }
 
-  exclude { |device, excludeMod = true, excludeCc = true|
+  exclude { |device, excludeMod = true, excludeCc = true, excludeNote = true|
     var uid = if (device.isInteger) { device } { device.uid };
     if (excludeCc) {
-      ccExclude = ccExclude.add(device.uid);
+      ccExclude = ccExclude.add(uid);
     };
     if (excludeMod) {
-      modExclude = modExclude.add(device.uid);
+      modExclude = modExclude.add(uid);
+    };
+    if (excludeNote) {
+      noteExclude = noteExclude.add(uid)
     };
   }
 }
