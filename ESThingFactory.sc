@@ -386,10 +386,15 @@
           knob.onClose = { param.removeDependant(dependantFunc) };
         } {
           // array control
-          MultiSliderView(view, knobBounds.copy.insetBy(-6, 0)).elasticMode_(true).value_(param.val).valueThumbSize_(3).colors_(*Color.hsv(hue, 1, 0.675, 0.7).dup(2)).isFilled_(true).background_(Color.hsv(thing.hue, 0.05, 1, 0.8)).action_({ |view|
-            param.val = view.value
+          var dependantFunc = { |param, val|
+            defer { msv.value = param.valNorm };
+          };
+          var msv = MultiSliderView(view, knobBounds.copy.insetBy(-6, 0)).elasticMode_(true).value_(param.valNorm).reference_(param.spec.unmap(0).dup(param.val.size)).valueThumbSize_(3).colors_(*Color.hsv(hue, 1, 0.675, 0.7).dup(2)).isFilled_(true).background_(Color.hsv(thing.hue, 0.05, 1, 0.8)).action_({ |view|
+            param.valNorm = view.value;
           });
           StaticText(view, knobBounds.copy.height_(15)).string_(param.name).stringColor_(Color.hsv(hue, 1, 0.35)).acceptsMouse_(false);
+          param.addDependant(dependantFunc);
+          msv.onClose = { param.removeDependant(dependantFunc) };
         };
         newKnobPoints[param.name] = point;
         y = y + 1;

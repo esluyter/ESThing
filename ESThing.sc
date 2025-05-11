@@ -582,8 +582,9 @@ ESThingSpace {
             oldThing.params.do { |oldParam|
               var newParam = thisThing.paramAt(oldParam.name);
               if (newParam.notNil and: {newParam.val != oldParam.val}) {
-                [oldParam.name, oldParam.value].postln;
-                newParam.val_(oldParam.val);
+                if (newParam.val.size == oldParam.val.size) {
+                  newParam.val_(oldParam.val);
+                };
               };
               if (newParam.isNil) {
                 // to catch params created after thing is created
