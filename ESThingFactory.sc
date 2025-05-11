@@ -356,13 +356,23 @@
         var point = (left + 72 + (90 * x))@((75 * y) + 40 + top);
         var knobBounds = Rect(5 + (90 * x), (75 * y) + 30, 80, 70);
         if (param.val.isNumber) {
-          var knob = EZKnob(view, knobBounds, param.name, param.spec, { |knob| thing.set(param.name, knob.value) }, param.val, labelWidth: 100, labelHeight: 15).setColors(stringColor: Color.hsv(hue, 1, 0.35), knobColors: [Color.hsv(hue, 0.4, 1), Color.hsv(hue, 1, 0.675), Color.gray(0.5, 0.1), Color.black]);
-          var dependantFunc = { |param, val|
-            defer { knob.value = val };
-          };
           // they won't be red anymore, unless modulated by an input
           var redIndex = redParams.indexOf(param);
           var patchKnob;
+          var knob;
+
+          if (param.spec == \button.asSpec) {
+            var butt = Button(view, knobBounds.copy.insetBy(0, 10).moveBy(0, 10)).states_([[nil, nil, Color.hsv(hue, 0.2, 1)], [nil, nil, Color.hsv(hue, 1, 0.675)]]).mouseDownAction_{ |view| view.valueAction = 1}.action_{ |view| param.val_(view.value) };
+            StaticText(view, knobBounds.copy.height_(15)).string_(param.name).stringColor_(Color.hsv(hue, 1, 0.35)).acceptsMouse_(false);
+          } {
+            var dependantFunc = { |param, val|
+              defer { knob.value = val };
+            };
+            knob = EZKnob(view, knobBounds, param.name, param.spec, { |knob| thing.set(param.name, knob.value) }, param.val, labelWidth: 100, labelHeight: 15, layout: 'vert').setColors(stringColor: Color.hsv(hue, 1, 0.35), knobColors: [Color.hsv(hue, 0.4, 1), Color.hsv(hue, 1, 0.675), Color.gray(0.5, 0.1), Color.black]);
+            param.addDependant(dependantFunc);
+            knob.onClose = { param.removeDependant(dependantFunc) };
+          };
+
           if (redIndex.notNil) {
             var patch = redPatches[redIndex];
             var spec = \amp.asSpec;
@@ -371,7 +381,9 @@
               defer {
                 patchKnob.value = spec.unmap(val);
                 patchView.refresh;
-                knob.setColors(background: Color.hsv(hue, 0.5, 1, patch.amp.curvelin(0, 10, 0.02, 0.4, 4)));
+                if (knob.notNil) {
+                  knob.setColors(background: Color.hsv(hue, 0.5, 1, patch.amp.curvelin(0, 10, 0.02, 0.4, 4)));
+                };
                 patchKnob.color_([Color.hsv(hue, 1, 1, patch.amp.curvelin(0, 10, 0.1, 0.3, 4)), Color.hsv(hue, 0.8, 0.5), Color.gray(0.5, 0.1)]);
               };
             };
@@ -382,8 +394,6 @@
             patchKnob.onClose = { patch.removeDependant(dependantFunc) };
             dependantFunc.(patch, \amp, patch.amp);
           };
-          param.addDependant(dependantFunc);
-          knob.onClose = { param.removeDependant(dependantFunc) };
         } {
           // array control
           var dependantFunc = { |param, val|

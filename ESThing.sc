@@ -5,6 +5,11 @@ ESThingParam {
   var <modPatch, <modSynth, <modBus;
   var rout;
   var <>hue;
+  *initClass {
+    StartUp.add {
+      ControlSpec.specs[\button] = ControlSpec(0, 1, \lin, 1);
+    };
+  }
   storeArgs { ^[name, spec, func, val] }
   *new { |name, spec, func, val|
     spec = (spec ?? { name } ?? { ControlSpec() }).asSpec;
