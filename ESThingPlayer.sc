@@ -158,4 +158,6 @@ ESThingPlayer {
       noteExclude = noteExclude.add(uid)
     };
   }
+
+  at { |sym| ^ts.at(sym) }
 }
