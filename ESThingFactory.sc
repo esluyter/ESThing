@@ -92,7 +92,7 @@
       // filter out any arrayed controls
       var isArray = control.defaultValue.isArray;
       // TODO: have different sort of param and GUI element for arrays
-      (exposeControl or: hideMidiControls.not) and: isArray.not and: isQ.not
+      (exposeControl or: hideMidiControls.not) /*and: isArray.not*/ and: isQ.not
     } .collect({ |control|
       var spec;
       // look for spec in metadata, otherwise use name.asSpec
@@ -355,34 +355,42 @@
         var hue = param.hue ? thing.hue;
         var point = (left + 72 + (90 * x))@((75 * y) + 40 + top);
         var knobBounds = Rect(5 + (90 * x), (75 * y) + 30, 80, 70);
-        var knob = EZKnob(view, knobBounds, param.name, param.spec, { |knob| thing.set(param.name, knob.value) }, param.val, labelWidth: 100, labelHeight: 15).setColors(stringColor: Color.hsv(hue, 1, 0.35), knobColors: [Color.hsv(hue, 0.4, 1), Color.hsv(hue, 1, 0.675), Color.gray(0.5, 0.1), Color.black]);
-        var dependantFunc = { |param, val|
-          defer { knob.value = val };
-        };
-        // they won't be red anymore, unless modulated by an input
-        var redIndex = redParams.indexOf(param);
-        var patchKnob;
-        if (redIndex.notNil) {
-          var patch = redPatches[redIndex];
-          var spec = \amp.asSpec;
-          var hue = patch.fromThing.hue ?? 0;
-          var dependantFunc = { |patch, what, val|
-            defer {
-              patchKnob.value = spec.unmap(val);
-              patchView.refresh;
-              knob.setColors(background: Color.hsv(hue, 0.5, 1, patch.amp.curvelin(0, 10, 0.02, 0.4, 4)));
-              patchKnob.color_([Color.hsv(hue, 1, 1, patch.amp.curvelin(0, 10, 0.1, 0.3, 4)), Color.hsv(hue, 0.8, 0.5), Color.gray(0.5, 0.1)]);
+        if (param.val.isNumber) {
+          var knob = EZKnob(view, knobBounds, param.name, param.spec, { |knob| thing.set(param.name, knob.value) }, param.val, labelWidth: 100, labelHeight: 15).setColors(stringColor: Color.hsv(hue, 1, 0.35), knobColors: [Color.hsv(hue, 0.4, 1), Color.hsv(hue, 1, 0.675), Color.gray(0.5, 0.1), Color.black]);
+          var dependantFunc = { |param, val|
+            defer { knob.value = val };
+          };
+          // they won't be red anymore, unless modulated by an input
+          var redIndex = redParams.indexOf(param);
+          var patchKnob;
+          if (redIndex.notNil) {
+            var patch = redPatches[redIndex];
+            var spec = \amp.asSpec;
+            var hue = patch.fromThing.hue ?? 0;
+            var dependantFunc = { |patch, what, val|
+              defer {
+                patchKnob.value = spec.unmap(val);
+                patchView.refresh;
+                knob.setColors(background: Color.hsv(hue, 0.5, 1, patch.amp.curvelin(0, 10, 0.02, 0.4, 4)));
+                patchKnob.color_([Color.hsv(hue, 1, 1, patch.amp.curvelin(0, 10, 0.1, 0.3, 4)), Color.hsv(hue, 0.8, 0.5), Color.gray(0.5, 0.1)]);
+              };
             };
+            patchKnob = Knob(view, Rect(knobBounds.left + 60, knobBounds.top, 20, 20)).action_{
+              patch.amp = spec.map(patchKnob.value);
+            };
+            patch.addDependant(dependantFunc);
+            patchKnob.onClose = { patch.removeDependant(dependantFunc) };
+            dependantFunc.(patch, \amp, patch.amp);
           };
-          patchKnob = Knob(view, Rect(knobBounds.left + 60, knobBounds.top, 20, 20)).action_{
-            patch.amp = spec.map(patchKnob.value);
-          };
-          patch.addDependant(dependantFunc);
-          patchKnob.onClose = { patch.removeDependant(dependantFunc) };
-          dependantFunc.(patch, \amp, patch.amp);
+          param.addDependant(dependantFunc);
+          knob.onClose = { param.removeDependant(dependantFunc) };
+        } {
+          // array control
+          MultiSliderView(view, knobBounds.copy.insetBy(-6, 0)).elasticMode_(true).value_(param.val).valueThumbSize_(3).colors_(*Color.hsv(hue, 1, 0.675, 0.7).dup(2)).isFilled_(true).background_(Color.hsv(thing.hue, 0.05, 1, 0.8)).action_({ |view|
+            param.val = view.value
+          });
+          StaticText(view, knobBounds.copy.height_(15)).string_(param.name).stringColor_(Color.hsv(hue, 1, 0.35)).acceptsMouse_(false);
         };
-        param.addDependant(dependantFunc);
-        knob.onClose = { param.removeDependant(dependantFunc) };
         newKnobPoints[param.name] = point;
         y = y + 1;
         if (y >= columnSpec[x]) {
