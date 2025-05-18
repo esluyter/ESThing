@@ -4,6 +4,43 @@ A container for any possible SC code that can be played, with built-in routing, 
 
 (i.e. a less-featured version of NodeProxy et al)
 
+most recent syntax:
+
+```
+~session = ESThingSession();
+
+(
+// add a new space to the session, in slot 0
+// (keep reevaluating this as you build it -- automatically keeps param values)
+~session[0] = [
+  [
+    \note->(`\default: \drone->[0, 2]),
+    \verb->{ |in| NHHall.ar(In.ar(in, 2), \time.kr(1, spec: [0, 10])) }
+  ], 
+  [
+    (\note : \verb),
+    \verb
+  ],
+  inChannels: 0
+]
+)
+
+// set to empty space
+~session[0] = [];
+// free
+~session[0] = nil
+```
+<img width="363" alt="Screenshot 2025-05-18 at 1 47 23 AM" src="https://github.com/user-attachments/assets/7fd0d286-ccd4-40ae-94e5-cf8e6c0a3d40" />
+
+<br />
+
+A "space" is a bunch of "things" that make sound, have parameters, and are patched together. A thing can be a space, if you want.
+
+A session is a bunch of spaces that might in the future be able to be patched together.
+
+<br />
+<br />
+
 <img width="50%" alt="Screenshot 2025-05-02 at 3 56 36 AM" src="https://github.com/user-attachments/assets/2917f52b-9e17-4926-b949-b9ded546001a" /><img width="50%" alt="Screenshot 2025-05-02 at 3 56 06 AM" src="https://github.com/user-attachments/assets/ee428329-a161-4c2f-b221-825d6752f4e9" />
 
 
