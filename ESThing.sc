@@ -518,6 +518,12 @@ ESThingSpace {
     };
     patches = patches.asArray.collect { |patch|
       var n;
+      var fromInput = false, toOutput = false;
+      var cs = patch.asCompileString;
+      if (patch.isKindOf(Symbol)) {
+        // patch a symbol directly to the output
+        patch = (patch : -1);
+      };
       if (patch.isKindOf(Dictionary)) {
         var amp = patch.removeAt(\amp) ?? 1;
         if (patch.size == 1) {
@@ -526,16 +532,24 @@ ESThingSpace {
           patch.to = arr[1];
         };
         if ((patch.from.class == Symbol) or: (patch.from.class == Integer)) {
-          var fromThing = this.thingAt(patch.from, things) ?? {
-            (outChannels: inChannels)
+          var fromThing = this.thingAt(patch.from, things);
+          if (fromThing.isNil) {
+            fromInput = true;
+            fromThing = (outChannels: inChannels);
           };
           patch.from = patch.from->(fromThing.outChannels.collect{ |n| n });
         };
         if ((patch.to.class == Symbol) or: (patch.to.class == Integer)) {
-          var toThing = this.thingAt(patch.to, things) ?? {
-            (inChannels: outChannels)
+          var toThing = this.thingAt(patch.to, things);
+          if (toThing.isNil) {
+            toOutput = true;
+            toThing = (inChannels: outChannels);
           };
           patch.to = patch.to->(toThing.inChannels.collect{ |n| n });
+          if (fromInput and: toOutput) {
+            // post warning here
+            "% -- (% : %)  -- neglected to patch input directly to output".format(cs, patch.from, patch.to).warn;
+          };
         };
         // accept arrays of indices
         if (patch.from.value.isArray) {
@@ -552,12 +566,19 @@ ESThingSpace {
           patch = []
         } {
           patch = max(patch.from.size, patch.to.size).collect { |i|
-            ESThingPatch(patch.name, patch.from.wrapAt(i), patch.to.wrapAt(i), amp ?? 1)
+            // guard against patching ins to outs
+            var from = patch.from.wrapAt(i);
+            var to = patch.to.wrapAt(i);
+            if (fromInput and: toOutput) {
+              nil
+            } {
+              ESThingPatch(patch.name, from, to, amp ?? 1)
+            }
           };
         };
       };
       patch
-    } .flat;
+    } .flat.reject { |item| item.isNil };
     target = target ?? { Server.default };
     ^super.newCopyArgs(things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, useADC, useDAC, target).prInit(oldSpace);
   }

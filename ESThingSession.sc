@@ -5,12 +5,47 @@ ESThingSession {
     ^super.newCopyArgs(tps);
   }
 
+  // is this good?
   doesNotUnderstand { |selector ...args|
     ^tps.perform(selector, *args);
   }
+
+  // sugar: put a thing space directly
+  put { |index, ts|
+    if (tps.size <= index) {
+      tps = tps.extend(index + 1);
+    };
+    if (tps[index].isNil) {
+      tps[index] = ESThingPlayer().play;
+    };
+    // sugar: convert array to ESThingSpace
+    if (ts.isArray) {
+      var argNames = ['things', 'patches', 'initFunc', 'playFunc', 'stopFunc', 'freeFunc', 'inChannels', 'outChannels', 'useADC', 'useDAC', 'target', 'oldSpace'];
+      var args = [[], [], nil, nil, nil, nil, 2, 2, true, true, nil, tps[index].ts];
+      var i = 0;
+      ts.do { |item|
+        var argIndex = argNames.indexOf(item);
+        if (argIndex.notNil) {
+          i = argIndex;
+        } {
+          args[i] = item;
+          i = i + 1;
+        };
+      };
+      ts = ESThingSpace(*args);
+    };
+    if (ts.isNil) {
+      try {
+        tps[index].stop;
+      };
+      tps[index].free;
+      tps[index] = nil;
+    } {
+      // after all this, if ts not nil put it where it goes
+      tps[index].ts = ts;
+    };
+  }
 }
-
-
 
 
 ESThingClient {
