@@ -2,6 +2,8 @@
 
 A container for any possible SC code that can be played, with built-in routing, MIDI keyboard polyphony, parameter control via MIDI, GUI, and Open Stage Control, buffer management, and presets.
 
+(i.e. a less-featured version of NodeProxy et al)
+
 <img width="50%" alt="Screenshot 2025-05-02 at 3 56 36 AM" src="https://github.com/user-attachments/assets/2917f52b-9e17-4926-b949-b9ded546001a" /><img width="50%" alt="Screenshot 2025-05-02 at 3 56 06 AM" src="https://github.com/user-attachments/assets/ee428329-a161-4c2f-b221-825d6752f4e9" />
 
 
