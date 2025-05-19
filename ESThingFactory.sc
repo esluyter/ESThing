@@ -36,6 +36,9 @@
         };
         thing.params = params ?? { var def = funcToPlay.asSynthDef; this.prMakeParams(def.allControlNames, false, def) };
       },
+      initFunc: { |thing|
+        thing[\noteStack] = [];
+      },
       playFunc: { |thing|
         var funcToPlay = if (func.def.argNames.first == \thing) {
           func.value(thing)
@@ -121,11 +124,19 @@
         thing[\synths] = ();
       },
       noteOnFunc: { |thing, num, vel| // note: vel is mapped 0-1
-        var defaults = thing.params.collect({ |param| [param.name, param.synthVal] }).flat;
+        var defaults = [];
         var freq = thing.midicpsFunc.(num);
         var amp = thing.velampFunc.(vel);
+        thing.params.do({ |param| defaults = defaults ++ [param.name, param.synthVal] });
         thing[\synths][num].free;
-        thing[\synths][num] = Synth(thing.defName, [out: thing.outbus, in: thing.inbus, doneAction: 2, freq: freq, amp: amp, bend: thing[\bend]] ++ thing.args ++ defaults, thing.group);
+        thing[\synths][num] = Synth(thing.defName, [
+          out: thing.outbus,
+          in: thing.inbus,
+          doneAction: 2,
+          freq: freq,
+          amp: amp,
+          bend: thing[\bend]
+        ] ++ thing.args ++ defaults, thing.group);
       },
       noteOffFunc: { |thing, num, vel|
         thing[\synths][num].release;
@@ -165,7 +176,8 @@
         thing[\noteStack] = [];
       },
       playFunc: { |thing|
-        var defaults = thing.params.collect({ |param| [param.name, param.synthVal] }).flat;
+        var defaults = [];
+        thing.params.do({ |param| defaults = defaults ++ [param.name, param.synthVal] });
         thing[\synth] = Synth(thing.defName, [out: thing.outbus, in: thing.inbus, doneAction: 0, amp: 0, gate: 0, bend: thing[\bend]] ++ thing.args ++ defaults, thing.group);
       },
       stopFunc: { |thing|
@@ -218,7 +230,8 @@
         thing[\noteStack] = [];
       },
       playFunc: { |thing|
-        var defaults = thing.params.collect({ |param| [param.name, param.synthVal] }).flat;
+        var defaults = [];
+        thing.params.do({ |param| defaults = defaults ++ [param.name, param.synthVal] });
         thing[\synth] = Synth(thing.defName, [out: thing.outbus, in: thing.inbus, bend: thing[\bend]] ++ thing.args ++ defaults, thing.group);
       },
       stopFunc: { |thing|
