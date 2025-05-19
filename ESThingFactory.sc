@@ -361,10 +361,26 @@
           var patchKnob;
           var knob;
 
-          if (param.spec == \button.asSpec) {
-            var butt = Button(view, knobBounds.copy.insetBy(0, 10).moveBy(0, 10)).states_([[nil, nil, Color.hsv(hue, 0.2, 1)], [nil, nil, Color.hsv(hue, 1, 0.675)]]).mouseDownAction_{ |view| view.valueAction = 1}.action_{ |view| param.val_(view.value) };
+          switch(param.spec.units)
+          { \button } {
+            var dependantFunc = { |param, val|
+              defer { butt.value = val };
+            };
+            var butt = Button(view, knobBounds.copy.insetBy(0, 10).moveBy(0, 10).width_(55)).states_([["PUSH", Color.hsv(hue, 0.5, 0.5), Color.hsv(hue, 0.2, 1)], ["PUSH", Color.white, Color.hsv(hue, 1, 0.675)]]).mouseDownAction_{ |view| view.valueAction = 1}.action_{ |view| param.val_(view.value) };
             StaticText(view, knobBounds.copy.height_(15)).string_(param.name).stringColor_(Color.hsv(hue, 1, 0.35)).acceptsMouse_(false);
-          } {
+            param.addDependant(dependantFunc);
+            butt.onClose = { param.removeDependant(dependantFunc) };
+          }
+          { \toggle } {
+            var dependantFunc = { |param, val|
+              defer { butt.value = val };
+            };
+            var butt = Button(view, knobBounds.copy.insetBy(0, 10).moveBy(0, 10).width_(55)).states_([["OFF", Color.hsv(hue, 0.5, 0.5), Color.hsv(hue, 0, 1)], ["ON", Color.white, Color.hsv(hue, 1, 0.675, 0.65)]]).value_(param.val).action_{ |view| param.val_(view.value) };
+            StaticText(view, knobBounds.copy.height_(15)).string_(param.name).stringColor_(Color.hsv(hue, 1, 0.35)).acceptsMouse_(false);
+            param.addDependant(dependantFunc);
+            butt.onClose = { param.removeDependant(dependantFunc) };
+          }
+          {
             var dependantFunc = { |param, val|
               defer { knob.value = val };
             };

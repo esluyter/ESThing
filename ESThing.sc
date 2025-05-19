@@ -7,7 +7,8 @@ ESThingParam {
   var <>hue;
   *initClass {
     StartUp.add {
-      ControlSpec.specs[\button] = ControlSpec(0, 1, \lin, 1);
+      ControlSpec.specs[\button] = ControlSpec(0, 1, \lin, 1, units: \button);
+      ControlSpec.specs[\toggle] = ControlSpec(0, 1, \lin, 1, units: \toggle);
     };
   }
   storeArgs { ^[name, spec, func, val] }
