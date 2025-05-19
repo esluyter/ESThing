@@ -9,6 +9,15 @@ ESThingParam {
     StartUp.add {
       ControlSpec.specs[\button] = ControlSpec(0, 1, \lin, 1, units: \button);
       ControlSpec.specs[\toggle] = ControlSpec(0, 1, \lin, 1, units: \toggle);
+      ControlSpec.specs[\bend] = ControlSpec(-1, 1);
+      ControlSpec.specs[\atk] = ControlSpec(0, 5, 4, default: 0.6);
+      ControlSpec.specs[\dec] = ControlSpec(0, 5, 4, default: 1);
+      ControlSpec.specs[\sus] = ControlSpec(0, 1, default: 0.5);
+      ControlSpec.specs[\rel] = ControlSpec(0, 10, 3, default: 1);
+      ControlSpec.specs[\at] = ControlSpec.specs[\atk];
+      ControlSpec.specs[\dt] = ControlSpec.specs[\dec];
+      ControlSpec.specs[\sl] = ControlSpec.specs[\sus];
+      ControlSpec.specs[\rt] = ControlSpec.specs[\rel];
     };
   }
   storeArgs { ^[name, spec, func, val] }
