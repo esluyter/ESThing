@@ -2,7 +2,7 @@ ESThingPlayer {
   var <ts, <>knobFunc, <>knobArr, <>ccExclude, <>modExclude, <>noteExclude, <>paramExclude;
   var <presets;
   var <noteOnMf, <noteOffMf, <bendMf, <touchMf, <polytouchMf, <ccMf;
-  var <win, <winBounds;
+  var <win, <>winBounds;
   var <isPlaying = false;
   var <tsbus, <amp = 1, <synths;
 
@@ -75,14 +75,15 @@ ESThingPlayer {
   }
 
   play {
+    isPlaying = true;
     Server.default.waitForBoot {
       this.initTsbus;
       ts.init;
       Server.default.sync;
       ts.play;
       synths = tsbus.numChannels.collect { |i| Synth(\ESThingPatch, [in: tsbus.index + i, out: i, amp: amp], ts.group, \addAfter) };
+      win !? { win.close };
       win = ts.makeWindow(winBounds);
-      isPlaying = true;
     };
   }
 
@@ -98,8 +99,11 @@ ESThingPlayer {
     ts.stop;
     ts.free;
     win !? {
-      winBounds = win.bounds;
-      win.close
+      try {
+        winBounds = win.bounds;
+      };
+      win.close;
+      win = nil;
     };
     isPlaying = false;
   }
@@ -113,6 +117,8 @@ ESThingPlayer {
   ts_ { |val|
     if (isPlaying) {
       this.stop;
+      // in case of an error, we still want to play on reeval
+      isPlaying = true;
       ts = val;
       ts.outbus = tsbus;
       this.play;

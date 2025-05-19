@@ -1,6 +1,6 @@
 ESThingPresets {
   var <tp, <presetArr, <defaultTime, <affectModAmps, <>restoreCallback, <>defaultPath;
-  var w;
+  var <w;
 
   defaultTime_ { |val|
     defaultTime = val;
@@ -107,15 +107,17 @@ ESThingPresets {
     }
   }
 
-  makeWindow {
+  makeWindow { |bounds|
 
     var view;
     var list, populateList, textView, setTextViewString;
     var slider, goButt, goNowButt, modBox, saveEditButt, captureButt, deleteButt, moveUpButt, moveDownButt, writeButt, readButt;
     var dependantFunc;
 
+    bounds = bounds ?? Rect(0, 910, 650, 330);
+
     w !? { w.close };
-    w = Window("Space Presets", Rect(0, 910, 650, 330)).front;
+    w = Window("Space Presets", bounds).front;
     view = View(w, Rect(0, 30, 650, 300)).resize_(5);
 
     list = ListView(w, Rect(0, 0, 200, w.bounds.height)).resize_(4).action_({

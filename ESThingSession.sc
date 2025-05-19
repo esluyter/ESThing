@@ -16,7 +16,9 @@ ESThingSession {
       tps = tps.extend(index + 1);
     };
     if (tps[index].isNil) {
-      tps[index] = ESThingPlayer().play;
+      // make a new player with default winBounds by index
+      tps[index] = ESThingPlayer().play.winBounds_(Rect(500 * index, 80, 650, 800));
+      tps[index].presets.makeWindow(Rect(500 * index, 910, 650, 330));
     };
     // sugar: convert array to ESThingSpace
     if (ts.isArray) {
@@ -35,10 +37,9 @@ ESThingSession {
       ts = ESThingSpace(*args);
     };
     if (ts.isNil) {
-      try {
-        tps[index].stop;
-      };
+      tps[index].stop;
       tps[index].free;
+      tps[index].presets.w.close;
       tps[index] = nil;
     } {
       // after all this, if ts not nil put it where it goes
