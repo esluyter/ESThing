@@ -78,7 +78,9 @@ ESThingPresets {
     if (preset.isInteger) { preset = presetArr[preset] };
     restoreCallback.();
     preset[\params].do { |arr|
-      tp.ts[arr[0]][arr[1]].tryPerform(\fadeTo, arr[2], dur);
+      try {
+        tp.ts[arr[0]][arr[1]].fadeTo(arr[2], dur);
+      };
     };
     if (affectModAmps) {
       preset[\modAmps].do { |arr|
