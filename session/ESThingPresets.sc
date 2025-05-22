@@ -1,5 +1,24 @@
+
+
+//            ESThingPresets
+//         saves snapshots of a thing space
+//           editable via GUI
+
+
 ESThingPresets {
-  var <tp, <presetArr, <defaultTime, <affectModAmps, <>restoreCallback, <>defaultPath;
+  // an ESThingPlayer
+  var <tp,
+  // array of presets as events
+  <presetArr,
+  // if no time is specified in the preset, how long to fade
+  <defaultTime,
+  // whether to affect modulation amounts or just param values
+  <affectModAmps,
+  // callback for when preset is restored
+  <>restoreCallback,
+  // default save path is the now executing dir
+  <>defaultPath;
+  // window
   var <w;
 
   defaultTime_ { |val|
@@ -60,6 +79,7 @@ ESThingPresets {
     ^presetArr.size;
   }
 
+  // return the current situation in the form of a preset
   currentState {
     ^(params: tp.ts.params.collect { |param|
       [param.parentThing.name, param.name, param.val]
@@ -68,12 +88,13 @@ ESThingPresets {
     }, date: Date.localtime);
   }
 
+  // insert current situation as preset
   capture { |index = inf|
     var preset = this.currentState;
     this.insert(index, preset);
   }
 
-  // preset arg can be either event or index
+  // preset arg can be either event or index #
   restorePreset { |preset, dur = 0|
     if (preset.isInteger) { preset = presetArr[preset] };
     restoreCallback.();
@@ -93,6 +114,7 @@ ESThingPresets {
     };
   }
 
+  // shortcuts to go at a particular index
   go { |index = 0|
     var preset = presetArr[index];
     var dur = preset[\time] ?? { defaultTime };
@@ -102,6 +124,7 @@ ESThingPresets {
     this.restorePreset(presetArr[index], 0);
   }
 
+  // list of display names for GUI
   displayNames {
     ^presetArr.collect { |preset, i|
       var name = preset[\name] ?? { preset[\date] !? { preset[\date].format("%d/%m/%y %I:%M:%S %p") } } ? "";
@@ -109,8 +132,9 @@ ESThingPresets {
     }
   }
 
-  makeWindow { |bounds|
 
+  // gross GUI code
+  makeWindow { |bounds|
     var view;
     var list, populateList, textView, setTextViewString;
     var slider, goButt, goNowButt, modBox, saveEditButt, captureButt, deleteButt, moveUpButt, moveDownButt, writeButt, readButt;
