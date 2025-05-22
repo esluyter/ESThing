@@ -465,7 +465,7 @@
       var columnMax = columnSpec.maxItem(_.value);
       var top = thing.top + 20 + (30 * thing.index);
       var width = 90 * thing.width;
-      var height = max(columnMax, max(thing.inChannels, thing.outChannels) / 2.5 - 0.5) * 75 + 40;
+      var height = max(columnMax, max(thing.inChannels, thing.outChannels) / 2.5 - 0.5) * 75 + 55;
       var view = UserView(parentView, Rect(left, top, width, height)).background_(Color.hsv(thing.hue, 0.05, 1, 0.8)).drawFunc_({ |view|
         Pen.use {
           Pen.addRect(view.bounds.copy.origin_(0@0));
@@ -584,6 +584,11 @@
       inlets = inlets.add(newInlets);
       outlets = outlets.add(newOutlets);
       knobPoints = knobPoints.add(newKnobPoints);
+
+      Button(view, Rect(2, height - 19, 17, 17)).states_([["⟳", Color.hsv(thing.hue, 1, 0.5)]]).font_(Font.sansSerif(20, true));
+      Button(view, Rect(width - 59, height - 19, 17, 17)).states_([["S", Color.hsv(thing.hue, 0.5, 0.5, 0.5), Color.hsv(thing.hue, 0.1, 1.0)], ["S", Color.white, Color.hsv(thing.hue, 1, 0.5)]]);
+      Button(view, Rect(width - 39, height - 19, 17, 17)).states_([["M", Color.hsv(thing.hue, 0.5, 0.5, 0.5), Color.hsv(thing.hue, 0.1, 1.0)], ["M", Color.white, Color.hsv(thing.hue, 1, 0.5)]]);
+      Button(view, Rect(width - 19, height - 19, 17, 17)).states_([["B", Color.hsv(thing.hue, 0.5, 0.5, 0.5), Color.hsv(thing.hue, 0.1, 1.0)], ["B", Color.white, Color.hsv(thing.hue, 1, 0.5)]]);
       view;
     };
 
