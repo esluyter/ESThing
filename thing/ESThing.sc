@@ -52,7 +52,7 @@ ESThing { // n.b. width can be array of knobs per column
     defaultVelampFunc = { |vel| vel.linexp(0, 1, 0.05, 1) };
   }
 
-  // rub it in, there are too many variables here
+  // there are too many variables :/
   storeArgs { ^[name, params, initFunc, freeFunc, playFunc, stopFunc,
     noteOnFunc, noteOffFunc, bendFunc,
     touchFunc, polytouchFunc, slideFunc,

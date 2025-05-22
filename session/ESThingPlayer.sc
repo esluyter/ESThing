@@ -1,25 +1,35 @@
+
+
+//          ESThingPlayer
+//       plays a thing space
+//            handles MIDI
+
+
 ESThingPlayer {
-  var <ts, <>knobFunc, <>knobArr, <>ccExclude, <>modExclude, <>noteExclude, <>paramExclude;
+  // ts is the thing space we are playing
+  var <ts,
+  // these are misc to do with what devices control which things
+  <>knobFunc, <>knobArr, <>ccExclude, <>modExclude, <>noteExclude, <>paramExclude;
+  // an instance of ESPresets
   var <presets;
+  // midi funcs
   var <noteOnMf, <noteOffMf, <bendMf, <touchMf, <polytouchMf, <ccMf;
+  // GUI window, remembers its bounds on reeval
   var <win, <>winBounds;
   var <isPlaying = false;
+  // tsbus so we have volume control etc
   var <tsbus, <amp = 1, <synths;
 
   *new { |ts, knobFunc, knobArr = ([]), ccExclude = ([]), modExclude = ([]), noteExclude = ([]), paramExclude = ([])|
     ts = ts ?? { ESThingSpace() };
     ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude, modExclude, noteExclude, paramExclude).initMidi.initPresets;
   }
-
-  initTsbus {
-    tsbus = tsbus ?? { Bus.audio(Server.default, ts.outChannels) };
-    ts.outbus = tsbus;
-  }
-
   initPresets {
     presets = ESThingPresets(this);
   }
 
+
+  // connect to MIDI and register midi funcs
   initMidi {
     var checkChans = { |chan, src, func|
       ts.things.do({ |thing|
@@ -68,6 +78,12 @@ ESThingPlayer {
     });
   }
 
+  // called later, on play
+  initTsbus {
+    tsbus = tsbus ?? { Bus.audio(Server.default, ts.outChannels) };
+    ts.outbus = tsbus;
+  }
+
   // this is so it can be used as out device by controller...
   control { |chan = 0, num = 0, val = 0|
     knobArr.pairsDo { |key, value|
@@ -81,11 +97,19 @@ ESThingPlayer {
   play {
     isPlaying = true;
     Server.default.waitForBoot {
+      // make sure the output bus is initialized
       this.initTsbus;
+      // play ts
       ts.init;
       Server.default.sync;
       ts.play;
-      synths = tsbus.numChannels.collect { |i| Synth(\ESThingPatch, [in: tsbus.index + i, out: i, amp: amp], ts.group, \addAfter) };
+      // patch to output
+      synths = tsbus.numChannels.collect { |i|
+        Synth(\ESThingPatch,
+          [in: tsbus.index + i, out: i, amp: amp],
+          ts.group, \addAfter)
+      };
+      // make window
       win !? { win.close };
       win = ts.makeWindow(winBounds, "Space", this);
     };
@@ -102,6 +126,7 @@ ESThingPlayer {
     synths = nil;
     ts.stop;
     ts.free;
+    // remember window bounds on close
     win !? {
       try {
         winBounds = win.bounds;
@@ -118,6 +143,7 @@ ESThingPlayer {
     tsbus.free;
   }
 
+  // smoothly replace ts on reeval
   ts_ { |val|
     if (isPlaying) {
       this.stop;
@@ -131,10 +157,13 @@ ESThingPlayer {
     }
   }
 
+  // params can be divided into included and excluded params,
+  // for randomization et al
   params { ^ts.params }
   excludedParams { ^paramExclude.collect { |ass| ts.(ass.key).(ass.value) } }
   includedParams { var ex = this.excludedParams; ^this.params.reject({ |param| ex.indexOf(param).notNil }) }
 
+  // modulation patches can also be excluded
   modPatches { ^ts.modPatches }
   excludedModPatches {
     ^this.excludedParams.collect { |param|
@@ -148,6 +177,7 @@ ESThingPlayer {
     ^this.modPatches.reject({ |modPatch| ex.indexOf(modPatch).notNil })
   }
 
+  // automatically assign all params to sequential MIDI ccs
   assignAllKnobs { |ccStart = 0|
     knobArr = ts.params.collect { |param|
       var ret = [ccStart, param.parentThing.name->param.name];
@@ -156,6 +186,7 @@ ESThingPlayer {
     } .flat;
   }
 
+  // exclude a MIDI device from mod, note, and cc control
   exclude { |device, excludeMod = true, excludeCc = true, excludeNote = true|
     var uid = if (device.isInteger) { device } { device.uid };
     if (excludeCc) {
@@ -169,9 +200,11 @@ ESThingPlayer {
     };
   }
 
+  // get params and vars from thing space
   at { |sym| ^ts.at(sym) }
 
 
+  // generates a func to be used for 2D parameter randomization
   makeXYFunc {
     var vals, randVals, modAmps, randModAmps, mulFuncs, distX, distY;
     var includedParams = this.includedParams;
