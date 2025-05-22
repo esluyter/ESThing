@@ -443,10 +443,12 @@
             butt.onClose = { param.removeDependant(dependantFunc) };
           }
           {
+            // if its a number and not a button or toggle, it's a knob!
             var dependantFunc = { |param, val|
               defer { knob.value = val };
             };
             knob = EZKnob(view, knobBounds, param.name, param.spec, { |knob| thing.set(param.name, knob.value) }, param.val, labelWidth: 100, labelHeight: 15, layout: 'vert').setColors(stringColor: Color.hsv(hue, 1, 0.35), knobColors: [Color.hsv(hue, 0.4, 1), Color.hsv(hue, 1, 0.675), Color.gray(0.5, 0.1), Color.black]);
+            knob.knobView.mouseDownAction_{ |view, x, y, modifiers, buttonNumber, clickCount| clickCount.postln; if (clickCount == 2) { "hiu".postln; param.val_(param.spec.default); true }; };
             param.addDependant(dependantFunc);
             knob.onClose = { param.removeDependant(dependantFunc) };
           };
