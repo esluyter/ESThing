@@ -113,8 +113,13 @@
 
   *prMakeParamsDefName { |defName, hideMidiControls = true|
     var synthDesc = SynthDescLib.global[defName];
-    var params = this.prMakeParams(synthDesc.controls, hideMidiControls, synthDesc);
-    ^params;
+    if (synthDesc.notNil) {
+      var params = this.prMakeParams(synthDesc.controls, hideMidiControls, synthDesc);
+      ^params;
+    } {
+      "SynthDef '%' not found".format(defName).error;
+      ^nil;
+    }
   }
 
   *mpeSynth { |name, defName, args, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, srcID|

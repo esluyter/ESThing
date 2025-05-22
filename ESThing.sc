@@ -444,11 +444,11 @@ ESThing { // n.b. width can be array of knobs per column
 
 ESThingSpace {
   var <>things, <>patches;
-  var <>initFunc, <>playFunc, <>stopFunc, <>freeFunc, <inChannels, <outChannels, <>useADC, <>useDAC, <>target;
+  var <>initFunc, <>playFunc, <>stopFunc, <>freeFunc, <inChannels, <outChannels, <>target;
   var <>inbus, <>outbus, <>group;
   var <>environment;
 
-  storeArgs { ^[things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, useADC, useDAC, target]}
+  storeArgs { ^[things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, target]}
   modPatches {
     ^patches.select { |patch| patch.to.index.isKindOf(Symbol) };
   }
@@ -467,7 +467,7 @@ ESThingSpace {
       ).tr($?, $\\).postln;
     };
   }
-  *new { |things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels = 2, outChannels = 2, useADC = true, useDAC = true, target, oldSpace|
+  *new { |things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels = 2, outChannels = 2, target, oldSpace|
     // syntactic sugar
     var hueList = [ 0.55, 0.3, 0.0, 0.8, 0.5, 0.1, 0.65, 0.35, 0.9, 0.2 ], hueIndex = 0;
     things = things.asArray.collect { |thing|
@@ -594,22 +594,14 @@ ESThingSpace {
       patch
     } .flat.reject { |item| item.isNil };
     target = target ?? { Server.default };
-    ^super.newCopyArgs(things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, useADC, useDAC, target).prInit(oldSpace);
+    ^super.newCopyArgs(things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, target).prInit(oldSpace);
   }
   prInit { |oldSpace|
     environment = ();
     things.do(_.parentSpace_(this));
     patches.do(_.parentSpace_(this));
-    if (useADC) {
-      inbus = Server.default.options.numOutputBusChannels.asBus('audio', inChannels, Server.default);
-    } {
-      inbus = Bus.audio(Server.default, inChannels);
-    };
-    if (useDAC) {
-      outbus = 0.asBus('audio', outChannels, Server.default);
-    } {
-      outbus = Bus.audio(Server.default, outChannels);
-    };
+    inbus = Server.default.options.numOutputBusChannels.asBus('audio', inChannels, Server.default);
+    outbus = 0.asBus('audio', outChannels, Server.default);
 
     // for all named things,
     // set all knob values to their previous (i.e. current) position

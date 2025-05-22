@@ -22,8 +22,8 @@ ESThingSession {
     };
     // sugar: convert array to ESThingSpace
     if (ts.isArray) {
-      var argNames = ['things', 'patches', 'initFunc', 'playFunc', 'stopFunc', 'freeFunc', 'inChannels', 'outChannels', 'useADC', 'useDAC', 'target', 'oldSpace'];
-      var args = [[], [], nil, nil, nil, nil, 2, 2, true, true, nil, tps[index].ts];
+      var argNames = ['things', 'patches', 'initFunc', 'playFunc', 'stopFunc', 'freeFunc', 'inChannels', 'outChannels', 'target', 'oldSpace'];
+      var args = [[], [], nil, nil, nil, nil, 2, 2, nil, tps[index].ts];
       var i = 0;
       ts.do { |item|
         var argIndex = argNames.indexOf(item);
