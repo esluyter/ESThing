@@ -1,37 +1,43 @@
+
+
+//         ESThingParam
+//      a named value, with a spec and a func
+
+
 ESThingParam {
   var <name, <spec, <>func, <val;
   var <>parentThing;
+
+  // when modulated client-side, val retains knob position
+  // and modded val is the current "sounding" / modulated value,
+  // updated frequently
   var moddedVal;
+  // when modulated server-side, this is mapped by a Synth
   var <modPatch, <modSynth, <modBus;
+  // for fadeTo
   var rout;
+  // so that e.g. in a space thing, the params can be color coded
+  // back to their original thing
   var <>hue;
-  *initClass {
-    StartUp.add {
-      ControlSpec.specs[\button] = ControlSpec(0, 1, \lin, 1, units: \button);
-      ControlSpec.specs[\toggle] = ControlSpec(0, 1, \lin, 1, units: \toggle);
-      ControlSpec.specs[\bend] = ControlSpec(-1, 1);
-      ControlSpec.specs[\atk] = ControlSpec(0, 5, 4, default: 0.6);
-      ControlSpec.specs[\dec] = ControlSpec(0, 5, 4, default: 1);
-      ControlSpec.specs[\sus] = ControlSpec(0, 1, default: 0.5);
-      ControlSpec.specs[\rel] = ControlSpec(0, 10, 3, default: 1);
-      ControlSpec.specs[\at] = ControlSpec.specs[\atk];
-      ControlSpec.specs[\dt] = ControlSpec.specs[\dec];
-      ControlSpec.specs[\sl] = ControlSpec.specs[\sus];
-      ControlSpec.specs[\rt] = ControlSpec.specs[\rel];
-    };
-  }
+
   storeArgs { ^[name, spec, func, val] }
   *new { |name, spec, func, val|
+    // default to name, otherwise default spec
     spec = (spec ?? { name } ?? { ControlSpec() }).asSpec;
+    // default func updates synth parameter
     func = func ? { |name, val, synthVal, thing|
       if (thing[\synth].class == Synth) {
         thing[\synth].set(name, synthVal);
       };
       thing[\synths].do({ |synth| synth.set(name, synthVal) });
     };
+    // default to spec default value
     val = val ?? { spec.default };
     ^super.newCopyArgs(name, spec, func, val);
   }
+
+  // this is the thing that should be sent to synth via .set message
+  // if parameter is being modulated, this is a bus mapping
   synthVal {
     ^if (modBus.notNil and: { modBus.index.notNil }) {
       modBus.asMap;
@@ -39,17 +45,22 @@ ESThingParam {
       val;
     }
   }
+
+  // sets the parameter value, by default stopping any fade routine
   val_ { |argval, stopRout = true|
     if (stopRout) { rout.stop; rout = nil; };
     val = argval;
+    // if parameter is being modulated, update modulator mapping
     if (modSynth.notNil) { modSynth.set(\val, val) };
-    //[name, val].postln;
+    // call the provided func
     func.value(name, val, this.synthVal, parentThing);
     this.changed(val);
   }
+  // sets the parameter value, normalized from 0-1
   valNorm_ { |argval, stopRout = true|
     this.val_(spec.map(argval), stopRout);
   }
+  // normalized from 0-127
   val127_ { |midival|
     this.valNorm_(midival / 127);
   }
@@ -59,6 +70,8 @@ ESThingParam {
   val127 {
     ^this.valNorm * 127;
   }
+
+  // fades parameter over a duration with a curve
   fadeTo { |value = 0, dur = 1, curve = \sin, hz = 30, clock|
     var fromValNorm = this.valNorm;
     var toValNorm = spec.unmap(value);
@@ -79,6 +92,9 @@ ESThingParam {
       }.fork(clock);
     }
   }
+
+  // play a synth to modulate this param
+  // (n.b the patch will always be playing a ReplyFunc.....)
   setModPatch { |patch, inBus|
     var args;
     modPatch = patch;
@@ -90,6 +106,9 @@ ESThingParam {
     modSynth = Synth(("ESmodulate" ++ spec.warp.class.asString).asSymbol, args, patch.synth, \addAfter);
     this.val_(val);
   }
+
+  // update the moddedVal from the reply func
+  // (this holds a language-side approximation of the current sounding value)
   setModulator { |modVal|
     moddedVal = spec.map(spec.unmap(val) + modVal);
     if (parentThing.callFuncOnParamModulate) {
@@ -98,7 +117,11 @@ ESThingParam {
       };
     };
   }
+
+  // syntax sugar
   value { ^val }
+
+  // for use language-side
   moddedVal { ^moddedVal ? val }
   asPattern { ^Pfunc { this.moddedVal } }
   embedInStream { arg inval;
@@ -112,6 +135,8 @@ ESThingParam {
       }
     })
   }
+
+  // clean up
   free {
     modBus.free;
     modSynth.free;

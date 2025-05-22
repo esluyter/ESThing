@@ -1,162 +1,59 @@
 
 
 //           ESThingSpace
+//       a container for many things
 
 
 
 ESThingSpace {
+  // these are arrays of ESThing and ESThingPatch
   var <>things, <>patches;
-  var <>initFunc, <>playFunc, <>stopFunc, <>freeFunc, <inChannels, <outChannels, <>target;
+  // user functions, take argument { |space| }
+  // environment variables here will propagate
+  // e.g. space[\buf] = ... , child things can find at thing[\buf]
+  var <>initFunc, <>freeFunc, <>playFunc, <>stopFunc,
+  // i/o specs
+  <inChannels, <outChannels,
+  // where to add group
+  <>target;
+
+  // buses are created on .init / destroyed on .free
+  // group is created on .play / destroyed on .stop
   var <>inbus, <>outbus, <>group;
   var <>environment;
 
-  storeArgs { ^[things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, target]}
-  modPatches {
-    ^patches.select { |patch| patch.to.index.isKindOf(Symbol) };
-  }
-  postModPatches {
-    this.modPatches.do { |patch|
-      // this doesn't work with backslash directly, so use question mark temp
-      "(?% : ?%->?%, amp: %)".format(
-        if (patch.fromThing.outChannels == 1) {
-          patch.from.thingIndex
-        } {
-          "%->?%".format(patch.from.thingIndex, patch.from.index)
-        },
-        patch.to.thingIndex,
-        patch.to.index,
-        patch.amp
-      ).tr($?, $\\).postln;
-    };
-  }
-  *new { |things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels = 2, outChannels = 2, target, oldSpace|
-    // syntactic sugar
-    var hueList = [ 0.55, 0.3, 0.0, 0.8, 0.5, 0.1, 0.65, 0.35, 0.9, 0.2 ], hueIndex = 0;
+  storeArgs { ^[things, patches,
+    initFunc, freeFunc, playFunc, stopFunc,
+    inChannels, outChannels, target]}
+
+  *new { |things, patches,
+    initFunc, playFunc, stopFunc, freeFunc,
+    inChannels = 2, outChannels = 2, target,
+    // oldSpace is for remembering parameter values when reevaluating
+    oldSpace|
+
+    // the cycle of colors for child things
+    var hueList = [ 0.55, 0.3, 0.0, 0.8, 0.5, 0.1, 0.65, 0.35, 0.9, 0.2 ];
+    var hueIndex = 0;
+
+    // process array of possible things or associations
+    // (See ESThingFactory for implementation)
     things = things.asArray.collect { |thing|
-      thing = if (thing.isKindOf(ESThing)) {
-        thing
-      } {
-        if (thing.isKindOf(Association)) {
-          var name = thing.key;
-          var value = thing.value;
-          var ret;
-          if (value.isKindOf(ESThingSpace)) {
-            ret = ESThing.space(name, value);
-          };
-          if (value.isKindOf(Function)) {
-            ret = ESThing.playFuncSynth(name, value);
-          };
-          if (value.isKindOf(Ref)) {
-            ret = ESThing.droneSynth(name, value.dereference);
-          };
-          if (value.isKindOf(Dictionary)) {
-            var thisKey = value.keys.select(_.isKindOf(Symbol).not).pop;
-            var thisValue = value[thisKey];
-            var inChannels = 2, outChannels = 2;
-            var kind = \drone;
-            if (thisValue.isKindOf(Symbol)) {
-              kind = thisValue
-            };
-            if (thisValue.isKindOf(Association)) {
-              kind = thisValue.key;
-              thisValue = thisValue.value;
-            };
-            if (thisValue.isInteger) {
-              inChannels = outChannels = thisValue
-            };
-            if (thisValue.isArray) {
-              #inChannels, outChannels = thisValue
-            };
-            if (thisKey.isKindOf(ESThingSpace)) {
-              ret = ESThing.space(name, thisKey, inChannels, outChannels, value[\top] ? 0, value[\left] ? 0, value[\width] ? 1);
-            };
-            if (thisKey.isKindOf(Function)) {
-              ret = ESThing.playFuncSynth(name, thisKey, value[\params], inChannels, outChannels, value[\top] ? 0, value[\left] ? 0, value[\width] ? 1, value[\midiChannel], value[\srcID])
-            };
-            if (thisKey.isKindOf(Ref)) {
-              var method = switch (kind)
-              { \drone } { \droneSynth }
-              { \mono } { \monoSynth }
-              { \poly } { \polySynth }
-              { \mpe } { \mpeSynth };
-              ret = ESThing.perform(method, name, thisKey.dereference, value[\args], value[\params], inChannels, outChannels, value[\midicpsFunc], value[\velampFunc], value[\top] ? 0, value[\left] ? 0, value[\width] ? 1, value[\midiChannel], value[\srcID]);
-            };
-          };
-          ret;
-        } {
-          // don't know what to do with this
-          thing
-        };
-      };
+      thing = ESThing.newFrom(thing);
       thing.hue = hueList[hueIndex];
       hueIndex = hueIndex + 1 % hueList.size;
       thing;
     };
+    // process array of patches
+    // (see ESThingFactory for implementation)
     patches = patches.asArray.collect { |patch|
-      var n;
-      var fromInput = false, toOutput = false;
-      var cs = patch.asCompileString;
-      if (patch.isKindOf(Symbol)) {
-        // patch a symbol directly to the output
-        patch = (patch : -1);
-      };
-      if (patch.isKindOf(Dictionary)) {
-        var amp = patch.removeAt(\amp) ?? 1;
-        if (patch.size == 1) {
-          var arr = patch.asKeyValuePairs;
-          patch.from = arr[0];
-          patch.to = arr[1];
-        };
-        if ((patch.from.class == Symbol) or: (patch.from.class == Integer)) {
-          var fromThing = this.thingAt(patch.from, things);
-          if (fromThing.isNil) {
-            fromInput = true;
-            fromThing = (outChannels: inChannels);
-          };
-          patch.from = patch.from->(fromThing.outChannels.collect{ |n| n });
-        };
-        if ((patch.to.class == Symbol) or: (patch.to.class == Integer)) {
-          var toThing = this.thingAt(patch.to, things);
-          if (toThing.isNil) {
-            toOutput = true;
-            toThing = (inChannels: outChannels);
-          };
-          patch.to = patch.to->(toThing.inChannels.collect{ |n| n });
-          if (fromInput and: toOutput) {
-            // post warning here
-            "% -- (% : %)  -- neglected to patch input directly to output".format(cs, patch.from, patch.to).warn;
-          };
-        };
-        // accept arrays of indices
-        if (patch.from.value.isArray) {
-          patch.from = patch.from.value.collect { |index| patch.from.key->index };
-        } {
-          patch.from = patch.from.asArray;
-        };
-        if (patch.to.value.isArray) {
-          patch.to = patch.to.value.collect { |index| patch.to.key->index };
-        } {
-          patch.to = patch.to.asArray;
-        };
-        if (patch.from.value.isNil or: patch.to.value.isNil) {
-          patch = []
-        } {
-          patch = max(patch.from.size, patch.to.size).collect { |i|
-            // guard against patching ins to outs
-            var from = patch.from.wrapAt(i);
-            var to = patch.to.wrapAt(i);
-            if (fromInput and: toOutput) {
-              nil
-            } {
-              ESThingPatch(patch.name, from, to, amp ?? 1)
-            }
-          };
-        };
-      };
-      patch
+      ESThingPatch.newFrom(patch, things, inChannels, outChannels)
     } .flat.reject { |item| item.isNil };
+
+    // default to target the default server
     target = target ?? { Server.default };
-    ^super.newCopyArgs(things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, target).prInit(oldSpace);
+
+    ^super.newCopyArgs(things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, target).prInit.restoreOldSpace(oldSpace);
   }
   prInit { |oldSpace|
     environment = ();
@@ -164,7 +61,76 @@ ESThingSpace {
     patches.do(_.parentSpace_(this));
     inbus = Server.default.options.numOutputBusChannels.asBus('audio', inChannels, Server.default);
     outbus = 0.asBus('audio', outChannels, Server.default);
+  }
 
+
+  // main order of operations
+  // usually initiated by thing player
+  init {
+    initFunc.value(this);
+    things.do(_.init);
+  }
+  play {
+    group = Group(target);
+    forkIfNeeded {
+      playFunc.value(this);
+      Server.default.sync;
+      things.reverse.do(_.play); // assumes they each add to head
+      Server.default.sync;
+      patches.do(_.play);
+    }
+  }
+  stop {
+    stopFunc.value(this);
+    things.do(_.stop);
+    patches.do(_.stop);
+    group.free;
+  }
+  free {
+    freeFunc.value(this);
+    things.do(_.free);
+  }
+
+  // environment and thing access
+  at { |sym|
+    // default to 0 if symbol not found
+    // this is so it's ok to use thing[\buf] in a play func
+    ^(this.thingAt(sym) ? environment.at(sym)) ? 0;
+  }
+  put { |key, val|
+    environment.put(key, val);
+    ^this;
+  }
+
+  // expose as a class method because of ESThingPatch.newFrom
+  *thingAt { |sym, things|
+    things = things.asArray;
+    if (sym.isInteger) {
+      ^things[sym]
+    };
+    things.do { |thing|
+      if (thing.name == sym) {
+        ^thing
+      };
+    };
+    ^nil;
+  }
+  thingAt { |sym|
+    ^this.class.thingAt(sym, this.things);
+  }
+  params {
+    ^things.collect(_.params).flat;
+  }
+
+  //syntactic sugar
+  value { |sym| ^this.thingAt(sym) }
+
+  asTarget {
+    ^this.group
+  }
+
+  // usually done automatically when you reevaluate
+  restoreOldSpace { |oldSpace|
     // for all named things,
     // set all knob values to their previous (i.e. current) position
     // if oldSpace is provided
@@ -195,64 +161,22 @@ ESThingSpace {
       oldSpace.postModPatches;
     };
   }
-
-  init {
-    initFunc.value(this);
-    things.do(_.init);
+  modPatches {
+    ^patches.select { |patch| patch.to.index.isKindOf(Symbol) };
   }
-  play {
-    group = Group(target);
-    forkIfNeeded {
-      playFunc.value(this);
-      Server.default.sync;
-      things.reverse.do(_.play); // assumes they each add to head
-      Server.default.sync;
-      patches.do(_.play);
-    }
-  }
-  stop {
-    stopFunc.value(this);
-    things.do(_.stop);
-    patches.do(_.stop);
-    group.free;
-  }
-  free {
-    freeFunc.value(this);
-    things.do(_.free);
-  }
-
-  at { |sym|
-    // default to 0 if symbol not found
-    // this is so it's ok to use thing[\buf] in a play func
-    ^(this.thingAt(sym) ? environment.at(sym)) ? 0;
-  }
-  put { |key, val|
-    environment.put(key, val);
-    ^this;
-  }
-
-  *thingAt { |sym, things|
-    things = things.asArray;
-    if (sym.isInteger) {
-      ^things[sym]
+  postModPatches {
+    this.modPatches.do { |patch|
+      // this doesn't work with backslash directly, so use question mark temp
+      "(?% : ?%->?%, amp: %)".format(
+        if (patch.fromThing.outChannels == 1) {
+          patch.from.thingIndex
+        } {
+          "%->?%".format(patch.from.thingIndex, patch.from.index)
+        },
+        patch.to.thingIndex,
+        patch.to.index,
+        patch.amp
+      ).tr($?, $\\).postln;
     };
-    things.do { |thing|
-      if (thing.name == sym) {
-        ^thing
-      };
-    };
-    ^nil;
-  }
-  thingAt { |sym|
-    ^this.class.thingAt(sym, this.things);
-  }
-  params {
-    ^things.collect(_.params).flat;
-  }
-  //syntactic sugar
-  value { |sym| ^this.thingAt(sym) }
-
-  asTarget {
-    ^this.group
   }
 }

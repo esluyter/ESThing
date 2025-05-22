@@ -1,42 +1,83 @@
 
 
 //           ESThing
+//        the basic unit of sound creation
+//             (see ESThingFactory for its direct usage)
+//                 (and ESThingSession to begin properly)
 
 
 
 ESThing { // n.b. width can be array of knobs per column
-  var <>name, <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>slideFunc, <>stopFunc, <>freeFunc, <inChannels, <outChannels, <>midicpsFunc, <>velampFunc, <>defName, <>args, <>func, <>top, <>left, >width, <>midiChannel, <>srcID, <>callFuncOnParamModulate, <>prInitFunc;
+  var <>name,
+  // these are user functions to be called at the described times
+  // these take argument { |thing| }
+  <>initFunc, <>freeFunc, <>playFunc, <>stopFunc,
+  // these take { |thing, num, val, chan| }
+  <>noteOnFunc, <>noteOffFunc,
+  // these take { |thing, val, chan| }
+  // except polytouch which takes { |thing, val, num, chan| }
+  <>bendFunc, <>touchFunc, <>polytouchFunc, <>slideFunc,
+  // i/o specs
+  <inChannels, <outChannels,
+  // funcs to convert midi to cps and vel to amp
+  <>midicpsFunc, <>velampFunc,
+  // other special user data slots
+  <>defName, <>args, <>func,
+  // GUI specs
+  <>top, <>left, >width,
+  // MIDI specs
+  <>midiChannel, <>srcID,
+  // misc
+  <>callFuncOnParamModulate, <>prInitFunc;
+
+  // params is an array of ESThingParam
+  // oldParams is an Event of paramName : param
+  // just a hack used to defer setting default values until all params are created
   var <params, <oldParams;
+  // buses are created on .init / destroyed on .free
+  // group is created on .play / destroyed on .stop
   var <>inbus, <>outbus, <>group;
+  // environment local to thing, so you can store e.g. thing[\buf]
+  // these default to 0, not nil
+  // by convention synths are stored in thing[\synth], thing[\synths]
+  // and params behave sort of like environment variables
+  // thing[\paramName] -> param
   var <>environment, <>parentSpace;
   var <>hue = 0.5;
 
+  // default midi translation functions
   classvar <>defaultMidicpsFunc, <>defaultVelampFunc;
   *initClass {
     defaultMidicpsFunc = { |num| num.midicps };
     defaultVelampFunc = { |vel| vel.linexp(0, 1, 0.05, 1) };
   }
 
-  width { ^if (width.isArray) { width.size } { width } }
-  columnSpec {
-    if (width.isArray) {
-      ^width
-    } {
-      var sizes = 0.dup(width);
-      params.size.do { |i|
-        var indx = i % width;
-        sizes[indx] = sizes[indx] + 1;
-      };
-      ^sizes
-    };
-  }
+  // rub it in, there are too many variables here
+  storeArgs { ^[name, params, initFunc, freeFunc, playFunc, stopFunc,
+    noteOnFunc, noteOffFunc, bendFunc,
+    touchFunc, polytouchFunc, slideFunc,
+    inChannels, outChannels,
+    midicpsFunc, velampFunc, defName, args, func,
+    top, left, width,
+    midiChannel, srcID, callFuncOnParamModulate, prInitFunc] }
 
+  *new { |name, params, initFunc, freeFunc, playFunc, stopFunc,
+    noteOnFunc, noteOffFunc, bendFunc,
+    touchFunc, polytouchFunc, slideFunc,
+    inChannels = 2, outChannels = 2,
+    midicpsFunc, velampFunc, defName, args, func,
+    top = 0, left = 0, width = 1,
+    midiChannel, srcID, callFuncOnParamModulate = false, prInitFunc|
 
-  storeArgs { ^[name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, slideFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID, callFuncOnParamModulate, prInitFunc] }
-  *new { |name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, slideFunc, stopFunc, freeFunc, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, defName, args, func, top = 0, left = 0, width = 1, midiChannel, srcID, callFuncOnParamModulate = false, prInitFunc|
     midicpsFunc = midicpsFunc ? defaultMidicpsFunc;
     velampFunc = velampFunc ? defaultVelampFunc;
-    ^super.newCopyArgs(name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, slideFunc, stopFunc, freeFunc, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID, callFuncOnParamModulate, prInitFunc).prInit(params);
+    ^super.newCopyArgs(name, initFunc, freeFunc, playFunc, stopFunc,
+      noteOnFunc, noteOffFunc, bendFunc,
+      touchFunc, polytouchFunc, slideFunc,
+      inChannels, outChannels,
+      midicpsFunc, velampFunc, defName, args, func,
+      top, left, width,
+      midiChannel, srcID, callFuncOnParamModulate, prInitFunc).prInit(params);
   }
   prInit { |params|
     environment = ();
@@ -44,26 +85,9 @@ ESThing { // n.b. width can be array of knobs per column
     this.params_(params);
     prInitFunc.value(this);
   }
-  params_ { |arr|
-    params = arr.asArray.collect { |param|
-      if (param.isKindOf(Symbol)) {
-        param = ESThingParam(param, param.asSpec ?? { ControlSpec() })
-      };
-      if (param.class == Association) {
-        param = ESThingParam(param.key, param.value);
-      };
-      param
-    };
-    // to catch params created late i.e. playFuncSynth
-    params.do { |param|
-      param.parentThing_(this);
-      if (oldParams[param.name].notNil) {
-        param.val = oldParams[param.name].val;
-      };
-    };
-    oldParams = ();
-  }
 
+  // main order of operations
+  // usually initiated by parent space
   init {
     inbus = Bus.audio(Server.default, inChannels);
     outbus = Bus.audio(Server.default, outChannels);
@@ -110,6 +134,7 @@ ESThing { // n.b. width can be array of knobs per column
     params.do(_.free);
   }
 
+  // environment and param access
   at { |sym|
     // default to 0
     // so it's ok to use thing[\buf] in a play func
@@ -147,5 +172,46 @@ ESThing { // n.b. width can be array of knobs per column
   }
   asTarget {
     ^this.group
+  }
+
+  // params can be given in forms:
+  //ESThingParam(name, spec, func, val)
+  //name->spec
+  //name
+  /* the default func in ESThingParam:
+  { |name, val, synthVal, thing|
+      if (thing[\synth].class == Synth) {
+        thing[\synth].set(name, synthVal);
+      };
+      thing[\synths].do({ |synth| synth.set(name, synthVal) });
+    }*/
+  params_ { |arr|
+    params = arr.asArray.collect { |param|
+      ESThingParam.newFrom(param)
+    };
+    // to catch params created late i.e. playFuncSynth
+    params.do { |param|
+      param.parentThing_(this);
+      if (oldParams[param.name].notNil) {
+        param.val = oldParams[param.name].val;
+      };
+    };
+    oldParams = ();
+  }
+
+  // width is really number of columns
+  // if width is array, treat it as a specification for how many params per column
+  width { ^if (width.isArray) { width.size } { width } }
+  columnSpec {
+    if (width.isArray) {
+      ^width
+    } {
+      var sizes = 0.dup(width);
+      params.size.do { |i|
+        var indx = i % width;
+        sizes[indx] = sizes[indx] + 1;
+      };
+      ^sizes
+    };
   }
 }

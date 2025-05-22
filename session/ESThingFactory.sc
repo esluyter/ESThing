@@ -1,4 +1,280 @@
+
+
+//          ESThingFactory
+//     all syntax sugar in one place and more?
+//       aka quarantine the dirty stuff
+
+
++ ESThingParam {
+  *initClass {
+    // add extra ControlSpecs on startup
+    StartUp.add {
+      ControlSpec.specs[\button] = ControlSpec(0, 1, \lin, 1, units: \button);
+      ControlSpec.specs[\toggle] = ControlSpec(0, 1, \lin, 1, units: \toggle);
+      ControlSpec.specs[\bend] = ControlSpec(-1, 1);
+      ControlSpec.specs[\atk] = ControlSpec(0, 5, 4, default: 0.6);
+      ControlSpec.specs[\dec] = ControlSpec(0, 5, 4, default: 1);
+      ControlSpec.specs[\sus] = ControlSpec(0, 1, default: 0.5);
+      ControlSpec.specs[\rel] = ControlSpec(0, 10, 3, default: 1);
+      ControlSpec.specs[\at] = ControlSpec.specs[\atk];
+      ControlSpec.specs[\dt] = ControlSpec.specs[\dec];
+      ControlSpec.specs[\sl] = ControlSpec.specs[\sus];
+      ControlSpec.specs[\rt] = ControlSpec.specs[\rel];
+    };
+  }
+
+  *newFrom { |obj|
+    if (obj.class == ESThingParam) {
+      ^obj
+    };
+    if (obj.isKindOf(Symbol)) {
+      ^ESThingParam(obj, obj.asSpec ?? { ControlSpec() })
+    };
+    if (obj.class == Association) {
+      ^ESThingParam(obj.key, obj.value)
+    };
+  }
+}
+
+
++ ESThingPatch {
+  *initClass {
+    ServerBoot.add {
+      // add server-side control spec mapping
+      var warpModFuncs = ();
+      [CosineWarp, SineWarp, LinearWarp, ExponentialWarp].do { |warp|
+        warpModFuncs[warp] = { |val, modVal, minval, maxval, step|
+          var spec = ControlSpec(minval, maxval, warp, step);
+          var unmappedVal = spec.unmap(val);
+          var moddedVal = unmappedVal + modVal;
+          spec.map(moddedVal);
+        };
+      };
+      warpModFuncs[DbFaderWarp] = { |val, modVal, minval, maxval, step|
+        var valAmp = val.dbamp;
+        var minvalAmp = minval.dbamp;
+        var rangeAmp = maxval.dbamp - minvalAmp;
+        var unmappedVal = Select.kr(rangeAmp > 0, [
+          1 - sqrt(1 - ((valAmp - minvalAmp) / rangeAmp)),
+          ((valAmp - minvalAmp) / rangeAmp).sqrt
+        ]);
+        var moddedVal = (unmappedVal + modVal).clip(0, 1);
+        Select.ar(K2A.ar(rangeAmp > 0), [
+          (1 - (1 - moddedVal).squared) * rangeAmp + minvalAmp,
+          moddedVal.squared * rangeAmp + minvalAmp
+        ]).ampdb;
+      };
+      warpModFuncs[FaderWarp] = { |val, modVal, minval, maxval, step|
+        var range = maxval - minval;
+        var unmappedVal = Select.kr(range > 0, [
+          1 - sqrt(1 - ((val - minval) / range)),
+          ((val - minval) / range).sqrt
+        ]);
+        var moddedVal = (unmappedVal + modVal).clip(0, 1);
+        Select.ar(K2A.ar(range > 0), [
+          (1 - (1 - moddedVal).squared) * range + minval,
+          moddedVal.squared * range + minval
+        ]);
+      };
+      warpModFuncs.keysValuesDo { |warp, func|
+        var defName = ("ESmodulate" ++ warp.asString).asSymbol;
+        SynthDef(defName, { |out, in, amp, val, minval, maxval, step|
+          var modVal = InFeedback.ar(in) * amp;
+          Out.ar(out, func.(val, modVal, minval, maxval, step));
+        }).add;
+      };
+      SynthDef(\ESmodulateCurveWarp, { |out, in, amp, val, minval, maxval, step, curve|
+        var range = maxval - minval;
+        var grow = exp(curve);
+        var a = range / (1.0 - grow);
+        var b = minval + a;
+        var modVal = InFeedback.ar(in) * amp;
+        var unmappedVal = log((b - val) / a) / curve;
+        var moddedVal = unmappedVal + modVal;
+        Out.ar(out, b - (a * pow(grow, moddedVal)));
+      }).add;
+
+      // add other necessary SynthDefs for patching
+      SynthDef(\ESThingPatch, { |in, out, amp|
+        Out.ar(out, InFeedback.ar(in) * amp);
+      }).add;
+      SynthDef(\ESThingReply, { |in, freq = 100, id|
+        SendReply.ar(Impulse.ar(freq), '/ESThingReply', InFeedback.ar(in), id);
+      }).add;
+    };
+  }
+
+  // this might return an array!
+  *newFrom { |obj, things, inChannels, outChannels|
+    var n;
+    var fromInput = false, toOutput = false;
+    var cs = obj.asCompileString;
+    if (obj.isKindOf(Symbol)) {
+      // patch a symbol directly to the output
+      obj = (obj : -1);
+    };
+    if (obj.isKindOf(Dictionary)) {
+      var amp = obj.removeAt(\amp) ?? 1;
+      if (obj.size == 1) {
+        var arr = obj.asKeyValuePairs;
+        obj.from = arr[0];
+        obj.to = arr[1];
+      };
+      if ((obj.from.class == Symbol) or: (obj.from.class == Integer)) {
+        var fromThing = ESThingSpace.thingAt(obj.from, things);
+        if (fromThing.isNil) {
+          fromInput = true;
+          fromThing = (outChannels: inChannels);
+        };
+        obj.from = obj.from->(fromThing.outChannels.collect{ |n| n });
+      };
+      if ((obj.to.class == Symbol) or: (obj.to.class == Integer)) {
+        var toThing = ESThingSpace.thingAt(obj.to, things);
+        if (toThing.isNil) {
+          toOutput = true;
+          toThing = (inChannels: outChannels);
+        };
+        obj.to = obj.to->(toThing.inChannels.collect{ |n| n });
+        if (fromInput and: toOutput) {
+          // post warning here
+          "% -- (% : %)  -- neglected to patch input directly to output".format(cs, obj.from, obj.to).warn;
+        };
+      };
+      // accept arrays of indices
+      if (obj.from.value.isArray) {
+        obj.from = obj.from.value.collect { |index| obj.from.key->index };
+      } {
+        obj.from = obj.from.asArray;
+      };
+      if (obj.to.value.isArray) {
+        obj.to = obj.to.value.collect { |index| obj.to.key->index };
+      } {
+        obj.to = obj.to.asArray;
+      };
+      if (obj.from.value.isNil or: obj.to.value.isNil) {
+        obj = []
+      } {
+        obj = max(obj.from.size, obj.to.size).collect { |i|
+          // guard against patching ins to outs
+          var from = obj.from.wrapAt(i);
+          var to = obj.to.wrapAt(i);
+          if (fromInput and: toOutput) {
+            nil
+          } {
+            ESThingPatch(obj.name, from, to, amp ?? 1)
+          }
+        };
+      };
+    };
+    ^obj
+  }
+}
+
+
+
+
+
+
 + ESThing {
+  // syntax sugar, create a new thing from an Association
+  *newFrom { |obj|
+    if (obj.isKindOf(ESThing)) {
+      ^obj
+    } {
+      if (obj.isKindOf(Association)) {
+        var name = obj.key;
+        var value = obj.value;
+        var ret;
+        if (value.isKindOf(ESThingSpace)) {
+          ret = ESThing.space(name, value);
+        };
+        if (value.isKindOf(Function)) {
+          ret = ESThing.playFuncSynth(name, value);
+        };
+        if (value.isKindOf(Ref)) {
+          ret = ESThing.droneSynth(name, value.dereference);
+        };
+        if (value.isKindOf(Dictionary)) {
+          var thisKey = value.keys.select(_.isKindOf(Symbol).not).pop;
+          var thisValue = value[thisKey];
+          var inChannels = 2, outChannels = 2;
+          var kind = \drone;
+          if (thisValue.isKindOf(Symbol)) {
+            kind = thisValue
+          };
+          if (thisValue.isKindOf(Association)) {
+            kind = thisValue.key;
+            thisValue = thisValue.value;
+          };
+          if (thisValue.isInteger) {
+            inChannels = outChannels = thisValue
+          };
+          if (thisValue.isArray) {
+            #inChannels, outChannels = thisValue
+          };
+          if (thisKey.isKindOf(ESThingSpace)) {
+            ret = ESThing.space(name, thisKey, inChannels, outChannels, value[\top] ? 0, value[\left] ? 0, value[\width] ? 1);
+          };
+          if (thisKey.isKindOf(Function)) {
+            ret = ESThing.playFuncSynth(name, thisKey, value[\params], inChannels, outChannels, value[\top] ? 0, value[\left] ? 0, value[\width] ? 1, value[\midiChannel], value[\srcID])
+          };
+          if (thisKey.isKindOf(Ref)) {
+            var method = switch (kind)
+            { \drone } { \droneSynth }
+            { \mono } { \monoSynth }
+            { \poly } { \polySynth }
+            { \mpe } { \mpeSynth };
+            ret = ESThing.perform(method, name, thisKey.dereference, value[\args], value[\params], inChannels, outChannels, value[\midicpsFunc], value[\velampFunc], value[\top] ? 0, value[\left] ? 0, value[\width] ? 1, value[\midiChannel], value[\srcID]);
+          };
+        };
+        ^ret;
+      } {
+        // don't know what to do with this
+        "Don't know what to do with this %".format(obj).error
+        ^nil;
+      };
+    };
+  }
+
+  *prMakeParams { |controls, hideMidiControls = true, synthDesc|
+    var params = controls.select { |control|
+      var name = control.name;
+      // filter out the controls used internally by mono/poly synths
+      var isQ = ['?', \in, \out, \i_out].indexOf(name).notNil;
+      var exposeControl = [\gate, \bend, \touch, \slide, \freq, \amp].indexOf(name).isNil;
+      // filter out any arrayed controls
+      var isArray = control.defaultValue.isArray;
+      // TODO: have different sort of param and GUI element for arrays
+      (exposeControl or: hideMidiControls.not) /*and: isArray.not*/ and: isQ.not
+    } .collect({ |control|
+      var spec;
+      // look for spec in metadata, otherwise use name.asSpec
+      if (synthDesc.notNil and: { (spec = synthDesc.metadata.tryPerform(\at, \specs).tryPerform(\at, control.name)).notNil }) {
+        spec = spec.asSpec
+      } {
+        spec = control.name.asSpec;
+      };
+      // filter out nils
+      spec = spec ?? { ControlSpec() };
+      spec = spec.copy.default_(control.defaultValue);
+      ESThingParam(control.name, spec);
+    });
+    ^params;
+  }
+
+  *prMakeParamsDefName { |defName, hideMidiControls = true|
+    var synthDesc = SynthDescLib.global[defName];
+    if (synthDesc.notNil) {
+      var params = this.prMakeParams(synthDesc.controls, hideMidiControls, synthDesc);
+      ^params;
+    } {
+      "SynthDef '%' not found".format(defName).error;
+      ^nil;
+    }
+  }
+
+
+
   *space { |name, space, inChannels = 2, outChannels = 2, top = 0, left = 0, width = 1|
     [name, space].postln;
     ^ESThing(name,
@@ -83,43 +359,6 @@
       midiChannel: midiChannel,
       srcID: srcID
     )
-  }
-
-  *prMakeParams { |controls, hideMidiControls = true, synthDesc|
-    var params = controls.select { |control|
-      var name = control.name;
-      // filter out the controls used internally by mono/poly synths
-      var isQ = ['?', \in, \out, \i_out].indexOf(name).notNil;
-      var exposeControl = [\gate, \bend, \touch, \slide, \freq, \amp].indexOf(name).isNil;
-      // filter out any arrayed controls
-      var isArray = control.defaultValue.isArray;
-      // TODO: have different sort of param and GUI element for arrays
-      (exposeControl or: hideMidiControls.not) /*and: isArray.not*/ and: isQ.not
-    } .collect({ |control|
-      var spec;
-      // look for spec in metadata, otherwise use name.asSpec
-      if (synthDesc.notNil and: { (spec = synthDesc.metadata.tryPerform(\at, \specs).tryPerform(\at, control.name)).notNil }) {
-        spec = spec.asSpec
-      } {
-        spec = control.name.asSpec;
-      };
-      // filter out nils
-      spec = spec ?? { ControlSpec() };
-      spec = spec.copy.default_(control.defaultValue);
-      ESThingParam(control.name, spec);
-    });
-    ^params;
-  }
-
-  *prMakeParamsDefName { |defName, hideMidiControls = true|
-    var synthDesc = SynthDescLib.global[defName];
-    if (synthDesc.notNil) {
-      var params = this.prMakeParams(synthDesc.controls, hideMidiControls, synthDesc);
-      ^params;
-    } {
-      "SynthDef '%' not found".format(defName).error;
-      ^nil;
-    }
   }
 
   *mpeSynth { |name, defName, args, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, srcID|
@@ -393,6 +632,9 @@
     )
   }
 }
+
+
+
 
 
 

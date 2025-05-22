@@ -1,72 +1,25 @@
+
+
+//      ESThingPatch
+//         signal routing
+//       from thing to thing, or thing to param
+//          each patch is one channel
+//              use syntax sugar for multichannel, see ESThingFactory
+
+
 ESThingPatch {
+  // to and from are events with
+  // thingIndex (identifying thing) and index (identifying channel number)
   var <name, <from, <to, <amp;
+  // synth to play patch, osc func to recieve info back
   var <synth, <oscFunc;
   var <>parentSpace;
+  // for fadeTo
   var rout;
-  *initClass {
-    ServerBoot.add {
-      var warpModFuncs = ();
-      [CosineWarp, SineWarp, LinearWarp, ExponentialWarp].do { |warp|
-        warpModFuncs[warp] = { |val, modVal, minval, maxval, step|
-          var spec = ControlSpec(minval, maxval, warp, step);
-          var unmappedVal = spec.unmap(val);
-          var moddedVal = unmappedVal + modVal;
-          spec.map(moddedVal);
-        };
-      };
-      warpModFuncs[DbFaderWarp] = { |val, modVal, minval, maxval, step|
-        var valAmp = val.dbamp;
-        var minvalAmp = minval.dbamp;
-        var rangeAmp = maxval.dbamp - minvalAmp;
-        var unmappedVal = Select.kr(rangeAmp > 0, [
-          1 - sqrt(1 - ((valAmp - minvalAmp) / rangeAmp)),
-          ((valAmp - minvalAmp) / rangeAmp).sqrt
-        ]);
-        var moddedVal = (unmappedVal + modVal).clip(0, 1);
-        Select.ar(K2A.ar(rangeAmp > 0), [
-          (1 - (1 - moddedVal).squared) * rangeAmp + minvalAmp,
-          moddedVal.squared * rangeAmp + minvalAmp
-        ]).ampdb;
-      };
-      warpModFuncs[FaderWarp] = { |val, modVal, minval, maxval, step|
-        var range = maxval - minval;
-        var unmappedVal = Select.kr(range > 0, [
-          1 - sqrt(1 - ((val - minval) / range)),
-          ((val - minval) / range).sqrt
-        ]);
-        var moddedVal = (unmappedVal + modVal).clip(0, 1);
-        Select.ar(K2A.ar(range > 0), [
-          (1 - (1 - moddedVal).squared) * range + minval,
-          moddedVal.squared * range + minval
-        ]);
-      };
-      warpModFuncs.keysValuesDo { |warp, func|
-        var defName = ("ESmodulate" ++ warp.asString).asSymbol;
-        SynthDef(defName, { |out, in, amp, val, minval, maxval, step|
-          var modVal = InFeedback.ar(in) * amp;
-          Out.ar(out, func.(val, modVal, minval, maxval, step));
-        }).add;
-      };
-      SynthDef(\ESmodulateCurveWarp, { |out, in, amp, val, minval, maxval, step, curve|
-        var range = maxval - minval;
-        var grow = exp(curve);
-        var a = range / (1.0 - grow);
-        var b = minval + a;
-        var modVal = InFeedback.ar(in) * amp;
-        var unmappedVal = log((b - val) / a) / curve;
-        var moddedVal = unmappedVal + modVal;
-        Out.ar(out, b - (a * pow(grow, moddedVal)));
-      }).add;
-      SynthDef(\ESThingPatch, { |in, out, amp|
-        Out.ar(out, InFeedback.ar(in) * amp);
-      }).add;
-      SynthDef(\ESThingReply, { |in, freq = 100, id|
-        SendReply.ar(Impulse.ar(freq), '/ESThingReply', InFeedback.ar(in), id);
-      }).add;
-    };
-  }
+
   storeArgs { ^[name, from, to, amp] }
   *new { |name, from, to, amp = 1|
+    // accept association syntax to and from
     if (from.class == Association) {
       from = (thingIndex: from.key, index: from.value);
     };
@@ -75,6 +28,9 @@ ESThingPatch {
     };
     ^super.newCopyArgs(name, from, to, amp);
   }
+
+  // get thing from parent space
+  // if thing not found, use a dummy event for space i/o
   prGetThing { |thingIndex|
     ^parentSpace.thingAt(thingIndex) ?? {
       (inbus: parentSpace.outbus, outbus: parentSpace.inbus, inChannels: parentSpace.outbus.numChannels, outChannels: parentSpace.inbus.numChannels)
@@ -86,6 +42,9 @@ ESThingPatch {
   toThing {
     ^this.prGetThing(to.thingIndex);
   }
+
+  // either play a synth patching outbus to inbus,
+  // or play a synth sending OSC back for language-side modulation
   play {
     var things = parentSpace.things;
     var addAction = \addBefore;
@@ -115,10 +74,13 @@ ESThingPatch {
       ], target, addAction);
     }
   }
+
   stop {
     synth.free;
     oscFunc.free;
   }
+
+  // set the patch volume
   amp_ { |val|
     amp = val;
     synth.set(\amp, val);
@@ -133,6 +95,8 @@ ESThingPatch {
   }
   ampNorm { ^\amp.asSpec.unmap(amp) }
   amp127 { ^this.ampNorm * 127 }
+
+  // fade patch volume
   fadeTo { |value = 0, dur = 1, curve = \sin, hz = 30, clock|
     var spec = \amp.asSpec;
     var fromValNorm = this.ampNorm;
