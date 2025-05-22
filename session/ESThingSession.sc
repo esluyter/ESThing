@@ -1,3 +1,10 @@
+
+
+//            ESThingSession
+//         holds an array of thing players
+//       with a little sugar for composition
+
+
 ESThingSession {
   var <>tps;
 
