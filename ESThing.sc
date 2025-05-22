@@ -289,7 +289,7 @@ ESThingPatch {
 
 
 ESThing { // n.b. width can be array of knobs per column
-  var <>name, <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>stopFunc, <>freeFunc, <inChannels, <outChannels, <>midicpsFunc, <>velampFunc, <>defName, <>args, <>func, <>top, <>left, >width, <>midiChannel, <>srcID, <>callFuncOnParamModulate, <>prInitFunc;
+  var <>name, <>initFunc, <>playFunc, <>noteOnFunc, <>noteOffFunc, <>bendFunc, <>touchFunc, <>polytouchFunc, <>slideFunc, <>stopFunc, <>freeFunc, <inChannels, <outChannels, <>midicpsFunc, <>velampFunc, <>defName, <>args, <>func, <>top, <>left, >width, <>midiChannel, <>srcID, <>callFuncOnParamModulate, <>prInitFunc;
   var <params, <oldParams;
   var <>inbus, <>outbus, <>group;
   var <>environment, <>parentSpace;
@@ -316,11 +316,11 @@ ESThing { // n.b. width can be array of knobs per column
   }
 
 
-  storeArgs { ^[name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID, callFuncOnParamModulate, prInitFunc] }
-  *new { |name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, defName, args, func, top = 0, left = 0, width = 1, midiChannel, srcID, callFuncOnParamModulate = false, prInitFunc|
+  storeArgs { ^[name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, slideFunc, stopFunc, freeFunc, params, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID, callFuncOnParamModulate, prInitFunc] }
+  *new { |name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, slideFunc, stopFunc, freeFunc, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, defName, args, func, top = 0, left = 0, width = 1, midiChannel, srcID, callFuncOnParamModulate = false, prInitFunc|
     midicpsFunc = midicpsFunc ? defaultMidicpsFunc;
     velampFunc = velampFunc ? defaultVelampFunc;
-    ^super.newCopyArgs(name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, stopFunc, freeFunc, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID, callFuncOnParamModulate, prInitFunc).prInit(params);
+    ^super.newCopyArgs(name, initFunc, playFunc, noteOnFunc, noteOffFunc, bendFunc, touchFunc, polytouchFunc, slideFunc, stopFunc, freeFunc, inChannels, outChannels, midicpsFunc, velampFunc, defName, args, func, top, left, width, midiChannel, srcID, callFuncOnParamModulate, prInitFunc).prInit(params);
   }
   prInit { |params|
     environment = ();
@@ -365,20 +365,23 @@ ESThing { // n.b. width can be array of knobs per column
       };
     };
   }
-  noteOn { |num = 69, vel = 64|
-    noteOnFunc.value(this, num, vel/127);
+  noteOn { |num = 69, vel = 64, chan|
+    noteOnFunc.value(this, num, vel/127, chan);
   }
-  noteOff { |num = 69, vel = 0|
-    noteOffFunc.value(this, num, vel/127);
+  noteOff { |num = 69, vel = 0, chan|
+    noteOffFunc.value(this, num, vel/127, chan);
   }
-  bend { |val = 8192|
-    bendFunc.value(this, val/8192 - 1);
+  bend { |val = 8192, chan|
+    bendFunc.value(this, val/8192 - 1, chan);
   }
-  touch { |val = 64|
-    touchFunc.value(this, val/127);
+  touch { |val = 64, chan|
+    touchFunc.value(this, val/127, chan);
   }
   polytouch { |val = 64, num = 69|
     polytouchFunc.value(this, val/127, num);
+  }
+  slide { |val = 64, chan|
+    slideFunc.value(this, val/127, chan);
   }
   stop {
     stopFunc.value(this);
@@ -512,7 +515,8 @@ ESThingSpace {
               var method = switch (kind)
               { \drone } { \droneSynth }
               { \mono } { \monoSynth }
-              { \poly } { \polySynth };
+              { \poly } { \polySynth }
+              { \mpe } { \mpeSynth };
               ret = ESThing.perform(method, name, thisKey.dereference, value[\args], value[\params], inChannels, outChannels, value[\midicpsFunc], value[\velampFunc], value[\top] ? 0, value[\left] ? 0, value[\width] ? 1, value[\midiChannel], value[\srcID]);
             };
           };

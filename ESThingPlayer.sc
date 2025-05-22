@@ -34,19 +34,19 @@ ESThingPlayer {
     MIDIIn.connectAll;
     noteOnMf = MIDIFunc.noteOn({ |vel, num, chan, src|
       if (noteExclude.indexOf(src).isNil) {
-        checkChans.(chan, src, { |thing| thing.noteOn(num, vel); });
+        checkChans.(chan, src, { |thing| thing.noteOn(num, vel, chan); });
       };
     });
     noteOffMf = MIDIFunc.noteOff({ |vel, num, chan, src|
       if (noteExclude.indexOf(src).isNil) {
-        checkChans.(chan, src, { |thing| thing.noteOff(num, vel); });
+        checkChans.(chan, src, { |thing| thing.noteOff(num, vel, chan); });
       };
     });
-    bendMf = MIDIFunc.bend({ |val, num, chan, src|
-      checkChans.(chan, src, { |thing| thing.bend(val); });
+    bendMf = MIDIFunc.bend({ |val, chan, src|
+      checkChans.(chan, src, { |thing| thing.bend(val, chan); });
     });
-    touchMf = MIDIFunc.touch({ |val, num, chan, src|
-      checkChans.(chan, src, { |thing| thing.touch(val) });
+    touchMf = MIDIFunc.touch({ |val, chan, src|
+      checkChans.(chan, src, { |thing| thing.touch(val, chan) });
     });
     polytouchMf = MIDIFunc.polytouch({ |val, num, chan, src|
       checkChans.(chan, src, { |thing| thing.polytouch(val, num); });
@@ -55,6 +55,10 @@ ESThingPlayer {
       // mod wheel
       if ((num == 1) and: modExclude.indexOf(src).isNil) {
         checkChans.(chan, src, { |thing| thing.set127(\mod, val) });
+      };
+      // slide
+      if ((num == 74) and: modExclude.indexOf(src).isNil) {
+        checkChans.(chan, src, { |thing| thing.slide(val, chan) });
       };
       // check that src is an accepted src, then do the control action
       if (ccExclude.indexOf(src).isNil) {

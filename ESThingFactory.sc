@@ -64,7 +64,6 @@
         };
       },
       bendFunc: { |thing, val| // note: val is mapped -1 to 1
-        thing[\bend] = val;
         thing.set(\bend, val);
       },
       touchFunc: { |thing, val|
@@ -91,7 +90,7 @@
       var name = control.name;
       // filter out the controls used internally by mono/poly synths
       var isQ = ['?', \in, \out, \i_out].indexOf(name).notNil;
-      var exposeControl = [\gate, \bend, \touch, \freq, \amp].indexOf(name).isNil;
+      var exposeControl = [\gate, \bend, \touch, \slide, \freq, \amp].indexOf(name).isNil;
       // filter out any arrayed controls
       var isArray = control.defaultValue.isArray;
       // TODO: have different sort of param and GUI element for arrays
@@ -116,6 +115,56 @@
     var synthDesc = SynthDescLib.global[defName];
     var params = this.prMakeParams(synthDesc.controls, hideMidiControls, synthDesc);
     ^params;
+  }
+
+  *mpeSynth { |name, defName, args, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, srcID|
+    ^ESThing(name,
+      playFunc: { |thing|
+        thing[\synths] = ();
+      },
+      noteOnFunc: { |thing, num, vel, chan| // note: vel is mapped 0-1
+        var defaults = [];
+        var freq = thing.midicpsFunc.(num);
+        var amp = thing.velampFunc.(vel);
+        thing.params.do({ |param| defaults = defaults ++ [param.name, param.synthVal] });
+        thing[\synths][chan].free;
+        thing[\synths][chan] = Synth(thing.defName, [
+          out: thing.outbus,
+          in: thing.inbus,
+          doneAction: 2,
+          freq: freq,
+          amp: amp
+        ] ++ thing.args ++ defaults, thing.group);
+      },
+      noteOffFunc: { |thing, num, vel, chan|
+        // TODO: use note off vel
+        thing[\synths][chan].release;
+        thing[\synths][chan] = nil;
+      },
+      bendFunc: { |thing, val, chan| // note: val is mapped -1 to 1
+        thing[\synths][chan].set(\bend, val);
+      },
+      touchFunc: { |thing, val, chan|
+        thing[\synths][chan].set(\touch, val);
+      },
+      slideFunc: { |thing, val, chan|
+        thing[\synths][chan].set(\slide, val);
+      },
+      stopFunc: { |thing|
+        thing[\group].free;
+      },
+      params: params ?? { this.prMakeParamsDefName(defName) },
+      inChannels: inChannels,
+      outChannels: outChannels,
+      midicpsFunc: midicpsFunc,
+      velampFunc: velampFunc,
+      defName: defName,
+      args: args,
+      top: top,
+      left: left,
+      width: width,
+      srcID: srcID
+    )
   }
 
   *polySynth { |name, defName, args, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
