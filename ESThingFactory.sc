@@ -230,6 +230,68 @@
         thing[\noteStack] = [];
       },
       playFunc: { |thing|
+
+      },
+      stopFunc: { |thing|
+        thing[\synth].free;
+      },
+      noteOnFunc: { |thing, num, vel| // note: vel is mapped 0-1
+        var freq = thing.midicpsFunc.(num);
+        var amp = thing.velampFunc.(vel);
+        if (thing[\synth] == 0) {
+          var defaults = [];
+          thing.params.do({ |param| defaults = defaults ++ [param.name, param.synthVal] });
+          thing[\synth] = Synth(thing.defName, [out: thing.outbus, in: thing.inbus, doneAction: 2, freq: freq, amp: amp, gate: 1, bend: thing[\bend]] ++ thing.args ++ defaults, thing.group);
+        } {
+          thing[\synth].set(\freq, freq, \amp, amp);
+        };
+        thing[\noteStack] = thing[\noteStack].add(num);
+      },
+      noteOffFunc: { |thing, num, vel|
+        var synth = thing[\synth];
+        thing[\noteStack].remove(num);
+        if (synth != 0) {
+          if (thing[\noteStack].size > 0) {
+            synth.set(\freq, thing.midicpsFunc.(thing[\noteStack].last));
+          } {
+            synth.set(\gate, 0);
+            thing[\synth] = nil;
+          };
+        };
+      },
+      bendFunc: { |thing, val| // note: val is mapped -1 to 1
+        thing[\bend] = val;
+        thing[\synth].set(\bend, val);
+      },
+      touchFunc: { |thing, val|
+        thing[\synth].set(\touch, val);
+      },
+      polytouchFunc: { |thing, val, num|
+        //if (num == thing[\noteStack].last) {
+          thing[\synth].set(\touch, val);
+        //};
+      },
+      params: params ?? { this.prMakeParamsDefName(defName) },
+      inChannels: inChannels,
+      outChannels: outChannels,
+      midicpsFunc: midicpsFunc,
+      velampFunc: velampFunc,
+      defName: defName,
+      args: args,
+      top: top,
+      left: left,
+      width: width,
+      midiChannel: midiChannel,
+      srcID: srcID
+    )
+  }
+
+  *mono0Synth { |name, defName, args, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
+    ^ESThing(name,
+      initFunc: { |thing|
+        thing[\noteStack] = [];
+      },
+      playFunc: { |thing|
         var defaults = [];
         thing.params.do({ |param| defaults = defaults ++ [param.name, param.synthVal] });
         thing[\synth] = Synth(thing.defName, [out: thing.outbus, in: thing.inbus, doneAction: 0, amp: 0, gate: 0, bend: thing[\bend]] ++ thing.args ++ defaults, thing.group);
