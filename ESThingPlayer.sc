@@ -87,7 +87,7 @@ ESThingPlayer {
       ts.play;
       synths = tsbus.numChannels.collect { |i| Synth(\ESThingPatch, [in: tsbus.index + i, out: i, amp: amp], ts.group, \addAfter) };
       win !? { win.close };
-      win = ts.makeWindow(winBounds);
+      win = ts.makeWindow(winBounds, "Space", this);
     };
   }
 
@@ -170,4 +170,38 @@ ESThingPlayer {
   }
 
   at { |sym| ^ts.at(sym) }
+
+
+  makeXYFunc {
+    var vals, randVals, modAmps, randModAmps, mulFuncs, distX, distY;
+    var includedParams = this.includedParams;
+    var includedModPatches = this.includedModPatches;
+    ^{ |x = 0.5, y = 0.5|
+      distY = (y - 0.5);
+      distX = (x - 0.5);
+      if ((x == 0.5) and: (y == 0.5)) {
+        vals = nil;
+      } {
+        if (vals == nil) {
+          vals = includedParams.collect(_.valNorm);
+          modAmps = includedModPatches.collect(_.ampNorm);
+          randVals = includedParams.collect { |param| if (param.val.isArray) { {1.0.rand2}!param.val.size } { 1.0.rand2 } };
+          randModAmps = includedModPatches.size.collect { 1.0.rand2 };
+          mulFuncs = max(includedParams.size, this.includedModPatches.size).collect { [{ distX }, { distY }].choose };
+        };
+        includedParams.do { |param, i|
+          var dist = mulFuncs[i].();
+          param.valNorm = blend(vals[i], vals[i] + (randVals[i] * dist.sign), dist.abs * 2);
+        };
+        defer {
+          if (this.presets.affectModAmps) {
+            includedModPatches.do { |patch, i|
+              var dist = mulFuncs[i].();
+              patch.ampNorm = blend(modAmps[i], modAmps[i] + (randModAmps[i] * dist.sign), dist.abs * 2);
+            };
+          };
+        };
+      };
+    }
+  }
 }

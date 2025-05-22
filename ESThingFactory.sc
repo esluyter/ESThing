@@ -331,7 +331,7 @@
 
 
 +ESThingSpace {
-  makeWindow { |winBounds, title = "Space"|
+  makeWindow { |winBounds, title = "Space", tp|
     var bounds = winBounds ?? { Rect(0, 80, 650, 800) };
     var winWidth = bounds.width;
     var left = 20;
@@ -343,11 +343,20 @@
 
     var w = Window(title, bounds).background_(Color.gray(0.95)).front;
 
+    // xy randomizer
+    var func = if (tp.notNil) { tp.makeXYFunc };
+    var pad = Slider2D(w, Rect(w.bounds.width - 220, w.bounds.height - 220, 200, 200)).resize_(9).x_(0.5).y_(0.5).background_(Color.gray(0.95)).action_{ |view|
+      func.(view.x, view.y);
+    }.mouseUpAction_{ |view|
+      view.x = 0.5;
+      view.activey = 0.5;
+    };
+
     // for knobs later
     var redPatches = patches.select { |patch| patch.to.index.isKindOf(Symbol) };
     var redParams = redPatches.collect { |patch| patch.toThing.(patch.to.index) };
 
-    var patchView = UserView(w, w.bounds.copy.origin_(0@0)).resize_(5).drawFunc_({ |v|
+    var patchView = UserView(w, w.bounds.copy.origin_(0@0)).resize_(5).acceptsMouse_(false).drawFunc_({ |v|
       patches.collect { |patch|
         var fromI = this.(patch.from.thingIndex).tryPerform(\index);
         var toI = this.(patch.to.thingIndex).tryPerform(\index);
@@ -448,7 +457,7 @@
               defer { knob.value = val };
             };
             knob = EZKnob(view, knobBounds, param.name, param.spec, { |knob| thing.set(param.name, knob.value) }, param.val, labelWidth: 100, labelHeight: 15, layout: 'vert').setColors(stringColor: Color.hsv(hue, 1, 0.35), knobColors: [Color.hsv(hue, 0.4, 1), Color.hsv(hue, 1, 0.675), Color.gray(0.5, 0.1), Color.black]);
-            knob.knobView.mouseDownAction_{ |view, x, y, modifiers, buttonNumber, clickCount| clickCount.postln; if (clickCount == 2) { "hiu".postln; param.val_(param.spec.default); true }; };
+            knob.knobView.mouseDownAction_{ |view, x, y, modifiers, buttonNumber, clickCount| if (clickCount == 2) {  param.val_(param.spec.default); true }; };
             param.addDependant(dependantFunc);
             knob.onClose = { param.removeDependant(dependantFunc) };
           };
