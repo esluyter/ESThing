@@ -135,6 +135,18 @@ ESThing { // n.b. width can be array of knobs per column
   slide { |val = 64, chan|
     slideFunc.value(this, val/127, chan);
   }
+  reset {
+    stopFunc.value(this);
+    forkIfNeeded {
+      // do whatever the playfunc says
+      playFunc.value(this);
+      // then activate all parameters
+      Server.default.sync;
+      params.do { |param|
+        param.val_(param.val);
+      };
+    };
+  }
   stop {
     stopFunc.value(this);
     group.free;

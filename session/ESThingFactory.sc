@@ -844,7 +844,9 @@
       outlets = outlets.add(newOutlets);
       knobPoints = knobPoints.add(newKnobPoints);
 
-      Button(view, Rect(2, height - 19, 17, 17)).states_([["⟳", Color.hsv(thing.hue, 1, 0.5)]]).font_(Font.sansSerif(20, true));
+      Button(view, Rect(2, height - 19, 17, 17)).states_([["⟳", Color.hsv(thing.hue, 1, 0.5)]]).font_(Font.sansSerif(20, true)).action_{
+        thing.reset;
+      };
       Button(view, Rect(width - 59, height - 19, 17, 17)).states_([["S", Color.hsv(thing.hue, 0.5, 0.5, 0.5), Color.hsv(thing.hue, 0.1, 1.0)], ["S", Color.white, Color.hsv(thing.hue, 1, 0.5)]]).action_({ |view|
         thing.solo(view.value);
       });
