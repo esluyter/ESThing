@@ -201,7 +201,7 @@
         if (value.isKindOf(Dictionary)) {
           var thisKey = value.keys.select(_.isKindOf(Symbol).not).pop;
           var thisValue = value[thisKey];
-          var inChannels = 2, outChannels = 2;
+          var inChannels, outChannels;
           var kind = \drone;
           if (thisValue.isKindOf(Symbol)) {
             kind = thisValue
@@ -280,7 +280,6 @@
 
 
   *space { |name, space, inChannels = 2, outChannels = 2, top = 0, left = 0, width = 1|
-    [name, space].postln;
     ^ESThing(name,
       initFunc: { |thing|
         thing[\space] = space;
@@ -378,7 +377,19 @@
     )
   }
 
-  *mpeSynth { |name, defName, args, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, srcID|
+  *mpeSynth { |name, defName, args, params, inChannels, outChannels, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, srcID|
+    var synthDesc = SynthDescLib.global[defName];
+    if (synthDesc.notNil) {
+      // infer in and out channels from func spec
+      inChannels = inChannels.postln ?? {
+        synthDesc.inputs.collect { |io|
+          io.numberOfChannels
+        } .sum.postln;
+      };
+      outChannels = outChannels ?? {
+        synthDesc.outputs.last.numberOfChannels
+      };
+    };
     ^ESThing(name,
       playFunc: { |thing|
         thing[\synths] = ();
@@ -428,7 +439,19 @@
     )
   }
 
-  *polySynth { |name, defName, args, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
+  *polySynth { |name, defName, args, params, inChannels, outChannels, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
+    var synthDesc = SynthDescLib.global[defName];
+    if (synthDesc.notNil) {
+      // infer in and out channels from func spec
+      inChannels = inChannels.postln ?? {
+        synthDesc.inputs.collect { |io|
+          io.numberOfChannels
+        } .sum.postln;
+      };
+      outChannels = outChannels ?? {
+        synthDesc.outputs.last.numberOfChannels
+      };
+    };
     ^ESThing(name,
       playFunc: { |thing|
         thing[\synths] = ();
@@ -480,7 +503,19 @@
     )
   }
 
-  *monoSynth { |name, defName, args, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
+  *monoSynth { |name, defName, args, params, inChannels, outChannels, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
+    var synthDesc = SynthDescLib.global[defName];
+    if (synthDesc.notNil) {
+      // infer in and out channels from func spec
+      inChannels = inChannels.postln ?? {
+        synthDesc.inputs.collect { |io|
+          io.numberOfChannels
+        } .sum.postln;
+      };
+      outChannels = outChannels ?? {
+        synthDesc.outputs.last.numberOfChannels
+      };
+    };
     ^ESThing(name,
       initFunc: { |thing|
         thing[\noteStack] = [];
@@ -542,7 +577,19 @@
     )
   }
 
-  *mono0Synth { |name, defName, args, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
+  *mono0Synth { |name, defName, args, params, inChannels, outChannels, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
+    var synthDesc = SynthDescLib.global[defName];
+    if (synthDesc.notNil) {
+      // infer in and out channels from func spec
+      inChannels = inChannels.postln ?? {
+        synthDesc.inputs.collect { |io|
+          io.numberOfChannels
+        } .sum.postln;
+      };
+      outChannels = outChannels ?? {
+        synthDesc.outputs.last.numberOfChannels
+      };
+    };
     ^ESThing(name,
       initFunc: { |thing|
         thing[\noteStack] = [];
@@ -596,7 +643,19 @@
     )
   }
 
-  *droneSynth { |name, defName, args, params, inChannels = 2, outChannels = 2, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
+  *droneSynth { |name, defName, args, params, inChannels, outChannels, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
+    var synthDesc = SynthDescLib.global[defName];
+    if (synthDesc.notNil) {
+      // infer in and out channels from func spec
+      inChannels = inChannels.postln ?? {
+        synthDesc.inputs.collect { |io|
+          io.numberOfChannels
+        } .sum.postln;
+      };
+      outChannels = outChannels ?? {
+        synthDesc.outputs.last.numberOfChannels
+      };
+    };
     ^ESThing(name,
       initFunc: { |thing|
         thing[\noteStack] = [];
