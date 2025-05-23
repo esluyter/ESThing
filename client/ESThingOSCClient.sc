@@ -47,7 +47,7 @@ ESThingOSCClient {
         };
       };
     }, "/session_switch"));
-    client.ts.params.do { |param, i|
+    client.ts.params.reject({ |param| param.val.size > 0 }).do { |param, i|
       i = map.indexOf(i);
       if (i.notNil) {
         var func;
@@ -146,36 +146,12 @@ ESThingOSCClient {
 
     // randomize xy pad
     {
-      var vals, randVals, modAmps, randModAmps, mulFuncs, distY, distX;
+      var func = client.tp.makeXYFunc;
       oscfuncs = oscfuncs.add(OSCFunc({ |msg|
         if (msg.last == id) {
           var x, y;
           #x, y = msg[1].asString.interpret;
-          distY = (y - 0.5);
-          distX = (x - 0.5);
-          if ((x == 0.5) and: (y == 0.5)) {
-            vals = nil;
-          } {
-            if (vals == nil) {
-              vals = client.tp.includedParams.collect(_.valNorm);
-              modAmps = client.tp.includedModPatches.collect(_.ampNorm);
-              randVals = client.tp.includedParams.size.collect { 1.0.rand2 };
-              randModAmps = client.tp.includedModPatches.size.collect { 1.0.rand2 };
-              mulFuncs = max(client.tp.includedParams.size, client.tp.includedModPatches.size).collect { [{ distX }, { distY }].choose };
-            };
-            client.tp.includedParams.do { |param, i|
-              var dist = mulFuncs[i].();
-              param.valNorm = blend(vals[i], vals[i] + (randVals[i] * dist.sign), dist.abs * 2);
-            };
-            defer {
-              if (client.tp.presets.affectModAmps) {
-                client.tp.includedModPatches.do { |patch, i|
-                  var dist = mulFuncs[i].();
-                  patch.ampNorm = blend(modAmps[i], modAmps[i] + (randModAmps[i] * dist.sign), dist.abs * 2);
-                };
-              };
-            };
-          };
+          func.(x, y);
         };
       }, "/xy_2"));
     }.value;

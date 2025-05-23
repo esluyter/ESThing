@@ -19,7 +19,7 @@ ESThingClient {
   tp { ^session[tpIndex] }
   ts { ^this.tp.ts }
 
-  map { |string, width = 5, height = 5, n = 64|
+  map { |string, width = 5, height = 5, n = 75|
     // x => knob
     // . => break
     // + => add space
