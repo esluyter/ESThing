@@ -43,8 +43,8 @@
       var warpModFuncs = ();
 
       // add necessary SynthDefs for patching and solo/mute/bypass
-      SynthDef(\ESThingPatch, { |in, out, amp|
-        Out.ar(out, InFeedback.ar(in) * amp);
+      SynthDef(\ESThingPatch, { |in, out, soloMuteGate = 1, amp|
+        Out.ar(out, InFeedback.ar(in) * amp * soloMuteGate);
       }).add;
       SynthDef(\ESThingReply, { |in, freq = 100, id|
         SendReply.ar(Impulse.ar(freq), '/ESThingReply', InFeedback.ar(in), id);
@@ -845,7 +845,9 @@
       knobPoints = knobPoints.add(newKnobPoints);
 
       Button(view, Rect(2, height - 19, 17, 17)).states_([["⟳", Color.hsv(thing.hue, 1, 0.5)]]).font_(Font.sansSerif(20, true));
-      Button(view, Rect(width - 59, height - 19, 17, 17)).states_([["S", Color.hsv(thing.hue, 0.5, 0.5, 0.5), Color.hsv(thing.hue, 0.1, 1.0)], ["S", Color.white, Color.hsv(thing.hue, 1, 0.5)]]);
+      Button(view, Rect(width - 59, height - 19, 17, 17)).states_([["S", Color.hsv(thing.hue, 0.5, 0.5, 0.5), Color.hsv(thing.hue, 0.1, 1.0)], ["S", Color.white, Color.hsv(thing.hue, 1, 0.5)]]).action_({ |view|
+        thing.solo(view.value);
+      });
       Button(view, Rect(width - 39, height - 19, 17, 17)).states_([["M", Color.hsv(thing.hue, 0.5, 0.5, 0.5), Color.hsv(thing.hue, 0.1, 1.0)], ["M", Color.white, Color.hsv(thing.hue, 1, 0.5)]]).action_{ |view|
         thing.mute(view.value);
       };

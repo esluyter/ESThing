@@ -19,8 +19,8 @@ ESThingSpace {
 
   // buses are created on .init / destroyed on .free
   // group is created on .play / destroyed on .stop
-  var <>inbus, <>outbus, <>group;
-  var <>environment;
+  var <>inbus, <>outbus, <>group, <>soloGroup;
+  var <>environment, <>soloThings;
 
   storeArgs { ^[things, patches,
     initFunc, freeFunc, playFunc, stopFunc,
@@ -57,6 +57,7 @@ ESThingSpace {
   }
   prInit { |oldSpace|
     environment = ();
+    soloThings = [];
     things.do(_.parentSpace_(this));
     patches.do(_.parentSpace_(this));
     inbus = Server.default.options.numOutputBusChannels.asBus('audio', inChannels, Server.default);
@@ -79,7 +80,8 @@ ESThingSpace {
       things.reverse.do(_.play); // assumes they each add to head
       Server.default.sync;
       patches.do(_.play);
-    }
+      soloGroup = Group(group, \addToTail);
+    };
   }
   stop {
     stopFunc.value(this);
@@ -91,6 +93,22 @@ ESThingSpace {
   free {
     freeFunc.value(this);
     things.do(_.free);
+  }
+
+  outPatches {
+    ^patches.select({ |patch| patch.toThing.class == Event })
+  }
+
+  prSoloThing { |thing, solo = true|
+    soloThings.remove(thing);
+    if (solo.asBoolean) {
+      soloThings = soloThings.add(thing);
+      this.outPatches.do { |patch| patch.synth.set(\soloMuteGate, 0) };
+    } {
+      if (soloThings.size == 0) {
+        this.outPatches.do { |patch| patch.synth.set(\soloMuteGate, 1) };
+      };
+    };
   }
 
   // environment and thing access

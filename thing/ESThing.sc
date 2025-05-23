@@ -46,7 +46,7 @@ ESThing { // n.b. width can be array of knobs per column
   var <>hue = 0.5;
 
   // for solo, mute, bypass
-  var smbSynths, bypassSynths;
+  var smbSynths, bypassSynths, soloSynths;
 
   // default midi translation functions
   classvar <>defaultMidicpsFunc, <>defaultVelampFunc;
@@ -243,6 +243,18 @@ ESThing { // n.b. width can be array of knobs per column
         Synth(\ESThingPatch,
           [in: inbus.index + i, out: outbus.index + i, amp: 1],
           smbGroup, \addToTail);
+      };
+    };
+  }
+  solo { |solo = true|
+    parentSpace.prSoloThing(this, solo);
+    soloSynths.do(_.free);
+    soloSynths = nil;
+    if (solo.asBoolean) {
+      soloSynths = outChannels.collect { |i|
+        Synth(\ESThingPatch,
+          [in: outbus.index + i, out: parentSpace.outbus.index + i, amp: 1],
+          parentSpace.soloGroup, \addToTail);
       };
     };
   }
