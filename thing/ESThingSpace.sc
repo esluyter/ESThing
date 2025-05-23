@@ -74,13 +74,14 @@ ESThingSpace {
   play {
     group.free;
     group = Group(target);
+    soloGroup.free;
+    soloGroup = Group(group, \addToTail);
     forkIfNeeded {
       playFunc.value(this);
       Server.default.sync;
       things.reverse.do(_.play); // assumes they each add to head
       Server.default.sync;
       patches.do(_.play);
-      soloGroup = Group(group, \addToTail);
     };
   }
   stop {
@@ -89,6 +90,8 @@ ESThingSpace {
     patches.do(_.stop);
     group.free;
     group = nil;
+    soloGroup.free;
+    soloGroup = nil;
   }
   free {
     freeFunc.value(this);

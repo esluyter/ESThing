@@ -103,6 +103,7 @@ ESThingParam {
     if (spec.warp.class == CurveWarp) {
       args = args ++ [curve: spec.warp.curve];
     };
+    modSynth.free;
     modSynth = Synth(("ESmodulate" ++ spec.warp.class.asString).asSymbol, args, patch.synth, \addAfter);
     this.val_(val);
   }
@@ -142,6 +143,7 @@ ESThingParam {
     if (modSynth.notNil) {
       Server.default.sendBundle(nil, ["/error", -1], modSynth.freeMsg);
     };
+    modSynth = nil;
     this.release;
   }
 }
