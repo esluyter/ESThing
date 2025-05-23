@@ -100,10 +100,15 @@ ESThingPlayer {
       // make sure the output bus is initialized
       this.initTsbus;
       // play ts
+      if (ts.isPlaying) {
+        ts.stop;
+        ts.free;
+      };
       ts.init;
       Server.default.sync;
       ts.play;
       // patch to output
+      synths.do(_.free);
       synths = tsbus.numChannels.collect { |i|
         Synth(\ESThingPatch,
           [in: tsbus.index + i, out: i, amp: amp],

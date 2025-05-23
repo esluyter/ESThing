@@ -36,7 +36,7 @@ ESThing { // n.b. width can be array of knobs per column
   var <params, <oldParams;
   // buses are created on .init / destroyed on .free
   // group is created on .play / destroyed on .stop
-  var <>inbus, <>outbus, <>group;
+  var <>inbus, <>outbus, <>group, <>smbGroup;
   // environment local to thing, so you can store e.g. thing[\buf]
   // these default to 0, not nil
   // by convention synths are stored in thing[\synth], thing[\synths]
@@ -44,6 +44,9 @@ ESThing { // n.b. width can be array of knobs per column
   // thing[\paramName] -> param
   var <>environment, <>parentSpace;
   var <>hue = 0.5;
+
+  // for solo, mute, bypass
+  var smbSynths, bypassSynths;
 
   // default midi translation functions
   classvar <>defaultMidicpsFunc, <>defaultVelampFunc;
@@ -94,7 +97,16 @@ ESThing { // n.b. width can be array of knobs per column
     initFunc.value(this);
   }
   play {
+    group.free;
+    smbGroup.free;
     group = Group(parentSpace.group);
+    smbGroup = Group(group, \addAfter);
+    // patch to output
+    smbSynths = outChannels.collect { |i|
+      Synth(\ESThingSMBPatch,
+        [out: outbus.index + i],
+        smbGroup)
+    };
     forkIfNeeded {
       // do whatever the playfunc says
       playFunc.value(this);
@@ -126,6 +138,10 @@ ESThing { // n.b. width can be array of knobs per column
   stop {
     stopFunc.value(this);
     group.free;
+    smbGroup.free;
+    group = nil;
+    smbSynths = nil;
+    smbGroup = nil;
   }
   free {
     freeFunc.value(this);
@@ -212,6 +228,22 @@ ESThing { // n.b. width can be array of knobs per column
         sizes[indx] = sizes[indx] + 1;
       };
       ^sizes
+    };
+  }
+
+  mute { |mute = true|
+    smbSynths.do(_.set(\muteGate, 1 - mute.asInteger));
+  }
+  bypass { |bypass = true|
+    smbSynths.do(_.set(\bypassGate, 1 - bypass.asInteger));
+    bypassSynths.do(_.free);
+    bypassSynths = nil;
+    if (bypass.asBoolean) {
+      bypassSynths = min(inChannels, outChannels).collect { |i|
+        Synth(\ESThingPatch,
+          [in: inbus.index + i, out: outbus.index + i, amp: 1],
+          smbGroup, \addToTail);
+      };
     };
   }
 }

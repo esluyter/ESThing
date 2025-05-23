@@ -49,6 +49,9 @@
       SynthDef(\ESThingReply, { |in, freq = 100, id|
         SendReply.ar(Impulse.ar(freq), '/ESThingReply', InFeedback.ar(in), id);
       }).add;
+      SynthDef(\ESThingSMBPatch, { |out, muteGate = 1, bypassGate = 1|
+        ReplaceOut.ar(out, In.ar(out) * muteGate * bypassGate);
+      }).add;
 
       // add server-side control spec mapping
       [CosineWarp, SineWarp, LinearWarp, ExponentialWarp].do { |warp|
@@ -843,8 +846,12 @@
 
       Button(view, Rect(2, height - 19, 17, 17)).states_([["⟳", Color.hsv(thing.hue, 1, 0.5)]]).font_(Font.sansSerif(20, true));
       Button(view, Rect(width - 59, height - 19, 17, 17)).states_([["S", Color.hsv(thing.hue, 0.5, 0.5, 0.5), Color.hsv(thing.hue, 0.1, 1.0)], ["S", Color.white, Color.hsv(thing.hue, 1, 0.5)]]);
-      Button(view, Rect(width - 39, height - 19, 17, 17)).states_([["M", Color.hsv(thing.hue, 0.5, 0.5, 0.5), Color.hsv(thing.hue, 0.1, 1.0)], ["M", Color.white, Color.hsv(thing.hue, 1, 0.5)]]);
-      Button(view, Rect(width - 19, height - 19, 17, 17)).states_([["B", Color.hsv(thing.hue, 0.5, 0.5, 0.5), Color.hsv(thing.hue, 0.1, 1.0)], ["B", Color.white, Color.hsv(thing.hue, 1, 0.5)]]);
+      Button(view, Rect(width - 39, height - 19, 17, 17)).states_([["M", Color.hsv(thing.hue, 0.5, 0.5, 0.5), Color.hsv(thing.hue, 0.1, 1.0)], ["M", Color.white, Color.hsv(thing.hue, 1, 0.5)]]).action_{ |view|
+        thing.mute(view.value);
+      };
+      Button(view, Rect(width - 19, height - 19, 17, 17)).states_([["B", Color.hsv(thing.hue, 0.5, 0.5, 0.5), Color.hsv(thing.hue, 0.1, 1.0)], ["B", Color.white, Color.hsv(thing.hue, 1, 0.5)]]).action_{ |view|
+        thing.bypass(view.value);
+      };
       view;
     };
 

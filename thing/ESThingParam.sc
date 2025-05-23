@@ -139,7 +139,9 @@ ESThingParam {
   // clean up
   free {
     modBus.free;
-    modSynth.free;
+    if (modSynth.notNil) {
+      Server.default.sendBundle(nil, ["/error", -1], modSynth.freeMsg);
+    };
     this.release;
   }
 }

@@ -51,7 +51,8 @@ ESThingPatch {
     // if fromThing or toThing is nil, make a dummy to direct to this space's input or output
     var fromThing = this.fromThing;
     var toThing = this.toThing;
-    var target = toThing.asTarget ?? { addAction = \addAfter; things.last.asTarget };
+    var target = toThing.asTarget ?? { addAction = \addAfter; fromThing.smbGroup };
+    synth.free;
     if (to.index.isKindOf(Symbol)) {
       var toParam = toThing.(to.index);
       var inBus = fromThing.outbus.index + from.index;
@@ -77,6 +78,7 @@ ESThingPatch {
 
   stop {
     synth.free;
+    synth = nil;
     oscFunc.free;
   }
 

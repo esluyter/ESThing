@@ -46,7 +46,7 @@ ESThingSession {
     if (ts.isNil) {
       tps[index].stop;
       tps[index].free;
-      tps[index].presets.w.close;
+      //tps[index].presets.w.close;
       tps[index] = nil;
     } {
       // after all this, if ts not nil put it where it goes

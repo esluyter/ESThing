@@ -71,6 +71,7 @@ ESThingSpace {
     things.do(_.init);
   }
   play {
+    group.free;
     group = Group(target);
     forkIfNeeded {
       playFunc.value(this);
@@ -85,6 +86,7 @@ ESThingSpace {
     things.do(_.stop);
     patches.do(_.stop);
     group.free;
+    group = nil;
   }
   free {
     freeFunc.value(this);
@@ -155,10 +157,14 @@ ESThingSpace {
           };
         };
       };
-      // post the mod patches, in case we forgot to save them
-      // TODO: simply restore values
-      "Restoring mod amps not yet figured out... meanwhile:".postln;
-      oldSpace.postModPatches;
+      // restore mod amps
+      oldSpace.modPatches.do { |oldPatch|
+        this.modPatches.do { |patch|
+          if ((patch.to.thingIndex == oldPatch.to.thingIndex) and: patch.to.index == oldPatch.to.index) {
+            patch.amp = oldPatch.amp;
+          };
+        };
+      };
     };
   }
   modPatches {
