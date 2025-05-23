@@ -18,7 +18,7 @@ ESThing { // n.b. width can be array of knobs per column
   // except polytouch which takes { |thing, val, num, chan| }
   <>bendFunc, <>touchFunc, <>polytouchFunc, <>slideFunc,
   // i/o specs
-  <inChannels, <outChannels,
+  <>inChannels, <>outChannels,
   // funcs to convert midi to cps and vel to amp
   <>midicpsFunc, <>velampFunc,
   // other special user data slots

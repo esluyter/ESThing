@@ -40,8 +40,17 @@
 + ESThingPatch {
   *initClass {
     ServerBoot.add {
-      // add server-side control spec mapping
       var warpModFuncs = ();
+
+      // add necessary SynthDefs for patching and solo/mute/bypass
+      SynthDef(\ESThingPatch, { |in, out, amp|
+        Out.ar(out, InFeedback.ar(in) * amp);
+      }).add;
+      SynthDef(\ESThingReply, { |in, freq = 100, id|
+        SendReply.ar(Impulse.ar(freq), '/ESThingReply', InFeedback.ar(in), id);
+      }).add;
+
+      // add server-side control spec mapping
       [CosineWarp, SineWarp, LinearWarp, ExponentialWarp].do { |warp|
         warpModFuncs[warp] = { |val, modVal, minval, maxval, step|
           var spec = ControlSpec(minval, maxval, warp, step);
@@ -92,14 +101,6 @@
         var unmappedVal = log((b - val) / a) / curve;
         var moddedVal = unmappedVal + modVal;
         Out.ar(out, b - (a * pow(grow, moddedVal)));
-      }).add;
-
-      // add other necessary SynthDefs for patching
-      SynthDef(\ESThingPatch, { |in, out, amp|
-        Out.ar(out, InFeedback.ar(in) * amp);
-      }).add;
-      SynthDef(\ESThingReply, { |in, freq = 100, id|
-        SendReply.ar(Impulse.ar(freq), '/ESThingReply', InFeedback.ar(in), id);
       }).add;
     };
   }
@@ -302,7 +303,10 @@
       callFuncOnParamModulate: true
     )
   }
-  *playFuncSynth { |name, func, params, inChannels = 2, outChannels = 2, top = 0, left = 0, width = 1, midiChannel, srcID|
+
+
+
+  *playFuncSynth { |name, func, params, inChannels, outChannels, top = 0, left = 0, width = 1, midiChannel, srcID|
     ^ESThing(name,
       prInitFunc: { |thing|
         var funcToPlay = if (func.def.argNames.first == \thing) {
@@ -310,7 +314,19 @@
         } {
           func
         };
-        thing.params = params ?? { var def = funcToPlay.asSynthDef; this.prMakeParams(def.allControlNames, false, def) };
+        thing.params = params ?? {
+          var def = funcToPlay.asSynthDef;
+          this.prMakeParams(def.allControlNames, false, def)
+        };
+        // infer in and out channels from func spec
+        thing.inChannels = inChannels ?? {
+          funcToPlay.asSynthDef.asSynthDesc.inputs.collect { |io|
+            io.numberOfChannels
+          } .sum
+        };
+        thing.outChannels = outChannels ?? {
+          funcToPlay.asSynthDef.asSynthDesc.outputs.last.numberOfChannels
+        };
       },
       initFunc: { |thing|
         thing[\noteStack] = [];
@@ -350,8 +366,6 @@
           thing.set(\touch, val);
         //};
       },
-      inChannels: inChannels,
-      outChannels: outChannels,
       func: func,
       top: top,
       left: left,
