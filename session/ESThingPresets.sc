@@ -127,7 +127,7 @@ ESThingPresets {
   // list of display names for GUI
   displayNames {
     ^presetArr.collect { |preset, i|
-      var name = preset[\name] ?? { preset[\date] !? { preset[\date].format("%d/%m/%y %I:%M:%S %p") } } ? "";
+      var name = preset[\name] ?? { preset[\date] !? { preset[\date].format(/*%d/%m/%y %I:%M:%S*/ "%m/%d %I:%M %p") } } ? "";
       "%: %".format(i, name);
     }
   }

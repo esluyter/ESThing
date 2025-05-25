@@ -9,7 +9,7 @@
   *initClass {
     // add extra ControlSpecs on startup
     StartUp.add {
-      ControlSpec.specs[\button] = ControlSpec(0, 1, \lin, 1, units: \button);
+      ControlSpec.specs[\push] = ControlSpec(0, 1, \lin, 1, units: \push);
       ControlSpec.specs[\toggle] = ControlSpec(0, 1, \lin, 1, units: \toggle);
       ControlSpec.specs[\bend] = ControlSpec(-1, 1);
       ControlSpec.specs[\atk] = ControlSpec(0, 5, 4, default: 0.6);
@@ -818,7 +818,7 @@
           var knob;
 
           switch(param.spec.units)
-          { \button } {
+          { \push } {
             var dependantFunc = { |param, val|
               defer { butt.value = val };
             };
