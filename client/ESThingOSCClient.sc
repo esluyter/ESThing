@@ -27,6 +27,7 @@ ESThingOSCClient {
         n.sendMsg("/client", id, "/%_knobmod_%/show".format(clientId, i + 1), false);
         n.sendMsg("/client", id, "/%_knob_%/show".format(clientId, i + 1), false);
         n.sendMsg("/client", id, "/%_button_%/show".format(clientId, i + 1), false);
+        n.sendMsg("/client", id, "/%_multislider_%/show".format(clientId, i + 1), false);
         n.sendMsg("/client", id, "/%_text_%".format(clientId, i + 1), "");
       };
 
@@ -70,7 +71,7 @@ ESThingOSCClient {
             var widget = switch (param.spec.units)
             { \push } { \button }
             { \toggle } { \button }
-            { \knob };
+            { if (param.val.size == 0) { \knob } { \multislider } };
             var addr = "/%_%_%".format(clientId, widget, i + 1);
             if (widget == \button) {
               n.sendMsg("/client", id, addr ++ "/mode", param.spec.units)
@@ -78,13 +79,16 @@ ESThingOSCClient {
             n.sendMsg("/client", id, addr ++ "/color", Color.hsv(param.hue ? param.parentThing.hue, 1, 1).hexString);
             n.sendMsg("/client", id, addr ++ "/show", true);
             n.sendMsg("/client", id, "/%_text_%".format(clientId, i + 1), param.name);
-            n.sendMsg("/client", id, addr, param.valNorm);
+            if (widget == \multislider) {
+              n.sendMsg("/client", id, addr ++ "/valueLength", param.val.size);
+            };
+            n.sendMsg("/client", id, addr, *param.valNorm);
             oscfuncs = oscfuncs.add(OSCFunc({ |msg|
               if (msg.last == id) {
-                param.valNorm = msg[1]
+                param.valNorm = msg[1].asString.interpret
               };
             }, addr));
-            func = { n.sendMsg("/client", id, addr, param.valNorm) };
+            func = { n.sendMsg("/client", id, addr, *param.valNorm) };
             dependants = dependants.add([param, func]);
             param.addDependant(func);
           };
