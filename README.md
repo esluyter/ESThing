@@ -4,40 +4,6 @@ A container for any possible SC code that can be played, with built-in routing, 
 
 (i.e. a less-featured version of NodeProxy et al)
 
-most recent syntax:
-
-```
-~session = ESThingSession();
-
-(
-// add a new space to the session, in slot 0
-// (keep reevaluating this as you build it -- automatically keeps param values)
-~session[0] = [
-  [
-    \note->(`\default: \drone->[0, 2]),
-    \verb->{ |in| NHHall.ar(In.ar(in, 2), \time.kr(1, spec: [0, 10])) }
-  ], 
-  [
-    (\note : \verb),
-    \verb
-  ],
-  inChannels: 0
-]
-)
-
-// set to empty space
-~session[0] = [];
-// free
-~session[0] = nil
-```
-<img width="363" alt="Screenshot 2025-05-18 at 1 47 23 AM" src="https://github.com/user-attachments/assets/7fd0d286-ccd4-40ae-94e5-cf8e6c0a3d40" />
-
-<br />
-
-A "space" is a bunch of "things" that make sound, have parameters, and are patched together. A thing can be a space, if you want.
-
-A session is a bunch of spaces that might in the future be able to be patched together.
-
 <br />
 <br />
 
@@ -293,21 +259,268 @@ t.knobs[0].do(_.color_(Color.black));
 <br />
 <br />
 -->
-The idea is that you build these spaces iteratively by reevaluating your code, the GUI shows you what's going on and gives you knobs which maintain their state when you reevaluate your code.
 
-Adjust parameters using MIDI knobs, with GUI, or like so:
-```
-~ts.(\lfo).set(\lofreq, 10);
-```
+
+
+<br />
+<br />
+<br />
+<br />
+
+# Syntax
+
+A "space" is a bunch of "things" that make sound, have parameters, and are patched together. A thing can be a space, if you want.
+
+A session is a bunch of spaces with volume control.
+
+The idea is that you build these spaces iteratively by reevaluating your code, the GUI shows you what's going on and gives you knobs which maintain their state when you reevaluate your code.
 
 Trying to abstract away all the boring repetitive stuff like MIDI and signal routing, with terse syntax.
 
-<br />
+## Sessions and spaces
+
+A session holds as many spaces as you want. To add or update a space, you give its arguments as an Array and the session will take care of building and playing the space for you.
+
+```
+~session = ESThingSession();
+
+(
+// syntax to make a thing space, with all default args
+// arg labels are optional
+~session[0] = [
+  things: [], 
+  patches: [],
+  initFunc: nil,
+  playFunc: nil,
+  stopFunc: nil,
+  freeFunc: nil,
+  inChannels: 2,
+  outChannels: 2,
+  target: nil,
+  oldSpace: (current space in slot 0 -- set to nil to override)
+]
+)
+
+// set to empty space
+~session[0] = [];
+// free
+~session[0] = nil
+```
+
+There is no need to free a space before replacing it -- it is encouraged to continuously reevaluate your `~session[0] = [...]` block as you work on it, the session will take care of all cleanup.
+
+## Things
+
+A thing is just an instance of ESThing. For convenience there are some "factory" things you can make with brief syntax.
+
+### Playable functions and patching
+
+```
+(
+~session[0] = [
+  things: [
+    // basic playable function
+    // (every Thing is audio rate)
+    \lfo->{
+      LFNoise2.ar(\lofreq.kr(1))
+    },
+    
+    // to provide more parameters, wrap in a dict
+    // (func: channels, params:, top:, left:, width:, midiChannel:, srcID:)
+    \sine->({ 
+      SinOsc.ar(\freq.kr(440)) 
+    }: [nil], top: 120, left: -100),
+    
+    // to process input, provide an 'in' control 
+    // and use In.ar
+    \dist->{ |in|
+      in = In.ar(in, 2);
+      BuchlaFoldOS.ar(in, 
+        \gain.kr(1, spec: [0, 10, 4])
+      ) * \amp.kr(0.1)
+    }
+  ],
+  
+  patches: [
+    // patch a Thing to the space's output: 
+    // just use the thing's name
+    \dist,
+    // alternatively,
+    // (\dist : -1) or (\dist : \out)
+    // any invalid thing name like \in or \out will patch to space input/output
+    
+    // and for just some of the channels
+    // \dist->0 or \dist->[0, 1]
+    
+    // patch a Thing into another Thing
+    (\sine : \dist),
+    // control gain like
+    // (\sine: \dist, amp: 1.5)
+    
+    // modulate a parameter with a Thing
+    (\lfo : \dist->\gain, amp: 0.25),
+  ]
+]
+)
+```
+
+<img width="650" height="373" alt="Screen Shot 2025-07-19 at 03 02 25" src="https://github.com/user-attachments/assets/aa1addbb-011c-43c8-85a7-139daa3b3b52" />
+
+### Adjusting parameters
+
+```
+~session[0][\lfo][\lofreq].val = 2
+```
+
+### Playing SynthDefs
+
+```
+(
+// provide a Ref to a symbol to play it as a Synth
+~session[0] = [
+  things: [
+    \synth->`\default
+  ],
+  
+  patches: [
+    \synth
+  ]
+]
+)
+```
+
+```
+(
+// instead make it a poly synth (if you have a midi keyboard connected, this should automatically work)
+// relevant params like \freq and \amp are hidden from gui
+~session[0] = [
+  things: [
+    \synth->(`\default: \poly)
+    //\synth->(`\default: \mono)
+    //\synth->(`\default: \mono0) // this is analog-style, requires doneAction of 0
+    //\synth->(`\default: \drone)
+    //\synth->(`\default: \mpe)
+  ],
+  
+  patches: [
+    \synth
+  ]
+]
+)
+```
+
+```
+(
+// basic starting synth template
+SynthDef(\sineSynth, { |out, gate = 1|
+  var touch = \touch.kr(0, 0.05);
+  var slide = \slide.kr(0.5, 0.05);
+  var bendRange = \bendRange.kr(2, spec: [0, 48, 4, 1.0]);
+  var bend = \bend.kr(0, 0.05) * bendRange;
+  var freq = \freq.kr(440, 0.1) * bend.midiratio;
+  var amp = \amp.kr(0.1, 0.05);
+  var env = Env.adsr(
+    \atk.kr(0.01), \dec.kr(0.3), \sus.kr(0.5), \rel.kr(0.1)
+  ).ar(2, gate + Impulse.kr(0));
+
+  var sig = SinOsc.ar(freq);
+
+  Out.ar(out, (sig * env * amp
+    * touch.lincurve(0, 1, 1, amp.reciprocal * 4, 2)
+    * 0.3).tanh);
+}).add;
+
+~session[0] = [
+  things: [
+    \synth->(`\sineSynth: \poly)
+  ],
+  
+  patches: [
+    \synth
+  ]
+]
+)
+```
+
+### Patterns
+
+work in progress...
+
+```
+(
+~session[0] = [
+  things: [
+    \lfo2->({ SinOsc.ar(\lofreq.kr(1)) }: [0, 1]),
+    \lfo->({ SinOsc.ar(\lofreq.kr(1)) }: [0, 1]),
+    ESThing(\pat,
+      playFunc: { |thing|
+        thing[\player] = Pbind(
+          \note, Prand([0, 2, 4, 5, 7, 9, 10, 12], inf) + thing.(\noteOffset),
+          \dur, Pwhite(0.1, 0.3) / Pwhite(1, 2),
+          \amp, thing.(\amp),
+          \in, thing.inbus,
+          \out, thing.outbus
+        ).play
+      },
+      stopFunc:  { |thing|
+        thing[\player].stop
+      },
+      params: [
+        \noteOffset->[-12, 12],
+        \amp->\amp
+      ]
+    )
+  ],
+  patches: [
+    (\lfo2 : \pat->\amp),
+    (\lfo : \pat->\noteOffset),
+    (\pat : \out)
+  ]
+]
+)
+```
+
+### Spaces
+
+work in progress
+
 <br />
 <br />
 <br />
 
+### ESThing
+- Provides a dedicated environment, group, inbus, and outbus.
+- Hooks for
+  - init/free
+  - play/stop
+  - noteOn/noteOff/bend
+  - touch/polytouch
+- Allows you to define `params` with custom hooks, or auto-generate them from synth controls
+  - by default these send `set` messages to whatever is in the environment under `synth` and `synths`
+- Provides special templates
+  - playFuncSynth (similar to {}.play)
+  - Playing a SynthDef with e.g. a midi controller, using `in`, `out`, `freq`, `amp`, `bend`, `touch`, `portamento`/`gate` controls
+    - droneSynth
+    - monoSynth
+    - polySynth
 
+### ESThingSpace
+- A container for many ESThings, as well as patched connections between them
+- Provides a dedicated environment inherited by its things, as well as a group
+- Either allocates dedicated inbus and outbus, or uses ADC and DAC
+- Hooks for
+  - init/free
+  - play/stop
+- Allows you to define `patches`, i.e. connections between outputs of one thing and inputs of another, with gain control
+
+<br />
+<br />
+<br />
+
+<details>
+
+<summary>old examples</summary>
+  
 ## starting template 
 gain knob
 
@@ -474,38 +687,7 @@ SynthDef(\sinNote, { |out, amp=0.1, freq=440, bend=0, touch=0, gate=1, pregain=4
 <br />
 <br />
 
-<br />
-<br />
-<br />
-
-### ESThing
-- Provides a dedicated environment, group, inbus, and outbus.
-- Hooks for
-  - init/free
-  - play/stop
-  - noteOn/noteOff/bend
-  - touch/polytouch
-- Allows you to define `params` with custom hooks, or auto-generate them from synth controls
-  - by default these send `set` messages to whatever is in the environment under `synth` and `synths`
-- Provides special templates
-  - playFuncSynth (similar to {}.play)
-  - Playing a SynthDef with e.g. a midi controller, using `in`, `out`, `freq`, `amp`, `bend`, `touch`, `portamento`/`gate` controls
-    - droneSynth
-    - monoSynth
-    - polySynth
-
-### ESThingSpace
-- A container for many ESThings, as well as patched connections between them
-- Provides a dedicated environment inherited by its things, as well as a group
-- Either allocates dedicated inbus and outbus, or uses ADC and DAC
-- Hooks for
-  - init/free
-  - play/stop
-- Allows you to define `patches`, i.e. connections between outputs of one thing and inputs of another, with gain control
-
-<br />
-<br />
-<br />
+</details>
 
 <details>
 
