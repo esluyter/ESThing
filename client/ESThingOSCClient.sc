@@ -1,8 +1,7 @@
 ESThingOSCClient {
   var <osc, <session, <clients, <clientIds, <id;
   var <oscfuncs, <dependants;
-  var <presetFunc, <>currentPreset = 0;
-  var <presetOscFuncs;
+  var <>currentPreset = 0;
 
   *new { |osc, session, clients, clientIds, id|
     // two clients, one for each side of interface, called "left" and "right"
@@ -13,14 +12,14 @@ ESThingOSCClient {
 
   init {
     var n = osc.netAddr;
-    var map;
+
+    oscfuncs = [];
+    dependants = [];
 
     clients.do { |client, i|
       var clientId = clientIds[i];
-      map = client.map(osc.maps[client.tpIndex]);
-
-      oscfuncs = [];
-      dependants = [];
+      var map = client.map(osc.maps[client.tpIndex]);
+      var presetFunc;
 
       // hide all knobs and buttons
       50.do { |i|
@@ -93,29 +92,30 @@ ESThingOSCClient {
             param.addDependant(func);
           };
         };
-      };
 
-      // set mod knob values and colors, and register handlers for changes
-      client.ts.modPatches.do { |patch|
-        var fromThing = patch.fromThing;
-        var toThing = patch.toThing;
-        var toParam = toThing.(patch.to.index);
-        var i = map.indexOf(client.ts.params.indexOf(toParam));
-        if (i.notNil) {
-          var func;
-          var spec = \amp.asSpec;
-          var addr = "/%_knobmod_%".format(clientId, i + 1);
-          n.sendMsg("/client", id, addr ++ "/color", Color.hsv(fromThing.hue, 1, 1).hexString);
-          n.sendMsg("/client", id, addr ++ "/show", 1);
-          n.sendMsg("/client", id, addr, spec.unmap(patch.amp));
-          oscfuncs = oscfuncs.add(OSCFunc({ |msg|
-            if (msg.last == id) {
-              patch.amp = spec.map(msg[1]);
-            };
-          }, addr));
-          func = { n.sendMsg("/client", id, addr, spec.unmap(patch.amp)) };
-          dependants = dependants.add([patch, func]);
-          patch.addDependant(func);
+
+        // set mod knob values and colors, and register handlers for changes
+        client.ts.modPatches.do { |patch|
+          var fromThing = patch.fromThing;
+          var toThing = patch.toThing;
+          var toParam = toThing.(patch.to.index);
+          var i = map.indexOf(client.ts.params.indexOf(toParam));
+          if (i.notNil) {
+            var func;
+            var spec = \amp.asSpec;
+            var addr = "/%_knobmod_%".format(clientId, i + 1);
+            n.sendMsg("/client", id, addr ++ "/color", Color.hsv(fromThing.hue, 1, 1).hexString);
+            n.sendMsg("/client", id, addr ++ "/show", 1);
+            n.sendMsg("/client", id, addr, spec.unmap(patch.amp));
+            oscfuncs = oscfuncs.add(OSCFunc({ |msg|
+              if (msg.last == id) {
+                patch.amp = spec.map(msg[1]);
+              };
+            }, addr));
+            func = { n.sendMsg("/client", id, addr, spec.unmap(patch.amp)) };
+            dependants = dependants.add([patch, func]);
+            patch.addDependant(func);
+          };
         };
 
         // presets
@@ -128,7 +128,8 @@ ESThingOSCClient {
         };
         presetFunc.();
         client.tp.presets.addDependant(presetFunc);
-        presetOscFuncs = [
+        dependants = dependants.add([client.tp.presets, presetFunc]);
+        oscfuncs = oscfuncs ++ [
           OSCFunc({ |msg|
             if (msg.last == id) {
               // change preset
@@ -163,25 +164,27 @@ ESThingOSCClient {
           }, "/%_button_capture".format(clientId)),
         ];
 
+
         // randomize xy pad
         {
           var func = client.tp.makeXYFunc;
           oscfuncs = oscfuncs.add(OSCFunc({ |msg|
+            msg.postln;
             if (msg.last == id) {
               var x, y;
               #x, y = msg[1].asString.interpret;
               func.(x, y);
             };
-          }, "/%_xy_rand".format(clientId)));
+          }, "/%_xy_rand".format(clientId).postln));
         }.value;
-      };
 
-      /*
-      ;
-      OSCdef(\undo, { |msg|
-      ~undoPreset !? { defer { ~restorePreset.(~undoPreset, if (~fade == 0) { 0 } { ~slider.value }); } };
-      }, "/button_undo_preset");
-      */
+        /*
+        ;
+        OSCdef(\undo, { |msg|
+        ~undoPreset !? { defer { ~restorePreset.(~undoPreset, if (~fade == 0) { 0 } { ~slider.value }); } };
+        }, "/button_undo_preset");
+        */
+      };
     };
   }
 
@@ -191,7 +194,6 @@ ESThingOSCClient {
     dependants.do { |arr| arr[0].removeDependant(arr[1]) };
     dependants = [];
     //client.tp.presets.removeDependant(presetFunc);
-    presetOscFuncs.do(_.free);
   }
 
   doesNotUnderstand { |selector ...args|
