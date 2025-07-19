@@ -226,6 +226,7 @@
             var method = switch (kind)
             { \drone } { \droneSynth }
             { \mono } { \monoSynth }
+            { \mono0 } { \mono0Synth }
             { \poly } { \polySynth }
             { \mpe } { \mpeSynth };
             ret = ESThing.perform(method, name, thisKey.dereference, value[\args], value[\params], inChannels, outChannels, value[\midicpsFunc], value[\velampFunc], value[\top] ? 0, value[\left] ? 0, value[\width] ? 1, value[\midiChannel], value[\srcID]);
