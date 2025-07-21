@@ -16,7 +16,7 @@ A container for any possible SC code that can be played, with built-in routing, 
 <details>
   <summary>code</summary>
 
-```
+```supercollider
 // prep
 (
 ~tp = ESThingPlayer();
@@ -177,89 +177,6 @@ A container for any possible SC code that can be played, with built-in routing, 
 
 </details>
 
-<br /><br />
-<!--
-<img width="600" alt="Screen Shot 2025-04-15 at 20 57 43" src="https://github.com/user-attachments/assets/e2b6c8b8-396c-47c7-8f26-10c619740f91" />
-
-
-<details>
-<summary>code</summary>
-  
-```
-// prep
-(
-~tp = ESThingPlayer();
-~tp.play;
-~bufs = ESBufList('bufs', [ ( 'name': 'testing', 'buf': Platform.resourceDir +/+ "sounds/a11wlk01.wav" ) ]).makeWindow;
-)
-
-// main (reevaluate to update graph, thing parameters will remember their current values)
-(
-~tp.ts = ~ts = ESThingSpace(
-  things: [
-    \lfo->({
-      SinOsc.ar(\lofreq.kr(29.45))
-    }: [0, 1]),
-    \lfo2->({
-      SinOsc.ar(\lofreq.kr(0.45))
-    }: [0, 1], top: 100, left: -90),
-    \osc->({
-      Pan2.ar(SinOsc.ar(\freq.ar(440, 0.1)), \pan.kr(0, 0.1), \amp.kr)
-    }: [1, 2], left: 10, top: -20),
-    \pb->({
-      var buf = ~bufs[\testing];
-      PlayBuf.ar(1, buf, BufRateScale.kr(buf) * \rate.kr(0.27), loop:1) * \amp.kr(0.5);
-    }: [0, 1], top: 250, left: -120),
-    \verb->({ |in|
-      in = In.ar(in, 2);
-      NHHall.ar(in, \size.kr(4.12, spec: [1, 10])) * \amp.kr(0.24)
-    }: [2, 2], left: 30),
-    /* testing colors
-    \blah->{\knob.ar},
-    \di->{\knob.ar},
-    \dah->{\knob.ar},
-    \ba->{\knob.ar},
-    \doo->{\knob.ar},
-    */
-  ],
-  patches: [
-    (\in->0: \osc),
-    (\lfo: \osc->\freq, amp: 0.1),
-    (\lfo2: \osc->\pan, amp: 1),
-    (\osc : \out),
-    (\pb : \out),
-    (\osc : \verb),
-    (\pb : \verb),
-    (\verb : \out),
-    (\lfo : \pb->\rate, amp: 0.1),
-    (\lfo2 : \lfo->\lofreq, amp: 0.35)
-  ],
-
-  oldSpace: ~tp.ts // comment out to refresh all values
-);
-)
-
-// automatically assign all parameters to MIDI knobs
-(
-~tp.assignAllKnobs;
-
-t.free;
-t = MFTwister();
-t.knobs[0].do(_.color_(Color.black));
-
-~ts.params.do { |param, i|
-  t[i].color = Color.hsv(param.parentThing.hue, 1, 1);
-  t[i].val = param.val127
-};
-)
-```
-
-</details>
-
-<br />
-<br />
--->
-
 
 
 <br />
@@ -281,7 +198,7 @@ Trying to abstract away all the boring repetitive stuff like MIDI and signal rou
 
 A session holds as many spaces as you want. To add or update a space, you give its arguments as an Array and the session will take care of building and playing the space for you.
 
-```
+```supercollider
 ~session = ESThingSession();
 
 (
@@ -297,7 +214,7 @@ A session holds as many spaces as you want. To add or update a space, you give i
   inChannels: 2,
   outChannels: 2,
   target: nil,
-  oldSpace: (current space in slot 0 -- set to nil to override)
+  oldSpace: //(current space in slot 0 -- set to nil to override)
 ]
 )
 
@@ -315,30 +232,47 @@ A thing is just an instance of ESThing. For convenience there are some "factory"
 
 ### Playable functions and patching
 
-```
+Here is a sort of overview of how the patching works, and syntax for playing functions a la `{}.play`
+
+```supercollider
 (
 ~session[0] = [
   things: [
+    // multichannel output: just add output channels to the synth
+    \lfos->{
+      LFDNoise3.ar(
+        [\lofreq1, \lofreq2].collect(
+          _.kr(1, spec: \lofreq)
+      ))
+    },
+    // to provide more parameters, wrap in a dict
+    // (func: channels, params:, top:, left:, width:, midiChannel:, srcID:)
+    \mod->({
+      SinOsc.ar(\freq.kr(440))
+    }: [nil], top: 200, left: -50),
+    
+
+    // --- BASIC MODEL: ---
     // basic playable function
     // (every Thing is audio rate)
     \lfo->{
-      LFNoise2.ar(\lofreq.kr(1))
+      LFDNoise3.ar(\lofreq.kr(1))
     },
     
-    // to provide more parameters, wrap in a dict
-    // (func: channels, params:, top:, left:, width:, midiChannel:, srcID:)
-    \sine->({ 
-      SinOsc.ar(\freq.kr(440)) 
-    }: [nil], top: 120, left: -100),
+    // use ar controls for audio rate modulation
+    \car->({ 
+      SinOsc.ar(\freq.ar(440)) 
+    }: [nil], top: 150, left: -100),
     
-    // to process input, provide an 'in' control 
-    // and use In.ar
-    \dist->{ |in|
-      in = In.ar(in, 2);
+
+    // to process input, provide an 'ESIn' control 
+    // (just a shortcut for In.ar(\in.kr(numChannels)))
+    \dist->({
+      var in = ESIn(2);
       BuchlaFoldOS.ar(in, 
-        \gain.kr(1, spec: [0, 10, 4])
+        \gain.kr(1, spec: [0.5, 10, 4])
       ) * \amp.kr(0.1)
-    }
+    }: [nil], exclude: [\amp])
   ],
   
   patches: [
@@ -348,33 +282,50 @@ A thing is just an instance of ESThing. For convenience there are some "factory"
     // alternatively,
     // (\dist : -1) or (\dist : \out)
     // any invalid thing name like \in or \out will patch to space input/output
-    
-    // and for just some of the channels
-    // \dist->0 or \dist->[0, 1]
+    // so (-1 : \dist) or (\in : \dist)
+    // will patch space input to the input of the 'dist' thing
     
     // patch a Thing into another Thing
-    (\sine : \dist),
-    // control gain like
-    // (\sine: \dist, amp: 1.5)
+    (\car : \dist),
     
-    // modulate a parameter with a Thing
+    // mod a parameter with a Thing
+    // control gain like so
     (\lfo : \dist->\gain, amp: 0.25),
+    
+    // parameter modulation at audio rate
+    // (just provide ar control in your synthdef as above)
+    (\mod : \car->\freq, amp: 0.5),
+    
+    // patching output channels independently
+    (\lfos->0 : \mod->\freq, amp: 0.5),
+    (\lfos->1 : \lfo->\lofreq, \amp: 0.5),
+    
+    (\lfo : \lfos->\lofreq1, amp: 0.25)
   ]
 ]
 )
 ```
 
-<img width="650" height="373" alt="Screen Shot 2025-07-19 at 03 02 25" src="https://github.com/user-attachments/assets/aa1addbb-011c-43c8-85a7-139daa3b3b52" />
+<img width="654" height="481" alt="Screen Shot 2025-07-21 at 02 05 01" src="https://github.com/user-attachments/assets/db7d9b82-01c1-44e5-8a74-b78e682f596a" />
+
+### Randomizing parameters
+
+By default the x/y pad will randomize all parameters not explicitly excluded via `exclude` as in this case `\dist->\amp` is
+
 
 ### Adjusting parameters
 
-```
+GUI knobs function as expected, and via code:
+
+```supercollider
 ~session[0][\lfo][\lofreq].val = 2
 ```
 
+Later we will add clients to control via MIDI or over OSC.
+
 ### Playing SynthDefs
 
-```
+```supercollider
 (
 // provide a Ref to a symbol to play it as a Synth
 ~session[0] = [
@@ -389,7 +340,13 @@ A thing is just an instance of ESThing. For convenience there are some "factory"
 )
 ```
 
-```
+<img width="654" height="481" alt="Screen Shot 2025-07-21 at 02 21 53" src="https://github.com/user-attachments/assets/d5ee83a4-4379-4418-84bf-98cdce339ddf" />
+
+This plays it as a "drone" kind of synth, and if you have a MIDI keyboard connected you should hear the keyboard is already controlling the frequency of the synth. For more typical MIDI cases:
+
+### MIDI mono and poly synths
+
+```supercollider
 (
 // instead make it a poly synth (if you have a midi keyboard connected, this should automatically work)
 // relevant params like \freq and \amp are hidden from gui
@@ -409,7 +366,13 @@ A thing is just an instance of ESThing. For convenience there are some "factory"
 )
 ```
 
-```
+<img width="652" height="346" alt="Screen Shot 2025-07-21 at 02 24 50" src="https://github.com/user-attachments/assets/6b5a7957-181f-4567-9a4a-45fb400d8005" />
+
+Now it plays the \default synth polyphonically. The parameters that are directly controlled by MIDI (such as `freq`) are hidden to avoid clutter.
+
+Here is a default starting point for a polyphonic or mpe instrument SynthDef:
+
+```supercollider
 (
 // basic starting synth template
 SynthDef(\sineSynth, { |out, gate = 1|
@@ -442,11 +405,17 @@ SynthDef(\sineSynth, { |out, gate = 1|
 )
 ```
 
+<img width="654" height="481" alt="Screen Shot 2025-07-21 at 02 24 12" src="https://github.com/user-attachments/assets/04458c9e-b96d-4444-a3ae-729617ba3d85" />
+
+
+
 ### Patterns
 
 work in progress...
 
-```
+For now consider as a template for using ESThing to construct new kinds of things (all of the above examples use ESThing under the hood -- see `ESThingFactory.sc` file for implementation
+
+```supercollider
 (
 ~session[0] = [
   things: [
@@ -483,6 +452,8 @@ work in progress...
 ### Spaces
 
 work in progress
+
+see above code example under first image for a template
 
 <br />
 <br />
