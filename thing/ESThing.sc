@@ -19,6 +19,10 @@ ESThing { // n.b. width can be array of knobs per column
   <>bendFunc, <>touchFunc, <>polytouchFunc, <>slideFunc,
   // i/o specs
   <>inChannels, <>outChannels,
+  // exclude params from things like presets and randomization
+  <>paramExclude,
+  // exclude midi devices from controlling this thing in various ways
+  <>midiExclude,
   // funcs to convert midi to cps and vel to amp
   <>midicpsFunc, <>velampFunc,
   // other special user data slots
@@ -59,7 +63,7 @@ ESThing { // n.b. width can be array of knobs per column
   storeArgs { ^[name, params, initFunc, freeFunc, playFunc, stopFunc,
     noteOnFunc, noteOffFunc, bendFunc,
     touchFunc, polytouchFunc, slideFunc,
-    inChannels, outChannels,
+    inChannels, outChannels, paramExclude, midiExclude,
     midicpsFunc, velampFunc, defName, args, func,
     top, left, width,
     midiChannel, srcID, callFuncOnParamModulate, prInitFunc] }
@@ -67,7 +71,7 @@ ESThing { // n.b. width can be array of knobs per column
   *new { |name, params, initFunc, freeFunc, playFunc, stopFunc,
     noteOnFunc, noteOffFunc, bendFunc,
     touchFunc, polytouchFunc, slideFunc,
-    inChannels = 2, outChannels = 2,
+    inChannels = 2, outChannels = 2, paramExclude = #[], midiExclude = #[],
     midicpsFunc, velampFunc, defName, args, func,
     top = 0, left = 0, width = 1,
     midiChannel, srcID, callFuncOnParamModulate = false, prInitFunc|
@@ -77,7 +81,7 @@ ESThing { // n.b. width can be array of knobs per column
     ^super.newCopyArgs(name, initFunc, freeFunc, playFunc, stopFunc,
       noteOnFunc, noteOffFunc, bendFunc,
       touchFunc, polytouchFunc, slideFunc,
-      inChannels, outChannels,
+      inChannels, outChannels, paramExclude.postln, midiExclude,
       midicpsFunc, velampFunc, defName, args, func,
       top, left, width,
       midiChannel, srcID, callFuncOnParamModulate, prInitFunc).prInit(params);
@@ -269,5 +273,11 @@ ESThing { // n.b. width can be array of knobs per column
           parentSpace.soloGroup, \addToTail);
       };
     };
+  }
+
+  includedParams {
+    ^params.select { |param|
+      paramExclude.indexOf(param.name).isNil
+    }
   }
 }

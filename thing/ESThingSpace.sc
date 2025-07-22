@@ -144,6 +144,9 @@ ESThingSpace {
   params {
     ^things.collect(_.params).flat;
   }
+  includedParams {
+    ^things.collect(_.includedParams).flat;
+  }
 
   //syntactic sugar
   value { |sym| ^this.thingAt(sym) }

@@ -295,8 +295,9 @@
 
 
 
-  *space { |name, space, inChannels = 2, outChannels = 2, top = 0, left = 0, width = 1|
-    ^ESThing(name,
+  // additional keys: inChannels, outChannels, args,  top = 0, left = 0, width = 1,  midicpsFunc, velampFunc, midiChannel, srcID
+  *space { |name, space ...args, kwargs|
+    ^ESThing.performArgs(\new, [name], [
       initFunc: { |thing|
         thing[\space] = space;
         thing[\space].inbus = thing.inbus;
@@ -313,19 +314,16 @@
       params: space.params.collect { |param|
         ESThingParam((param.name ++ "_" ++ param.parentThing.index.asCompileString).asSymbol, param.spec, { |name, val| param.parentThing.(param.name).val = val }, param.val).hue_(param.parentThing.hue);
       },
-      inChannels: inChannels,
-      outChannels: outChannels,
-      top: top,
-      left: left,
-      width: width,
+      inChannels: 2,
+      outChannels: 2,
       callFuncOnParamModulate: true
-    )
+    ] ++ kwargs)
   }
 
 
 
-  *playFuncSynth { |name, func, params, inChannels, outChannels, top = 0, left = 0, width = 1, midiChannel, srcID|
-    ^ESThing(name,
+  *playFuncSynth { |name, func, params, inChannels, outChannels ...args, kwargs|
+    ^ESThing.performArgs(\new, [name], [
       prInitFunc: { |thing|
         var funcToPlay = if (func.def.argNames.first == \thing) {
           func.value(thing)
@@ -385,15 +383,12 @@
         //};
       },
       func: func,
-      top: top,
-      left: left,
-      width: width,
-      midiChannel: midiChannel,
-      srcID: srcID
-    )
+      inChannels: inChannels,
+      outChannels: outChannels
+    ] ++ kwargs)
   }
 
-  *mpeSynth { |name, defName, args, params, inChannels, outChannels, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, srcID|
+  *mpeSynth { |name, defName, params, inChannels, outChannels ...args, kwargs|
     var synthDesc = SynthDescLib.global[defName];
     if (synthDesc.notNil) {
       // infer in and out channels from func spec
@@ -406,7 +401,7 @@
         synthDesc.outputs.last.numberOfChannels
       };
     };
-    ^ESThing(name,
+    ^ESThing.performArgs(\new, [name], [
       playFunc: { |thing|
         thing[\synths] = ();
       },
@@ -444,18 +439,11 @@
       params: params ?? { this.prMakeParamsDefName(defName) },
       inChannels: inChannels,
       outChannels: outChannels,
-      midicpsFunc: midicpsFunc,
-      velampFunc: velampFunc,
       defName: defName,
-      args: args,
-      top: top,
-      left: left,
-      width: width,
-      srcID: srcID
-    )
+    ] ++ kwargs)
   }
 
-  *polySynth { |name, defName, args, params, inChannels, outChannels, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
+  *polySynth { |name, defName, params, inChannels, outChannels ...args, kwargs|
     var synthDesc = SynthDescLib.global[defName];
     if (synthDesc.notNil) {
       // infer in and out channels from func spec
@@ -468,7 +456,7 @@
         synthDesc.outputs.last.numberOfChannels
       };
     };
-    ^ESThing(name,
+    ^ESThing.performArgs(\new, [name], [
       playFunc: { |thing|
         thing[\synths] = ();
       },
@@ -507,19 +495,11 @@
       params: params ?? { this.prMakeParamsDefName(defName) },
       inChannels: inChannels,
       outChannels: outChannels,
-      midicpsFunc: midicpsFunc,
-      velampFunc: velampFunc,
       defName: defName,
-      args: args,
-      top: top,
-      left: left,
-      width: width,
-      midiChannel: midiChannel,
-      srcID: srcID
-    )
+    ] ++ kwargs)
   }
 
-  *monoSynth { |name, defName, args, params, inChannels, outChannels, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
+  *monoSynth { |name, defName, params, inChannels, outChannels ...args, kwargs|
     var synthDesc = SynthDescLib.global[defName];
     if (synthDesc.notNil) {
       // infer in and out channels from func spec
@@ -532,7 +512,7 @@
         synthDesc.outputs.last.numberOfChannels
       };
     };
-    ^ESThing(name,
+    ^ESThing.performArgs(\new, [name], [
       initFunc: { |thing|
         thing[\noteStack] = [];
       },
@@ -581,19 +561,11 @@
       params: params ?? { this.prMakeParamsDefName(defName) },
       inChannels: inChannels,
       outChannels: outChannels,
-      midicpsFunc: midicpsFunc,
-      velampFunc: velampFunc,
-      defName: defName,
-      args: args,
-      top: top,
-      left: left,
-      width: width,
-      midiChannel: midiChannel,
-      srcID: srcID
-    )
+      defName: defName
+    ] ++ kwargs)
   }
 
-  *mono0Synth { |name, defName, args, params, inChannels, outChannels, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
+  *mono0Synth { |name, defName, params, inChannels, outChannels ...args, kwargs|
     var synthDesc = SynthDescLib.global[defName];
     if (synthDesc.notNil) {
       // infer in and out channels from func spec
@@ -606,7 +578,7 @@
         synthDesc.outputs.last.numberOfChannels
       };
     };
-    ^ESThing(name,
+    ^ESThing.performArgs(\new, [name], [
       initFunc: { |thing|
         thing[\noteStack] = [];
       },
@@ -647,19 +619,11 @@
       params: params ?? { this.prMakeParamsDefName(defName) },
       inChannels: inChannels,
       outChannels: outChannels,
-      midicpsFunc: midicpsFunc,
-      velampFunc: velampFunc,
       defName: defName,
-      args: args,
-      top: top,
-      left: left,
-      width: width,
-      midiChannel: midiChannel,
-      srcID: srcID
-    )
+    ] ++ kwargs)
   }
 
-  *droneSynth { |name, defName, args, params, inChannels, outChannels, midicpsFunc, velampFunc, top = 0, left = 0, width = 1, midiChannel, srcID|
+  *droneSynth { |name, defName, params, inChannels, outChannels ...args, kwargs|
     var synthDesc = SynthDescLib.global[defName];
     if (synthDesc.notNil) {
       // infer in and out channels from func spec
@@ -672,7 +636,7 @@
         synthDesc.outputs.last.numberOfChannels
       };
     };
-    ^ESThing(name,
+    ^ESThing.performArgs(\new, [name], [
       initFunc: { |thing|
         thing[\noteStack] = [];
       },
@@ -712,16 +676,8 @@
       params: params ?? { this.prMakeParamsDefName(defName, false) },
       inChannels: inChannels,
       outChannels: outChannels,
-      midicpsFunc: midicpsFunc,
-      velampFunc: velampFunc,
       defName: defName,
-      args: args,
-      top: top,
-      left: left,
-      width: width,
-      midiChannel: midiChannel,
-      srcID: srcID
-    )
+    ] ++ kwargs)
   }
 }
 

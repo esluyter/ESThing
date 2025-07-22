@@ -9,7 +9,7 @@ ESThingPlayer {
   // ts is the thing space we are playing
   var <ts,
   // these are misc to do with what devices control which things
-  <>knobFunc, <>knobArr, <>ccExclude, <>modExclude, <>noteExclude, <>paramExclude;
+  <>knobFunc, <>knobArr, <>ccExclude, <>modExclude, <>noteExclude;
   // an instance of ESPresets
   var <presets;
   // midi funcs
@@ -20,9 +20,9 @@ ESThingPlayer {
   // tsbus so we have volume control etc
   var <tsbus, <amp = 1, <synths;
 
-  *new { |ts, knobFunc, knobArr = ([]), ccExclude = ([]), modExclude = ([]), noteExclude = ([]), paramExclude = ([])|
+  *new { |ts, knobFunc, knobArr = ([]), ccExclude = ([]), modExclude = ([]), noteExclude = ([])|
     ts = ts ?? { ESThingSpace() };
-    ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude, modExclude, noteExclude, paramExclude).initMidi.initPresets;
+    ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude, modExclude, noteExclude).initMidi.initPresets;
   }
   initPresets {
     presets = ESThingPresets(this);
@@ -165,8 +165,12 @@ ESThingPlayer {
   // params can be divided into included and excluded params,
   // for randomization et al
   params { ^ts.params }
-  excludedParams { ^paramExclude.collect { |ass| ts.(ass.key).(ass.value) } }
-  includedParams { var ex = this.excludedParams; ^this.params.reject({ |param| ex.indexOf(param).notNil }) }
+  excludedParams {
+    var in = this.includedParams; ^this.params.reject({ |param| in.indexOf(param).notNil })
+  }
+  includedParams {
+    ^ts.includedParams;
+  }
 
   // modulation patches can also be excluded
   modPatches { ^ts.modPatches }
