@@ -14,7 +14,7 @@ A container for any possible SC code that can be played, with built-in routing, 
 <img width="1049" alt="Screenshot 2025-04-25 at 3 46 28 AM" src="https://github.com/user-attachments/assets/5c5babfd-a1c8-4715-a900-ba71ea53d2ad" />
 
 <details>
-  <summary>code</summary>
+  <summary>code (beware old syntax)</summary>
 
 ```supercollider
 // prep
@@ -188,7 +188,7 @@ A container for any possible SC code that can be played, with built-in routing, 
 
 A "space" is a bunch of "things" that make sound, have parameters, and are patched together. A thing can be a space, if you want.
 
-A session is a bunch of spaces with volume control.
+A session is a bunch of spaces with independent volume control.
 
 The idea is that you build these spaces iteratively by reevaluating your code, the GUI shows you what's going on and gives you knobs which maintain their state when you reevaluate your code.
 
@@ -224,6 +224,27 @@ A session holds as many spaces as you want. To add or update a space, you give i
 ~session[0] = nil
 ```
 
+Usually you start somewhere like:
+
+```supercollider
+~session = ESThingSession();
+
+(
+~session[0] = [
+  things: [
+    // make a thing called sine
+    \sine->{ SinOsc.ar(\freq.kr(440)) * \amp.kr(0.1) }
+  ],
+  patches: [
+    // patch sine thing to the output
+    \sine
+  ]
+];
+)
+```
+
+<img width="652" height="368" alt="Screen Shot 2025-07-21 at 02 53 49" src="https://github.com/user-attachments/assets/26fc6e05-4540-47e9-982c-8824dd1c9eb1" />
+
 There is no need to free a space before replacing it -- it is encouraged to continuously reevaluate your `~session[0] = [...]` block as you work on it, the session will take care of all cleanup.
 
 ## Things
@@ -238,68 +259,69 @@ Here is a sort of overview of how the patching works, and syntax for playing fun
 (
 ~session[0] = [
   things: [
-    // multichannel output: just add output channels to the synth
+    // extra, of note:
+    // multichannel output
     \lfos->{
       LFDNoise3.ar(
         [\lofreq1, \lofreq2].collect(
           _.kr(1, spec: \lofreq)
       ))
     },
-    // to provide more parameters, wrap in a dict
-    // (func: channels, params:, top:, left:, width:, midiChannel:, srcID:)
-    \mod->({
+    // to provide more parameters, give a dict
+    // (type:, channels: [numIns, numOuts], params:, top:, left:, width:, midiChannel:, srcID:)
+    \mod->{
       SinOsc.ar(\freq.kr(440))
-    }: [nil], top: 200, left: -50),
-    
+    }->(top: 200, left: -50),
 
-    // --- BASIC MODEL: ---
+
+
     // basic playable function
     // (every Thing is audio rate)
     \lfo->{
       LFDNoise3.ar(\lofreq.kr(1))
     },
-    
-    // use ar controls for audio rate modulation
-    \car->({ 
-      SinOsc.ar(\freq.ar(440)) 
-    }: [nil], top: 150, left: -100),
-    
 
-    // to process input, provide an 'ESIn' control 
+    // use ar controls for audio rate modulation
+    \car->{
+      SinOsc.ar(\freq.ar(440))
+    }->(top: 150, left: -100),
+
+
+
+    // to process input, provide an 'ESIn' control
     // (just a shortcut for In.ar(\in.kr(numChannels)))
-    \dist->({
+    \dist->{
       var in = ESIn(2);
-      BuchlaFoldOS.ar(in, 
+      BuchlaFoldOS.ar(in,
         \gain.kr(1, spec: [0.5, 10, 4])
       ) * \amp.kr(0.1)
-    }: [nil], exclude: [\amp])
+    }->(exclude: [\amp])
   ],
-  
+
   patches: [
-    // patch a Thing to the space's output: 
+    // patch a Thing to the space's output:
     // just use the thing's name
     \dist,
     // alternatively,
     // (\dist : -1) or (\dist : \out)
     // any invalid thing name like \in or \out will patch to space input/output
-    // so (-1 : \dist) or (\in : \dist)
-    // will patch space input to the input of the 'dist' thing
-    
+
     // patch a Thing into another Thing
     (\car : \dist),
-    
+    // control gain like
+    // (\sine: \dist, amp: 1.5)
+
     // mod a parameter with a Thing
-    // control gain like so
     (\lfo : \dist->\gain, amp: 0.25),
-    
+
     // parameter modulation at audio rate
-    // (just provide ar control in your synthdef as above)
+    // (just provide ar control in your synthdef)
     (\mod : \car->\freq, amp: 0.5),
-    
+
     // patching output channels independently
     (\lfos->0 : \mod->\freq, amp: 0.5),
     (\lfos->1 : \lfo->\lofreq, \amp: 0.5),
-    
+
     (\lfo : \lfos->\lofreq1, amp: 0.25)
   ]
 ]
@@ -352,13 +374,13 @@ This plays it as a "drone" kind of synth, and if you have a MIDI keyboard connec
 // relevant params like \freq and \amp are hidden from gui
 ~session[0] = [
   things: [
-    \synth->(`\default: \poly)
-    //\synth->(`\default: \mono)
-    //\synth->(`\default: \mono0) // this is analog-style, requires doneAction of 0
-    //\synth->(`\default: \drone)
-    //\synth->(`\default: \mpe)
+    \synth->`\default->\poly
+    //\synth->`\default->\mono
+    //\synth->`\default->\mono0 // this is analog-style, requires doneAction of 0
+    //\synth->`\default->\drone
+    //\synth->`\default->\mpe
   ],
-  
+
   patches: [
     \synth
   ]
@@ -395,7 +417,7 @@ SynthDef(\sineSynth, { |out, gate = 1|
 
 ~session[0] = [
   things: [
-    \synth->(`\sineSynth: \poly)
+    \synth->`\sineSynth->\poly
   ],
   
   patches: [
@@ -419,8 +441,8 @@ For now consider as a template for using ESThing to construct new kinds of thing
 (
 ~session[0] = [
   things: [
-    \lfo2->({ SinOsc.ar(\lofreq.kr(1)) }: [0, 1]),
-    \lfo->({ SinOsc.ar(\lofreq.kr(1)) }: [0, 1]),
+    \lfo2->{ SinOsc.ar(\lofreq.kr(1)) },
+    \lfo->{ SinOsc.ar(\lofreq.kr(1)) },
     ESThing(\pat,
       playFunc: { |thing|
         thing[\player] = Pbind(
@@ -443,7 +465,7 @@ For now consider as a template for using ESThing to construct new kinds of thing
   patches: [
     (\lfo2 : \pat->\amp),
     (\lfo : \pat->\noteOffset),
-    (\pat : \out)
+    \pat
   ]
 ]
 )
