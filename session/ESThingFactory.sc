@@ -186,52 +186,67 @@
       ^obj
     } {
       if (obj.isKindOf(Association)) {
-        var name = obj.key;
-        var value = obj.value;
-        var ret;
-        if (value.isKindOf(ESThingSpace)) {
-          ret = ESThing.space(name, value);
+        var name, value, args, ret;
+        var type = \drone;
+
+        // supports \name->{...}, \name->`\defname->\type, \name->{...}->(...)
+        // name will be first key, value will be the object to make the thing from
+        // args will be nil, a Symbol, or an Event
+        if (obj.key.isKindOf(Association)) {
+          name = obj.key.key;
+          value = obj.key.value;
+          args = obj.value;
+        } {
+          name = obj.key;
+          value = obj.value;
         };
+
+        if (args.isKindOf(Symbol)) {
+          type = args;
+          args = nil;
+        };
+
+        if (args.isKindOf(Dictionary)) {
+          if (args[\type].notNil) {
+            type = args[\type];
+          };
+
+          if (args[\channels].notNil) {
+            var thisValue = args[\channels];
+            if (thisValue.isInteger) {
+              args[\inChannels] = thisValue;
+              args[\outChannels] = thisValue;
+            };
+            if (thisValue.isArray) {
+              args[\inChannels] = thisValue[0];
+              args[\outChannels] = thisValue[1];
+            };
+            args[\channels] = nil;
+          };
+        };
+
+        // because of keyValuePairs later args needs to be an Event
+        if (args.isNil) {
+          args = ();
+        };
+
         if (value.isKindOf(Function)) {
-          ret = ESThing.playFuncSynth(name, value);
+          var method = \playFuncSynth;
+          ^ESThing.performArgs(method, [name, value], args.asKeyValuePairs);
         };
         if (value.isKindOf(Ref)) {
-          ret = ESThing.droneSynth(name, value.dereference);
-        };
-        if (value.isKindOf(Dictionary)) {
-          var thisKey = value.keys.select(_.isKindOf(Symbol).not).pop;
-          var thisValue = value[thisKey];
-          var inChannels, outChannels;
-          var kind = \drone;
-          if (thisValue.isKindOf(Symbol)) {
-            kind = thisValue
-          };
-          if (thisValue.isKindOf(Association)) {
-            kind = thisValue.key;
-            thisValue = thisValue.value;
-          };
-          if (thisValue.isInteger) {
-            inChannels = outChannels = thisValue
-          };
-          if (thisValue.isArray) {
-            #inChannels, outChannels = thisValue
-          };
-          if (thisKey.isKindOf(ESThingSpace)) {
-            ret = ESThing.space(name, thisKey, inChannels, outChannels, value[\top] ? 0, value[\left] ? 0, value[\width] ? 1);
-          };
-          if (thisKey.isKindOf(Function)) {
-            ret = ESThing.playFuncSynth(name, thisKey, value[\params], inChannels, outChannels, value[\top] ? 0, value[\left] ? 0, value[\width] ? 1, value[\midiChannel], value[\srcID])
-          };
-          if (thisKey.isKindOf(Ref)) {
-            var method = switch (kind)
+          var method = switch (type)
             { \drone } { \droneSynth }
             { \mono } { \monoSynth }
             { \mono0 } { \mono0Synth }
             { \poly } { \polySynth }
             { \mpe } { \mpeSynth };
-            ret = ESThing.perform(method, name, thisKey.dereference, value[\args], value[\params], inChannels, outChannels, value[\midicpsFunc], value[\velampFunc], value[\top] ? 0, value[\left] ? 0, value[\width] ? 1, value[\midiChannel], value[\srcID]);
-          };
+          ^ESThing.performArgs(method, [name, value.dereference], args.asKeyValuePairs);
         };
+        if (value.isKindOf(ESThingSpace)) {
+          ^ESThing.performArgs(\space, [name, value], args.asKeyValuePairs);
+        };
+
         ^ret;
       } {
         // don't know what to do with this
