@@ -295,7 +295,8 @@ Here is a sort of overview of how the patching works, and syntax for playing fun
       BuchlaFoldOS.ar(in,
         \gain.kr(1, spec: [0.5, 10, 4])
       ) * \amp.kr(0.1)
-    }->(exclude: [\amp])
+      // use paramExclude to leave parameters out of e.g.randomization with the x/y pad
+    }->(paramExclude: [\amp])
   ],
 
   patches: [
