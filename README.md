@@ -471,6 +471,7 @@ For now consider as a template for using ESThing to construct new kinds of thing
 ]
 )
 ```
+<img width="652" height="349" alt="Screen Shot 2025-07-22 at 03 30 09" src="https://github.com/user-attachments/assets/a47213df-a334-45c5-ba55-00433f8be76e" />
 
 ### Spaces
 
