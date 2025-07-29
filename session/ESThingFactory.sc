@@ -27,6 +27,9 @@
     if (obj.class == ESThingParam) {
       ^obj
     };
+    if (obj.class == ESThingPhasorParam) {
+      ^obj
+    };
     if (obj.isKindOf(Symbol)) {
       ^ESThingParam(obj, obj.asSpec ?? { ControlSpec() })
     };
@@ -293,18 +296,29 @@
       // TODO: have different sort of param and GUI element for arrays
       (exposeControl or: hideMidiControls.not) /*and: isArray.not*/ and: isQ.not
     } .collect({ |control|
-      var spec;
-      // look for spec in metadata, otherwise use name.asSpec
-      if (synthDesc.notNil and: { (spec = synthDesc.metadata.tryPerform(\at, \specs).tryPerform(\at, control.name)).notNil }) {
-        spec = spec.asSpec
+      var spec, name;
+      name = control.name;
+      if (name.asString.beginsWith("eSPhasor")) {
+        // if a phasor param: this is double control, just make single param
+        if (name.asString.endsWith("Phase")) {
+          ESThingPhasorParam(name);
+        } {
+          nil
+        }
       } {
-        spec = control.name.asSpec;
-      };
-      // filter out nils
-      spec = spec ?? { ControlSpec() };
-      spec = spec.copy.default_(control.defaultValue);
-      ESThingParam(control.name, spec);
-    });
+        // if a regular param:
+        // look for spec in metadata, otherwise use name.asSpec
+        if (synthDesc.notNil and: { (spec = synthDesc.metadata.tryPerform(\at, \specs).tryPerform(\at, control.name)).notNil }) {
+          spec = spec.asSpec
+        } {
+          spec = control.name.asSpec;
+        };
+        // filter out nils
+        spec = spec ?? { ControlSpec() };
+        spec = spec.copy.default_(control.defaultValue);
+        ESThingParam(name, spec)
+      }
+    }) .reject(_.isNil);
     ^params;
   }
 
@@ -840,6 +854,7 @@
         var hue = param.hue ? thing.hue;
         var point = (left + 72 + (90 * x))@((75 * y) + 40 + top);
         var knobBounds = Rect(5 + (90 * x), (75 * y) + 30, 80, 70);
+
         if (param.val.isNumber) {
           // they won't be red anymore, unless modulated by an input
           var redIndex = redParams.indexOf(param);
@@ -864,6 +879,15 @@
             StaticText(view, knobBounds.copy.height_(15)).string_(param.name).stringColor_(Color.hsv(hue, 1, 0.35)).acceptsMouse_(false);
             param.addDependant(dependantFunc);
             butt.onClose = { param.removeDependant(dependantFunc) };
+          }
+          { \phasor } {
+            var dependantFunc = { |param, val|
+              defer { knob.value = val };
+            };
+            StaticText(view, knobBounds.copy.height_(15)).string_(param.name).stringColor_(Color.hsv(hue, 1, 0.35)).acceptsMouse_(false);
+            knob = Slider(view, knobBounds.copy.insetBy(0, 20)).action_{ |knob| thing.set(param.name, knob.value) }.value_(param.val).background_(Color.hsv(hue, 1, 0.675, 0.2)).knobColor_(Color.hsv(hue, 1, 0.675)).thumbSize_(15);
+            param.addDependant(dependantFunc);
+            knob.onClose = { param.removeDependant(dependantFunc) };
           }
           {
             // if its a number and not a button or toggle, it's a knob!

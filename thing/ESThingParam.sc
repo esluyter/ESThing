@@ -152,3 +152,118 @@ ESThingParam {
     this.release;
   }
 }
+
+
+
+
+
+
+
+
+ESThingPhasorParam {
+  var <name, <val, <id, <func, <oscFunc;
+  var <>parentThing;
+
+  // for fadeTo
+  var rout;
+  // so that e.g. in a space thing, the params can be color coded
+  // back to their original thing
+  var <>hue;
+
+  storeArgs { ^[name, val] }
+  *new { |name, val = 0|
+    var func = { |val, id, thing|
+      if (thing[\synth].class == Synth) {
+        thing[\synth].set("eSPhasor%Phase".format(id), val, "eSPhasor%Trig".format(id), 1);
+      };
+      thing[\synths].do({ |synth| synth.set("eSPhasor%Phase".format(id), val, "ESPhasor%Trig".format(id), 1); });
+    };
+    var id = name.asString[8..].asInteger;
+    name = "phasor_%".format(id).asSymbol;
+    ^super.newCopyArgs(name, val, id, func).initOSC;
+  }
+  initOSC {
+    oscFunc = OSCFunc({ |msg|
+      var thisId = msg[2];
+      var value = msg[3];
+      if (thisId == id) {
+        this.valQuiet_(value)
+      }
+    }, "/ESPhasor");
+  }
+
+  valQuiet_ { |argval|
+    // notify dependents but don't set synth
+    val = argval;
+    this.changed(val);
+  }
+  // sets the parameter value, by default stopping any fade routine
+  val_ { |argval, stopRout = true|
+    if (stopRout) { rout.stop; rout = nil; };
+    val = argval;
+    func.value(val, id, parentThing);
+    this.changed(val);
+  }
+  // sets the parameter value, normalized from 0-1
+  valNorm_ { |argval, stopRout = true|
+    this.val_(argval, stopRout);
+  }
+  // normalized from 0-127
+  val127_ { |midival|
+    this.valNorm_(midival / 127);
+  }
+  valNorm {
+    ^val;
+  }
+  val127 {
+    ^this.valNorm * 127;
+  }
+
+  // fades parameter over a duration with a curve
+  fadeTo { |value = 0, dur = 1, curve = \sin, hz = 30, clock|
+    var fromValNorm = this.valNorm;
+    var toValNorm = value;//spec.unmap(value);
+    clock = clock ?? SystemClock;
+    rout.stop;
+    rout = nil;
+    if (dur == 0) {
+      this.val_(value, false);
+    } {
+      var waittime = hz.reciprocal;
+      var env = Env([fromValNorm, toValNorm], [dur], curve);
+      var iterations = (dur * hz).floor;
+      rout = {
+        iterations.do { |i|
+          this.valNorm_(env.at((i + 1) * waittime), false);
+          waittime.wait;
+        };
+      }.fork(clock);
+    }
+  }
+
+  // syntax sugar
+  value { ^val }
+
+  // for use language-side
+  moddedVal { ^val }
+  asPattern { ^Pfunc { this.moddedVal } }
+  embedInStream { arg inval;
+    this.moddedVal.embedInStream(inval);
+    ^inval;
+  }
+  asStream {
+    ^Routine({ arg inval;
+      loop {
+        this.embedInStream(inval)
+      }
+    })
+  }
+
+  spec { ^ControlSpec(units: \phasor) }
+
+  // clean up
+  free {
+    oscFunc.free;
+    this.release;
+  }
+}
