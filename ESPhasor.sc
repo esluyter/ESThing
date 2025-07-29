@@ -18,7 +18,7 @@ ESPhasor {
   *buf { |buf, id, rate = 1|
     var phase, env;
     #phase, env = ESPhasor.env(BufDur.kr(buf).reciprocal * rate, 1);
-    ^BufRd.ar(1, buf, phase * BufFrames.kr(buf)) * env
+    ^BufRd.ar(buf.numChannels, buf, phase * BufFrames.kr(buf)) * env
   }
 
   *new { |freq, id|
