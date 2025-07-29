@@ -177,7 +177,27 @@
 
 
 
-
++ ESThingSpace {
+  *newFrom { |ts, oldSpace|
+    // sugar: convert array to ESThingSpace
+    if (ts.isArray) {
+      var argNames = ['things', 'patches', 'initFunc', 'playFunc', 'stopFunc', 'freeFunc', 'inChannels', 'outChannels', 'target', 'oldSpace'];
+      var args = [[], [], nil, nil, nil, nil, 2, 2, nil, oldSpace];
+      var i = 0;
+      ts.do { |item|
+        var argIndex = argNames.indexOf(item);
+        if (argIndex.notNil) {
+          i = argIndex;
+        } {
+          args[i] = item;
+          i = i + 1;
+        };
+      };
+      ts = ESThingSpace(*args);
+    };
+    ^ts;
+  }
+}
 
 + ESThing {
   // syntax sugar, create a new thing from an Association
@@ -245,6 +265,9 @@
         };
         if (value.isKindOf(Pattern)) {
           ^ESThing.performArgs(\patternSynth, [name, value], args.asKeyValuePairs);
+        };
+        if (value.isKindOf(Array)) {
+          value = ESThingSpace.newFrom(value);
         };
         if (value.isKindOf(ESThingSpace)) {
           ^ESThing.performArgs(\space, [name, value], args.asKeyValuePairs);

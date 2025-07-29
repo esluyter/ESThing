@@ -172,6 +172,8 @@ ESThingPlayer {
     ^ts.includedParams;
   }
 
+  things { ^ts.things }
+
   // modulation patches can also be excluded
   modPatches { ^ts.modPatches }
   excludedModPatches {
