@@ -18,7 +18,9 @@ ESThingSession {
   }
 
   // sugar: put a thing space directly
+  // interacts directly with ESPhasor -- this won't work if you don't use this sugar
   put { |index, ts|
+    ESPhasor.spaceId = index * 100;
     if (tps.size <= index) {
       tps = tps.extend(index + 1);
     };
