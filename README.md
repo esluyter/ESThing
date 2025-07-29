@@ -512,6 +512,23 @@ SynthDef(\exquis, { |out, gate = 1|
 
 <img width="654" height="481" alt="Screen Shot 2025-07-21 at 02 24 12" src="https://github.com/user-attachments/assets/04458c9e-b96d-4444-a3ae-729617ba3d85" />
 
+To use the same SynthDef with different default parameter values, set `args`:
+
+```supercollider
+(
+~session[0] = [
+  things: [
+    \test->`\default->(args: [pan: -1]),
+    \test2->`\default->(args: [freq: 100, pan: 1])
+  ],
+  patches: [
+    \test,
+    \test2
+  ],
+];
+)
+```
+
 <br />
 <br />
 
