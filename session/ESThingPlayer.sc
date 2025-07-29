@@ -165,28 +165,15 @@ ESThingPlayer {
   // params can be divided into included and excluded params,
   // for randomization et al
   params { ^ts.params }
-  excludedParams {
-    var in = this.includedParams; ^this.params.reject({ |param| in.indexOf(param).notNil })
-  }
-  includedParams {
-    ^ts.includedParams;
-  }
+  excludedParams { ^ts.excludedParams; }
+  includedParams { ^ts.includedParams; }
 
   things { ^ts.things }
 
   // modulation patches can also be excluded
   modPatches { ^ts.modPatches }
-  excludedModPatches {
-    ^this.excludedParams.collect { |param|
-      ts.modPatches.select { |modPatch|
-        (modPatch.toThing == param.parentThing) and: (modPatch.to.index == param.name);
-      };
-    } .flat
-  }
-  includedModPatches {
-    var ex = this.excludedModPatches;
-    ^this.modPatches.reject({ |modPatch| ex.indexOf(modPatch).notNil })
-  }
+  excludedModPatches { ^ts.excludedModPatches }
+  includedModPatches { ^ts.includedModPatches }
 
   // automatically assign all params to sequential MIDI ccs
   assignAllKnobs { |ccStart = 0|
@@ -217,35 +204,6 @@ ESThingPlayer {
 
   // generates a func to be used for 2D parameter randomization
   makeXYFunc {
-    var vals, randVals, modAmps, randModAmps, mulFuncs, distX, distY;
-    var includedParams = this.includedParams;
-    var includedModPatches = this.includedModPatches;
-    ^{ |x = 0.5, y = 0.5|
-      distY = (y - 0.5);
-      distX = (x - 0.5);
-      if ((x == 0.5) and: (y == 0.5)) {
-        vals = nil;
-      } {
-        if (vals == nil) {
-          vals = includedParams.collect(_.valNorm);
-          modAmps = includedModPatches.collect(_.ampNorm);
-          randVals = includedParams.collect { |param| if (param.val.isArray) { {1.0.rand2}!param.val.size } { 1.0.rand2 } };
-          randModAmps = includedModPatches.size.collect { 1.0.rand2 };
-          mulFuncs = max(includedParams.size, this.includedModPatches.size).collect { [{ distX }, { distY }].choose };
-        };
-        includedParams.do { |param, i|
-          var dist = mulFuncs[i].();
-          param.valNorm = blend(vals[i], vals[i] + (randVals[i] * dist.sign), dist.abs * 2);
-        };
-        defer {
-          if (this.presets.affectModAmps) {
-            includedModPatches.do { |patch, i|
-              var dist = mulFuncs[i].();
-              patch.ampNorm = blend(modAmps[i], modAmps[i] + (randModAmps[i] * dist.sign), dist.abs * 2);
-            };
-          };
-        };
-      };
-    }
+    ^ts.makeXYFunc(this.presets.affectModAmps)
   }
 }

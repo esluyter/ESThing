@@ -141,11 +141,31 @@ ESThingSpace {
   thingAt { |sym|
     ^this.class.thingAt(sym, this.things);
   }
+
   params {
     ^things.collect(_.params).flat;
   }
   includedParams {
     ^things.collect(_.includedParams).flat;
+  }
+  excludedParams {
+    var in = this.includedParams;
+    ^this.params.reject({ |param| in.indexOf(param).notNil })
+  }
+  modPatches {
+    ^patches.select { |patch| patch.to.index.isKindOf(Symbol) };
+  }
+  excludedModPatches {
+    var modPatches = this.modPatches;
+    ^this.excludedParams.collect { |param|
+      modPatches.select { |modPatch|
+        (modPatch.toThing == param.parentThing) and: (modPatch.to.index == param.name);
+      };
+    } .flat
+  }
+  includedModPatches {
+    var ex = this.excludedModPatches;
+    ^this.modPatches.reject({ |modPatch| ex.indexOf(modPatch).notNil })
   }
 
   //syntactic sugar
@@ -191,9 +211,7 @@ ESThingSpace {
       };
     };
   }
-  modPatches {
-    ^patches.select { |patch| patch.to.index.isKindOf(Symbol) };
-  }
+
   postModPatches {
     this.modPatches.do { |patch|
       // this doesn't work with backslash directly, so use question mark temp
@@ -208,5 +226,39 @@ ESThingSpace {
         patch.amp
       ).tr($?, $\\).postln;
     };
+  }
+
+  // generates a func to be used for 2D parameter randomization
+  makeXYFunc { |affectModAmps = true|
+    var vals, randVals, modAmps, randModAmps, mulFuncs, distX, distY;
+    var includedParams = this.includedParams;
+    var includedModPatches = this.includedModPatches;
+    ^{ |x = 0.5, y = 0.5|
+      distY = (y - 0.5);
+      distX = (x - 0.5);
+      if ((x == 0.5) and: (y == 0.5)) {
+        vals = nil;
+      } {
+        if (vals == nil) {
+          vals = includedParams.collect(_.valNorm);
+          modAmps = includedModPatches.collect(_.ampNorm);
+          randVals = includedParams.collect { |param| if (param.val.isArray) { {1.0.rand2}!param.val.size } { 1.0.rand2 } };
+          randModAmps = includedModPatches.size.collect { 1.0.rand2 };
+          mulFuncs = max(includedParams.size, this.includedModPatches.size).collect { [{ distX }, { distY }].choose };
+        };
+        includedParams.do { |param, i|
+          var dist = mulFuncs[i].();
+          param.valNorm = blend(vals[i], vals[i] + (randVals[i] * dist.sign), dist.abs * 2);
+        };
+        defer {
+          if (affectModAmps) {
+            includedModPatches.do { |patch, i|
+              var dist = mulFuncs[i].();
+              patch.ampNorm = blend(modAmps[i], modAmps[i] + (randModAmps[i] * dist.sign), dist.abs * 2);
+            };
+          };
+        };
+      };
+    }
   }
 }

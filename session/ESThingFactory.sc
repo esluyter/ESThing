@@ -752,7 +752,7 @@
     var w = Window(title, bounds).background_(Color.gray(0.95)).front;
 
     // xy randomizer
-    var func = if (tp.notNil) { tp.makeXYFunc };
+    var func = if (tp.notNil) { tp.makeXYFunc } { this.makeXYFunc };
     var pad = Slider2D(w, Rect(w.bounds.width - 220, w.bounds.height - 220, 200, 200)).resize_(9).x_(0.5).y_(0.5).background_(Color.gray(0.95)).action_{ |view|
       func.(view.x, view.y);
     }.mouseUpAction_{ |view|
