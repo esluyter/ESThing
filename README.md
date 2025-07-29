@@ -1,8 +1,8 @@
 # ESThing
 
-A container for any possible SC code that can be played, with built-in routing, MIDI keyboard polyphony, parameter control via MIDI, GUI, and Open Stage Control, buffer management, and presets.
+An experimental live performance framework:
 
-(i.e. a less-featured version of NodeProxy et al)
+A "thing" is a container for any possible SC code that can be played (a bit similar to NodeProxy et al). This framework provides some nice features like built-in routing with mute/solo/bypass; MIDI keyboard polyphony and MPE; parameter control via MIDI, GUI, and Open Stage Control; buffer management; and presets.
 
 <br />
 <br />
@@ -194,9 +194,40 @@ The idea is that you build these spaces iteratively by reevaluating your code, t
 
 Trying to abstract away all the boring repetitive stuff like MIDI and signal routing, with terse syntax.
 
+<br />
+
 ## Sessions and spaces
 
 A session holds as many spaces as you want. To add or update a space, you give its arguments as an Array and the session will take care of building and playing the space for you.
+
+Recommended to put in your startup file:
+
+```supercollider
+~session = ESThingSession();
+```
+
+Usually you start somewhere like:
+
+```supercollider
+(
+~session[0] = [
+  things: [
+    // make a thing called sine
+    \sine->{ SinOsc.ar(\freq.kr(440)) * \amp.kr(0.1) }
+  ],
+  patches: [
+    // patch sine thing to the output
+    \sine
+  ]
+];
+)
+```
+
+<img width="652" height="368" alt="Screen Shot 2025-07-21 at 02 53 49" src="https://github.com/user-attachments/assets/26fc6e05-4540-47e9-982c-8824dd1c9eb1" />
+
+There is no need to free a space before replacing it -- it is encouraged to continuously reevaluate your `~session[0] = [...]` block as you work on it, the session will take care of all cleanup.
+
+The full space interface is:
 
 ```supercollider
 ~session = ESThingSession();
@@ -224,34 +255,12 @@ A session holds as many spaces as you want. To add or update a space, you give i
 ~session[0] = nil
 ```
 
-Usually you start somewhere like:
+<br />
+<br />
 
-```supercollider
-~session = ESThingSession();
-
-(
-~session[0] = [
-  things: [
-    // make a thing called sine
-    \sine->{ SinOsc.ar(\freq.kr(440)) * \amp.kr(0.1) }
-  ],
-  patches: [
-    // patch sine thing to the output
-    \sine
-  ]
-];
-)
-```
-
-<img width="652" height="368" alt="Screen Shot 2025-07-21 at 02 53 49" src="https://github.com/user-attachments/assets/26fc6e05-4540-47e9-982c-8824dd1c9eb1" />
-
-There is no need to free a space before replacing it -- it is encouraged to continuously reevaluate your `~session[0] = [...]` block as you work on it, the session will take care of all cleanup.
-
-## Things
+## Things and patching
 
 A thing is just an instance of ESThing. For convenience there are some "factory" things you can make with brief syntax.
-
-### Playable functions and patching
 
 Here is a sort of overview of how the patching works, and syntax for playing functions a la `{}.play`
 
@@ -331,12 +340,12 @@ Here is a sort of overview of how the patching works, and syntax for playing fun
 
 <img width="654" height="481" alt="Screen Shot 2025-07-21 at 02 05 01" src="https://github.com/user-attachments/assets/db7d9b82-01c1-44e5-8a74-b78e682f596a" />
 
-### Randomizing parameters
+<br />
+<br />
+
+### Randomizing and adjusting parameters
 
 By default the x/y pad will randomize all parameters not explicitly excluded via `exclude` as in this case `\dist->\amp` is
-
-
-### Adjusting parameters
 
 GUI knobs function as expected, and via code:
 
@@ -346,20 +355,26 @@ GUI knobs function as expected, and via code:
 
 Later we will add clients to control via MIDI or over OSC.
 
-### 2-way position updates
+### Scoping
 
-This is a work in progress.
+Shift-click on the name of a Thing to scope its output bus. Alt-click to scope its input bus.
 
-Also miscellany like init and free funcs, and `\buf->{ |thing| {} }` syntax.
+<br />
+
+### ESPhasor: 2-way position updates
+
+If you use ESPhasor in your function or SynthDef, you will get a playhead slider that updates in real time and is also interactive (move it to change the current position)
+
+(This example also includes miscellany like space init and free funcs, inherited environment variables, and `\buf->{ |thing| {} }` syntax.)
 
 ```supercollider
 (
 ~session[0] = [
-  initFunc: { |thing|
-    thing[\buf] = Buffer.read(s, ExampleFiles.child);
+  initFunc: { |space|
+    space[\buf] = Buffer.read(s, ExampleFiles.child);
   },
-  freeFunc: { |thing|
-    thing[\buf].free;
+  freeFunc: { |space|
+    space[\buf].free;
   },
   
   things: [
@@ -380,12 +395,19 @@ Also miscellany like init and free funcs, and `\buf->{ |thing| {} }` syntax.
 
 <img width="651" height="370" alt="Screen Shot 2025-07-29 at 05 14 49" src="https://github.com/user-attachments/assets/eb74f1ed-ecc0-42d2-b7c6-42d1ab92aebf" />
 
+<br />
+<br />
+<br />
+<br />
 
-### Playing SynthDefs
+## Other kinds of Things: SynthDef/MIDI, Pattern, Space
+
+### Playing a SynthDef
+
+Provide a Ref to a symbol to play it as a Synth:
 
 ```supercollider
 (
-// provide a Ref to a symbol to play it as a Synth
 ~session[0] = [
   things: [
     \synth->`\default
@@ -465,7 +487,10 @@ SynthDef(\sineSynth, { |out, gate = 1|
 
 <img width="654" height="481" alt="Screen Shot 2025-07-21 at 02 24 12" src="https://github.com/user-attachments/assets/04458c9e-b96d-4444-a3ae-729617ba3d85" />
 
-### Pattern thing
+<br />
+<br />
+
+### Pattern things
 
 ```supercollider
 (
@@ -490,8 +515,56 @@ SynthDef(\sineSynth, { |out, gate = 1|
 
 <img width="651" height="411" alt="Screen Shot 2025-07-28 at 20 41 56" src="https://github.com/user-attachments/assets/dc332727-453f-4d46-9505-f5775598cff3" />
 
+<br />
+<br />
 
-### Template for using ESThing directly to make a new kind of thing (Pattern)
+### Space things
+
+Provide an Array to create a new space inside of a thing, with the same format `things: [], patches: [], ...`
+
+```supercollider
+(
+~session[0] = [
+  things: [
+    \patSpace->[
+      things: [
+        \lfo2->{ SinOsc.ar(\lofreq.kr(1)) },
+        \lfo->{ SinOsc.ar(\lofreq.kr(0.1)) },
+        \pat->Pbind(
+          \note, Pparam(\noteOffset, 0, [-12, 12]) + [-6, 0, 4, 9],
+          \dur, Pparam(\dur, 0.1, [0.1, 10, \exp]) * Pwhite(0.1, 0.3) / Pwhite(1, 2),
+          \amp, Pparam(\amp, 0.06, bus: true),
+        )->(paramExclude: [\amp]),
+      ],
+      patches: [
+        (\lfo2 : \pat->\amp, amp: 0.2),
+        (\lfo : \pat->\noteOffset),
+        \pat
+      ]
+    ]->(paramExclude: [\amp_2]),
+    
+    \verb->{
+      NHHall.ar(ESIn(2), \time.kr(1, spec: [0, 10]), stereo: 1) * \amp.kr(0.5)
+    }
+  ],
+  patches: [
+    \patSpace,
+    (\patSpace : \verb),
+    \verb
+  ]
+]
+)
+```
+<img width="651" height="501" alt="Screen Shot 2025-07-28 at 21 13 35" src="https://github.com/user-attachments/assets/a911f648-f0e4-4ee2-8c6b-faebdf278fc7" />
+
+Double-click on the name of the space thing to open a new window for just that space.
+
+<br />
+<br />
+
+## Using ESThing directly
+
+Template for using ESThing directly to make a new kind of thing (in this case, a Pattern)
 
 (all of the above examples use ESThing under the hood -- see `ESThingFactory.sc` file for implementation
 
@@ -529,46 +602,6 @@ SynthDef(\sineSynth, { |out, gate = 1|
 )
 ```
 <img width="652" height="349" alt="Screen Shot 2025-07-22 at 03 30 09" src="https://github.com/user-attachments/assets/a47213df-a334-45c5-ba55-00433f8be76e" />
-
-### Spaces
-
-work in progress
-
-```supercollider
-(
-~session[0] = [
-  things: [
-    \patSpace->[
-      things: [
-        \lfo2->{ SinOsc.ar(\lofreq.kr(1)) },
-        \lfo->{ SinOsc.ar(\lofreq.kr(0.1)) },
-        \pat->Pbind(
-          \note, Pparam(\noteOffset, 0, [-12, 12]) + [-6, 0, 4, 9],
-          \dur, Pparam(\dur, 0.1, [0.1, 10, \exp]) * Pwhite(0.1, 0.3) / Pwhite(1, 2),
-          \amp, Pparam(\amp, 0.06, bus: true),
-        )->(paramExclude: [\amp]),
-      ],
-      patches: [
-        (\lfo2 : \pat->\amp, amp: 0.2),
-        (\lfo : \pat->\noteOffset),
-        \pat
-      ]
-    ]->(paramExclude: [\amp_2]),
-    
-    \verb->{
-      NHHall.ar(ESIn(2), \time.kr(1, spec: [0, 10]), stereo: 1) * \amp.kr(0.5)
-    }
-  ],
-  patches: [
-    \patSpace,
-    (\patSpace : \verb),
-    \verb
-  ]
-]
-)
-```
-<img width="651" height="501" alt="Screen Shot 2025-07-28 at 21 13 35" src="https://github.com/user-attachments/assets/a911f648-f0e4-4ee2-8c6b-faebdf278fc7" />
-
 
 <br />
 <br />
