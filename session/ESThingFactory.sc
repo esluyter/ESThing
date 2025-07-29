@@ -243,6 +243,9 @@
             { \mpe } { \mpeSynth };
           ^ESThing.performArgs(method, [name, value.dereference], args.asKeyValuePairs);
         };
+        if (value.isKindOf(Pattern)) {
+          ^ESThing.performArgs(\patternSynth, [name, value], args.asKeyValuePairs);
+        };
         if (value.isKindOf(ESThingSpace)) {
           ^ESThing.performArgs(\space, [name, value], args.asKeyValuePairs);
         };
@@ -679,6 +682,31 @@
       defName: defName,
     ] ++ kwargs)
   }
+
+  *patternSynth { |name, pattern, params ...args, kwargs|
+    ^ESThing.performArgs(\new, [name], [
+      prInitFunc: { |thing|
+        thing[\pattern] = pattern;
+        thing.params = params ?? {
+          // make params from all Pparams
+          Pparam.findIn(thing[\pattern]).collect { |pparam|
+            pparam.thing_(thing);
+            pparam.param
+          };
+        };
+      },
+      playFunc: { |thing|
+        thing[\player] = Pbindf(
+          thing[\pattern],
+          \in, thing.inbus,
+          \out, thing.outbus
+        ).play
+      },
+      stopFunc:  { |thing|
+        thing[\player].stop
+      },
+    ] ++ kwargs)
+  }
 }
 
 
@@ -906,3 +934,4 @@
     ^w;
   }
 }
+

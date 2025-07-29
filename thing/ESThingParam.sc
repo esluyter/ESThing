@@ -23,7 +23,12 @@ ESThingParam {
   storeArgs { ^[name, spec, func, val] }
   *new { |name, spec, func, val|
     // default to name, otherwise default spec
-    spec = (spec ?? { name } ?? { ControlSpec() }).asSpec;
+    // need two asSpecs because symbol will return nil
+    spec = (spec ?? { name.asSpec }).asSpec;
+    if (val.notNil) {
+      spec = spec.copy.default_(val);
+    };
+
     // default func updates synth parameter
     func = func ? { |name, val, synthVal, thing|
       if (thing[\synth].class == Synth) {
