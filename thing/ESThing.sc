@@ -81,7 +81,7 @@ ESThing { // n.b. width can be array of knobs per column
     ^super.newCopyArgs(name, initFunc, freeFunc, playFunc, stopFunc,
       noteOnFunc, noteOffFunc, bendFunc,
       touchFunc, polytouchFunc, slideFunc,
-      inChannels, outChannels, paramExclude.postln, midiExclude,
+      inChannels, outChannels, paramExclude, midiExclude,
       midicpsFunc, velampFunc, defName, args, func,
       top, left, width,
       midiChannel, srcID, callFuncOnParamModulate, prInitFunc).prInit(params);

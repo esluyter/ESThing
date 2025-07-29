@@ -418,10 +418,10 @@
     var synthDesc = SynthDescLib.global[defName];
     if (synthDesc.notNil) {
       // infer in and out channels from func spec
-      inChannels = inChannels.postln ?? {
+      inChannels = inChannels ?? {
         synthDesc.inputs.collect { |io|
           io.numberOfChannels
-        } .sum.postln;
+        } .sum;
       };
       outChannels = outChannels ?? {
         synthDesc.outputs.last.numberOfChannels
@@ -473,10 +473,10 @@
     var synthDesc = SynthDescLib.global[defName];
     if (synthDesc.notNil) {
       // infer in and out channels from func spec
-      inChannels = inChannels.postln ?? {
+      inChannels = inChannels ?? {
         synthDesc.inputs.collect { |io|
           io.numberOfChannels
-        } .sum.postln;
+        } .sum;
       };
       outChannels = outChannels ?? {
         synthDesc.outputs.last.numberOfChannels
@@ -529,10 +529,10 @@
     var synthDesc = SynthDescLib.global[defName];
     if (synthDesc.notNil) {
       // infer in and out channels from func spec
-      inChannels = inChannels.postln ?? {
+      inChannels = inChannels ?? {
         synthDesc.inputs.collect { |io|
           io.numberOfChannels
-        } .sum.postln;
+        } .sum;
       };
       outChannels = outChannels ?? {
         synthDesc.outputs.last.numberOfChannels
@@ -595,10 +595,10 @@
     var synthDesc = SynthDescLib.global[defName];
     if (synthDesc.notNil) {
       // infer in and out channels from func spec
-      inChannels = inChannels.postln ?? {
+      inChannels = inChannels ?? {
         synthDesc.inputs.collect { |io|
           io.numberOfChannels
-        } .sum.postln;
+        } .sum;
       };
       outChannels = outChannels ?? {
         synthDesc.outputs.last.numberOfChannels
@@ -653,10 +653,10 @@
     var synthDesc = SynthDescLib.global[defName];
     if (synthDesc.notNil) {
       // infer in and out channels from func spec
-      inChannels = inChannels.postln ?? {
+      inChannels = inChannels ?? {
         synthDesc.inputs.collect { |io|
           io.numberOfChannels
-        } .sum.postln;
+        } .sum;
       };
       outChannels = outChannels ?? {
         synthDesc.outputs.last.numberOfChannels
