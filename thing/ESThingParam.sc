@@ -51,6 +51,11 @@ ESThingParam {
     }
   }
 
+  valQuiet_ { |argval|
+    // notify dependents but don't set synth
+    val = argval;
+    this.changed(val);
+  }
   // sets the parameter value, by default stopping any fade routine
   val_ { |argval, stopRout = true|
     if (stopRout) { rout.stop; rout = nil; };
