@@ -822,6 +822,12 @@
       var x = 0, y = 0;
       if (thing.name.notNil) {
         StaticText(view, Rect(5, 3, width, 20)).string_(thing.name).font_(Font.sansSerif(14, true)).stringColor_(Color.hsv(thing.hue, 1, 0.5)).mouseDownAction_{ |v, x, y, mods, buttNum, clickCount|
+          if (mods.isAlt) {
+            thing.inbus.scope
+          };
+          if (mods.isShift) {
+            thing.outbus.scope
+          };
           if (clickCount == 2) {
             if (thing[\space].class == ESThingSpace) {
               w !? { w.close };
