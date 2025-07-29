@@ -432,7 +432,7 @@ SynthDef(\sineSynth, { |out, gate = 1|
 
 ### Pattern thing
 
-```
+```supercollider
 (
 ~session[0] = [
   things: [
