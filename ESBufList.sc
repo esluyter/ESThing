@@ -5,12 +5,15 @@ ESBufList {
   storeArgs {
     ^[name, bufs.collect { |bufwrap| (name: bufwrap.name, buf: bufwrap.buf.path) }]
   }
-  *new { |name = \bufs, list = nil|
-    ^super.newCopyArgs(name, []).prInit(list);
+  *new { |name = \bufs, list = nil, makeWindow = true|
+    ^super.newCopyArgs(name, []).prInit(list, makeWindow);
   }
-  prInit { |list|
+  prInit { |list, makeWindow|
     if (list.notNil) {
       this.add(list);
+    };
+    if (makeWindow) {
+      this.makeWindow;
     };
   }
 
@@ -19,7 +22,7 @@ ESBufList {
     w !? { w.close };
     w = Window(name, bounds).front;
 
-    topView = View(w, w.bounds.copy.origin_(0@0)).receiveDragHandler_({ |v, x, y|
+    topView = ScrollView(w, w.bounds.copy.origin_(0@0)).receiveDragHandler_({ |v, x, y|
       var drags;
       if (View.currentDrag.class == String) {
         drags = [View.currentDrag];
@@ -100,6 +103,9 @@ ESBufList {
       };
       view;
     };
+
+    // bit of space at bottom for drag/drop
+    StaticText(topView, Rect(0, bufViews.size * 85 + 5, topView.bounds.width, 80)).string_("+ drag files here to add to list").align_(\center);
   }
 
   at { |index|
