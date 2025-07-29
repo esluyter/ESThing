@@ -485,6 +485,29 @@ SynthDef(\sineSynth, { |out, gate = 1|
 )
 ```
 
+```supercollider
+(
+SynthDef(\exquis, { |out, gate = 1|
+  var touch = \touch.kr(0, 0.05);
+  var slide = \slide.kr(0.5, 0.05);
+  var bendRange = \bendRange.kr(2, spec: [0, 48, 4, 1.0]);
+  var bend = \bend.kr(0, 0.05) * bendRange;
+  var freq = \freq.kr(440, 0.1) * bend.midiratio;
+  var amp = \amp.kr(0.1, 0.05);
+  var env = Env.adsr(
+    \atk.kr(0.01), \dec.kr(0.3), \sus.kr(0.5), \rel.kr(0.1)
+  ).ar(2, gate + Impulse.kr(0));
+  
+  var sig = Pan2.ar(SVF.ar(Pulse.ar(freq), freq * slide.linexp(0, 1, 1, 10), LFDNoise3.kr(1).range(0, 1)));
+  
+  Out.ar(out, (sig * env * amp 
+    * touch.lincurve(0, 1, 1, amp.reciprocal * 4, 6) 
+    * 0.3).tanh);
+}).add;
+)
+
+```
+
 <img width="654" height="481" alt="Screen Shot 2025-07-21 at 02 24 12" src="https://github.com/user-attachments/assets/04458c9e-b96d-4444-a3ae-729617ba3d85" />
 
 <br />
