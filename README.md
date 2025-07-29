@@ -430,13 +430,35 @@ SynthDef(\sineSynth, { |out, gate = 1|
 
 <img width="654" height="481" alt="Screen Shot 2025-07-21 at 02 24 12" src="https://github.com/user-attachments/assets/04458c9e-b96d-4444-a3ae-729617ba3d85" />
 
+### Pattern thing
+
+```
+(
+~session[0] = [
+  things: [
+    \lfo2->{ SinOsc.ar(\lofreq.kr(1)) },
+    \lfo->{ SinOsc.ar(\lofreq.kr(0.1)) },
+    \pat->Pbind(
+      \note, Pparam(\noteOffset, 0, [-12, 12]) + [-6, 0, 4, 9],
+      \dur, Pparam(\dur, 0.1, [0.1, 10, \exp]) * Pwhite(0.1, 0.3) / Pwhite(1, 2),
+      \amp, Pparam(\amp, 0, bus: true),
+    )->(paramExclude: [\amp]),
+  ],
+  patches: [
+    (\lfo2 : \pat->\amp),
+    (\lfo : \pat->\noteOffset),
+    \pat
+  ]
+]
+)
+```
+
+<img width="651" height="411" alt="Screen Shot 2025-07-28 at 20 41 56" src="https://github.com/user-attachments/assets/dc332727-453f-4d46-9505-f5775598cff3" />
 
 
-### Patterns
+### Template for using ESThing directly to make a new kind of thing (Pattern)
 
-work in progress...
-
-For now consider as a template for using ESThing to construct new kinds of things (all of the above examples use ESThing under the hood -- see `ESThingFactory.sc` file for implementation
+(all of the above examples use ESThing under the hood -- see `ESThingFactory.sc` file for implementation
 
 ```supercollider
 (
