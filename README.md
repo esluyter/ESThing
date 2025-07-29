@@ -204,6 +204,8 @@ Recommended to put in your startup file:
 
 ```supercollider
 ~session = ESThingSession();
+// optional:
+~bufs = ESBufList();
 ```
 
 Usually you start somewhere like:
