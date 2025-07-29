@@ -499,7 +499,41 @@ SynthDef(\sineSynth, { |out, gate = 1|
 
 work in progress
 
-see above code example under first image for a template
+```supercollider
+(
+~session[0] = [
+  things: [
+    \patSpace->[
+      things: [
+        \lfo2->{ SinOsc.ar(\lofreq.kr(1)) },
+        \lfo->{ SinOsc.ar(\lofreq.kr(0.1)) },
+        \pat->Pbind(
+          \note, Pparam(\noteOffset, 0, [-12, 12]) + [-6, 0, 4, 9],
+          \dur, Pparam(\dur, 0.1, [0.1, 10, \exp]) * Pwhite(0.1, 0.3) / Pwhite(1, 2),
+          \amp, Pparam(\amp, 0.06, bus: true),
+        )->(paramExclude: [\amp]),
+      ],
+      patches: [
+        (\lfo2 : \pat->\amp, amp: 0.2),
+        (\lfo : \pat->\noteOffset),
+        \pat
+      ]
+    ]->(paramExclude: [\amp_2]),
+    
+    \verb->{
+      NHHall.ar(ESIn(2), \time.kr(1, spec: [0, 10]), stereo: 1) * \amp.kr(0.5)
+    }
+  ],
+  patches: [
+    \patSpace,
+    (\patSpace : \verb),
+    \verb
+  ]
+]
+)
+```
+<img width="651" height="501" alt="Screen Shot 2025-07-28 at 21 13 35" src="https://github.com/user-attachments/assets/a911f648-f0e4-4ee2-8c6b-faebdf278fc7" />
+
 
 <br />
 <br />
