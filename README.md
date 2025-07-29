@@ -346,6 +346,41 @@ GUI knobs function as expected, and via code:
 
 Later we will add clients to control via MIDI or over OSC.
 
+### 2-way position updates
+
+This is a work in progress.
+
+Also miscellany like init and free funcs, and `\buf->{ |thing| {} }` syntax.
+
+```supercollider
+(
+~session[0] = [
+  initFunc: { |thing|
+    thing[\buf] = Buffer.read(s, ExampleFiles.child);
+  },
+  freeFunc: { |thing|
+    thing[\buf].free;
+  },
+  
+  things: [
+    \lfo->{ LFDNoise3.ar(\lofreq.kr(1)) },
+    \buf->{ |thing| {
+      var phase, env;
+      var rate = \rate.kr(1, spec: [0.1, 10000, \exponential]);
+      ESPhasor.buf(thing[\buf], 1, rate) * \amp.kr(0.5);
+    }}->(paramExclude: [\amp])
+  ],
+  patches: [
+    (\lfo: \buf->\rate, amp: 0.3),
+    \buf
+  ]
+]
+)
+```
+
+<img width="651" height="370" alt="Screen Shot 2025-07-29 at 05 14 49" src="https://github.com/user-attachments/assets/eb74f1ed-ecc0-42d2-b7c6-42d1ab92aebf" />
+
+
 ### Playing SynthDefs
 
 ```supercollider
