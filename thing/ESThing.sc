@@ -219,7 +219,14 @@ ESThing { // n.b. width can be array of knobs per column
     }*/
   params_ { |arr|
     params = arr.asArray.collect { |param|
-      ESThingParam.newFrom(param)
+      // if there are args, apply them as param defaults
+      var newParam = ESThingParam.newFrom(param);
+      var argIndex = args.asArray.indexOf(param.name);
+      if (argIndex.notNil) {
+        newParam.spec.default = args[argIndex + 1];
+        newParam.valQuiet = args[argIndex + 1];
+      };
+      newParam
     };
     // to catch params created late i.e. playFuncSynth
     params.do { |param|

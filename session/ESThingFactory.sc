@@ -232,6 +232,7 @@
         if (args.isKindOf(Dictionary)) {
           if (args[\type].notNil) {
             type = args[\type];
+            args[\type] = nil;
           };
 
           if (args[\channels].notNil) {
@@ -336,7 +337,7 @@
 
 
   // additional keys: inChannels, outChannels, args,  top = 0, left = 0, width = 1,  midicpsFunc, velampFunc, midiChannel, srcID
-  *space { |name, space ...args, kwargs|
+  *space { |name, space ...arrgs, kwargs|
     ^ESThing.performArgs(\new, [name], [
       initFunc: { |thing|
         thing[\space] = space;
@@ -366,7 +367,7 @@
 
 
 
-  *playFuncSynth { |name, func, params, inChannels, outChannels ...args, kwargs|
+  *playFuncSynth { |name, func, params, inChannels, outChannels ...arrgs, kwargs|
     ^ESThing.performArgs(\new, [name], [
       prInitFunc: { |thing|
         var funcToPlay = if (func.def.argNames.first == \thing) {
@@ -432,7 +433,7 @@
     ] ++ kwargs)
   }
 
-  *mpeSynth { |name, defName, params, inChannels, outChannels ...args, kwargs|
+  *mpeSynth { |name, defName, params, inChannels, outChannels ...arrgs, kwargs|
     var synthDesc = SynthDescLib.global[defName];
     if (synthDesc.notNil) {
       // infer in and out channels from func spec
@@ -487,7 +488,7 @@
     ] ++ kwargs)
   }
 
-  *polySynth { |name, defName, params, inChannels, outChannels ...args, kwargs|
+  *polySynth { |name, defName, params, inChannels, outChannels ...arrgs, kwargs|
     var synthDesc = SynthDescLib.global[defName];
     if (synthDesc.notNil) {
       // infer in and out channels from func spec
@@ -543,7 +544,7 @@
     ] ++ kwargs)
   }
 
-  *monoSynth { |name, defName, params, inChannels, outChannels ...args, kwargs|
+  *monoSynth { |name, defName, params, inChannels, outChannels ...arrgs, kwargs|
     var synthDesc = SynthDescLib.global[defName];
     if (synthDesc.notNil) {
       // infer in and out channels from func spec
@@ -609,7 +610,7 @@
     ] ++ kwargs)
   }
 
-  *mono0Synth { |name, defName, params, inChannels, outChannels ...args, kwargs|
+  *mono0Synth { |name, defName, params, inChannels, outChannels ...arrgs, kwargs|
     var synthDesc = SynthDescLib.global[defName];
     if (synthDesc.notNil) {
       // infer in and out channels from func spec
@@ -667,7 +668,7 @@
     ] ++ kwargs)
   }
 
-  *droneSynth { |name, defName, params, inChannels, outChannels ...args, kwargs|
+  *droneSynth { |name, defName, params, inChannels, outChannels ...arrgs, kwargs|
     var synthDesc = SynthDescLib.global[defName];
     if (synthDesc.notNil) {
       // infer in and out channels from func spec
@@ -724,7 +725,7 @@
     ] ++ kwargs)
   }
 
-  *patternSynth { |name, pattern, params ...args, kwargs|
+  *patternSynth { |name, pattern, params ...arrgs, kwargs|
     ^ESThing.performArgs(\new, [name], [
       prInitFunc: { |thing|
         thing[\pattern] = pattern;

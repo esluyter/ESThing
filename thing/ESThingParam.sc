@@ -24,9 +24,9 @@ ESThingParam {
   *new { |name, spec, func, val|
     // default to name, otherwise default spec
     // need two asSpecs because symbol will return nil
-    spec = (spec ?? { name.asSpec }).asSpec;
+    spec = (spec ?? { name.asSpec }).asSpec.copy;
     if (val.notNil) {
-      spec = spec.copy.default_(val);
+      spec.default_(val);
     };
 
     // default func updates synth parameter
