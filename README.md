@@ -251,6 +251,9 @@ The full space interface is:
 ]
 )
 
+// set the volume of a space
+~session[0].amp = 0.1;
+
 // set to empty space
 ~session[0] = [];
 // free
