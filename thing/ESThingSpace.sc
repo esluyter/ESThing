@@ -17,6 +17,9 @@ ESThingSpace {
   // where to add group
   <>target;
 
+  // top level spaces get an index
+  var <>index, <>session, <>parentThing;
+
   // buses are created on .init / destroyed on .free
   // group is created on .play / destroyed on .stop
   var <>inbus, <>outbus, <>group, <>soloGroup;

@@ -112,6 +112,7 @@ ESThing { // n.b. width can be array of knobs per column
         smbGroup)
     };
     forkIfNeeded {
+      ESPhasor.spaceId = this.spaceIndex * 100;
       // do whatever the playfunc says
       playFunc.value(this);
       // then activate all parameters
@@ -286,5 +287,12 @@ ESThing { // n.b. width can be array of knobs per column
     ^params.select { |param|
       paramExclude.indexOf(param.name).isNil
     }
+  }
+
+  spaceIndex {
+    if (parentSpace.index.notNil) {
+      ^parentSpace.index
+    };
+    ^parentSpace.parentThing.spaceIndex;
   }
 }

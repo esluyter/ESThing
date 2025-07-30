@@ -338,7 +338,7 @@
 
   // additional keys: inChannels, outChannels, args,  top = 0, left = 0, width = 1,  midicpsFunc, velampFunc, midiChannel, srcID
   *space { |name, space ...arrgs, kwargs|
-    ^ESThing.performArgs(\new, [name], [
+    var thing = ESThing.performArgs(\new, [name], [
       initFunc: { |thing|
         thing[\space] = space;
         thing[\space].inbus = thing.inbus;
@@ -362,7 +362,9 @@
       inChannels: 2,
       outChannels: 2,
       callFuncOnParamModulate: true
-    ] ++ kwargs)
+    ] ++ kwargs);
+    space.parentThing = thing;
+    ^thing
   }
 
 

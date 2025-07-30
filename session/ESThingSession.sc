@@ -36,7 +36,7 @@ ESThingSession {
       tps[index] = nil;
     } {
       // after all this, if ts not nil put it where it goes
-      tps[index].ts = ESThingSpace.newFrom(ts, tps[index].ts);
+      tps[index].ts = ESThingSpace.newFrom(ts, tps[index].ts).index_(index).session_(this);
     };
   }
 }
