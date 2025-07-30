@@ -251,6 +251,9 @@ The full space interface is:
 ]
 )
 
+// set the volume of a space
+~session[0].amp = 0.1;
+
 // set to empty space
 ~session[0] = [];
 // free
@@ -345,6 +348,12 @@ Here is a sort of overview of how the patching works, and syntax for playing fun
 <br />
 <br />
 
+### Solo, mute, bypass
+
+The S / M / B buttons in the lower right corner of each thing allow you to mute (send zeros), solo (only listen to it), and bypass (pass input through to output)
+
+The refresh button will restart the thing (useful for stochastic things or things that can finish playing)
+
 ### Randomizing and adjusting parameters
 
 By default the x/y pad will randomize all parameters not explicitly excluded via `exclude` as in this case `\dist->\amp` is
@@ -362,6 +371,39 @@ Later we will add clients to control via MIDI or over OSC.
 Shift-click on the name of a Thing to scope its output bus. Alt-click to scope its input bus.
 
 <br />
+
+## Other kinds of params
+
+### Multislider, toggle, push
+
+```supercollider
+(
+~session[0] = [
+  things: [
+    \test->{
+      var freqs = \freq.kr(440) * (1..10);
+      // array input = multislider param
+      var amps = \amps.kr(1/(1..10), spec: \amp);
+      // toggle button
+      var which = \saw.kr(0, spec: \toggle);
+      // push button
+      var trig = \sound.kr(0, spec: \push);
+      var env = Env.perc.ar(0, trig);
+      (Select.ar(which, [
+        SinOsc.ar(freqs),
+        Saw.ar(freqs)
+      ]) * amps).mean * env;
+    }
+  ],
+  patches: [
+    \test
+  ],
+];
+)
+```
+
+<img width="641" height="417" alt="Screen Shot 2025-07-30 at 00 57 02" src="https://github.com/user-attachments/assets/951263a9-ca67-4926-af86-ac99d23fe899" />
+
 
 ### ESPhasor: 2-way position updates
 
@@ -382,7 +424,6 @@ If you use ESPhasor in your function or SynthDef, you will get a playhead slider
   things: [
     \lfo->{ LFDNoise3.ar(\lofreq.kr(1)) },
     \buf->{ |thing| {
-      var phase, env;
       var rate = \rate.kr(1, spec: [0.1, 10000, \exponential]);
       ESPhasor.buf(thing[\buf], 1, rate) * \amp.kr(0.5);
     }}->(paramExclude: [\amp])
