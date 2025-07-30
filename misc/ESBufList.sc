@@ -172,8 +172,10 @@ ESBufList {
     dropText !? { dropText.close };
     dropText = StaticText(topView, Rect(0, bufViews.size * 85 + 5, topView.bounds.width, 80)).string_("+ drag files here to add to list\nor double click to make a new buffer").align_(\center).canReceiveDragHandler_(true).receiveDragHandler_(topView.receiveDragHandler).mouseDownAction_{ |v, x, y, mods, buttNum, clickCount|
       if (clickCount == 2) {
-        bufs = bufs.add((buf: Buffer.alloc(Server.default, Server.default.sampleRate * 3)));
-        this.refresh;
+        Server.default.waitForBoot {
+          bufs = bufs.add((buf: Buffer.alloc(Server.default, Server.default.sampleRate * 3)));
+          defer { this.refresh };
+        };
       };
     };
   }
