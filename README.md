@@ -371,6 +371,79 @@ Later we will add clients to control via MIDI or over OSC.
 Shift-click on the name of a Thing to scope its output bus. Alt-click to scope its input bus.
 
 <br />
+<br />
+
+## Buffers and environment variables
+
+### BufList
+
+If you use BufList, 
+
+```supercollider
+~bufs = ESBufList(autoNormalize: true);
+```
+
+just drag some soundfiles in. Drag them on the left side to rearrange, on the shaded part of the right side to copy one buffer to another. Double click to rename, and right click for context menu. Drag a soundfile on top of an existing buffer to replace the contents.
+
+Access them by index or name:
+
+```supercollider
+~bufs[4]
+
+~bufs[\hello]
+```
+
+<img width="512" height="940" alt="Screen Shot 2025-07-30 at 19 04 38" src="https://github.com/user-attachments/assets/83c82356-0beb-45c5-a424-d07336b57864" />
+
+Playing one in a patch. (See also ESPhasor below)
+
+```supercollider
+(
+~session[0] = [
+  things: [
+    \pb->{
+      PlayBuf.ar(2, ~bufs[\hello])
+    }
+  ],
+  patches: [
+    \pb
+  ]
+]
+)
+```
+
+Using BufList is flexible and allows you to work with buffers while you are listening to them in the patch. But you need to make sure it is in an appropriate state for the patch to work.
+
+<br />
+
+### Space/thing shared environment
+
+Alternatively, you can make sure the buffer is always created with the patch using the patch's environment:
+
+```supercollider
+(
+~session[0] = [
+  initFunc: { |space|
+    space[\buf] = Buffer.read(s, ExampleFiles.child);
+  },
+  freeFunc: { |space|
+    space[\buf].free;
+  },
+  
+  things: [
+    \pb->{ |thing| {
+      PlayBuf.ar(1, thing[\buf])
+    } }
+  ],
+  patches: [
+    \pb
+  ]
+]
+)
+```
+
+<br />
+<br />
 
 ## Other kinds of params
 
@@ -404,12 +477,12 @@ Shift-click on the name of a Thing to scope its output bus. Alt-click to scope i
 
 <img width="641" height="417" alt="Screen Shot 2025-07-30 at 00 57 02" src="https://github.com/user-attachments/assets/951263a9-ca67-4926-af86-ac99d23fe899" />
 
+<br />
+<br />
 
 ### ESPhasor: 2-way position updates
 
 If you use ESPhasor in your function or SynthDef, you will get a playhead slider that updates in real time and is also interactive (move it to change the current position)
-
-(This example also includes miscellany like space init and free funcs, inherited environment variables, and `\buf->{ |thing| {} }` syntax.)
 
 ```supercollider
 (
@@ -689,6 +762,8 @@ Template for using ESThing directly to make a new kind of thing (in this case, a
 <br />
 <br />
 <br />
+<br />
+<br />
 
 ### ESThing
 - Provides a dedicated environment, group, inbus, and outbus.
@@ -696,15 +771,19 @@ Template for using ESThing directly to make a new kind of thing (in this case, a
   - init/free
   - play/stop
   - noteOn/noteOff/bend
-  - touch/polytouch
+  - touch/polytouch/slide
 - Allows you to define `params` with custom hooks, or auto-generate them from synth controls
   - by default these send `set` messages to whatever is in the environment under `synth` and `synths`
+- Allows custom midi-cps mapping and provides other midi mapping filters
 - Provides special templates
   - playFuncSynth (similar to {}.play)
   - Playing a SynthDef with e.g. a midi controller, using `in`, `out`, `freq`, `amp`, `bend`, `touch`, `portamento`/`gate` controls
     - droneSynth
     - monoSynth
     - polySynth
+    - mpeSynth
+  - patternSynth
+  - space (nest a space inside a thing)
 
 ### ESThingSpace
 - A container for many ESThings, as well as patched connections between them
@@ -714,6 +793,14 @@ Template for using ESThing directly to make a new kind of thing (in this case, a
   - init/free
   - play/stop
 - Allows you to define `patches`, i.e. connections between outputs of one thing and inputs of another, with gain control
+
+### ESThingPlayer
+- Handles the playing of the space and MIDI (might merge with session)
+- Enables to keep old parameter values on reevaluate
+- Provides volume control
+
+### ESThingSession
+- Just holds a bunch of players
 
 <br />
 <br />
