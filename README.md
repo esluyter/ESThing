@@ -648,6 +648,8 @@ To use the same SynthDef with different default parameter values, set `args`:
 
 ### Pattern things
 
+Use Pparam in your patterns to expose parameters to the Thing:
+
 ```supercollider
 (
 ~session[0] = [
