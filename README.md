@@ -348,6 +348,12 @@ Here is a sort of overview of how the patching works, and syntax for playing fun
 <br />
 <br />
 
+### Solo, mute, bypass
+
+The S / M / B buttons in the lower right corner of each thing allow you to mute (send zeros), solo (only listen to it), and bypass (pass input through to output)
+
+The refresh button will restart the thing (useful for stochastic things or things that can finish playing)
+
 ### Randomizing and adjusting parameters
 
 By default the x/y pad will randomize all parameters not explicitly excluded via `exclude` as in this case `\dist->\amp` is
