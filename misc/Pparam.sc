@@ -59,7 +59,10 @@ Pparam : Pfunc {
     thing = (moddedVal: param.val);
     nextFunc = {
       var thingParam = thing.(param.name);
-      if (useBus and: thingParam.modBus.notNil) {
+      if (useBus) {
+        if (thingParam.modBus.isNil) {
+          thingParam.playModSynth;
+        };
         thingParam.modBus.asMap
       } {
         thingParam.moddedVal

@@ -106,15 +106,21 @@ ESThingParam {
   // play a synth to modulate this param
   // (n.b the patch will always be playing a ReplyFunc.....)
   setModPatch { |patch, inBus|
-    var args;
     modPatch = patch;
-    modBus = Bus.audio(Server.default);
-    args = [out: modBus, in: inBus, amp: patch.amp, val: val, minval: spec.minval, maxval: spec.maxval, step: spec.step];
+    // is this always the same as adding before the parent thing group?
+    this.playModSynth(patch.synth, \addAfter, patch.amp, inBus);
+  }
+
+  playModSynth { |target, addAction = \addBefore, amp = 0, inBus|
+    var args;
+    target = target ?? { parentThing.group };
+    modBus = modBus ?? { Bus.audio(Server.default) };
+    args = [out: modBus, in: inBus, amp: amp, val: val, minval: spec.minval, maxval: spec.maxval, step: spec.step];
     if (spec.warp.class == CurveWarp) {
       args = args ++ [curve: spec.warp.curve];
     };
     modSynth.free;
-    modSynth = Synth(("ESmodulate" ++ spec.warp.class.asString).asSymbol, args, patch.synth, \addAfter);
+    modSynth = Synth(("ESmodulate" ++ spec.warp.class.asString).asSymbol, args, target, addAction);
     this.val_(val);
   }
 

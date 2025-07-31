@@ -743,7 +743,8 @@
         thing[\player] = Pbindf(
           thing[\pattern],
           \in, thing.inbus,
-          \out, thing.outbus
+          \out, thing.outbus,
+          \group, thing.group
         ).play
       },
       stopFunc:  { |thing|
