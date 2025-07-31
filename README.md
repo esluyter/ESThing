@@ -96,7 +96,41 @@ The full space interface is:
 
 A thing is just an instance of ESThing. For convenience there are some "factory" things you can make with brief syntax.
 
-Here is a sort of overview of how the patching works, and syntax for playing functions a la `{}.play`
+To get started, I have saved this snippet for easy recall:
+
+```supercollider
+(
+~session[0] = [
+  things: [],
+  patches: [],
+];
+)
+```
+
+The first thing to do is make some things and then wire them together, here is the general syntax:
+
+```supercollider
+(
+~session[0] = [
+  things: [
+    /*
+    format
+    \thingName->/*thing object*/->(more arguments)
+    for example:
+    */
+    \myFunc->{ /*func to play*/ },
+    \mySynth->`\defName->\poly,
+    \myPattern->Pbind(),
+    \mySpace->[ things: [ \blah->{} ], patches: [ \blah ] ]
+  ],
+  patches: [
+    // see below for real world examples
+  ],
+];
+)
+```
+
+Here is a sort of overview of how the patching works, and more on the syntax and mechanics:
 
 ```supercollider
 (
@@ -273,41 +307,9 @@ Alternatively, you can make sure the buffer is always created with the patch usi
 
 <br />
 <br />
-
-## Other kinds of params
-
-### Multislider, toggle, push
-
-```supercollider
-(
-~session[0] = [
-  things: [
-    \test->{
-      var freqs = \freq.kr(440) * (1..10);
-      // array input = multislider param
-      var amps = \amps.kr(1/(1..10), spec: \amp);
-      // toggle button
-      var which = \saw.kr(0, spec: \toggle);
-      // push button
-      var trig = \sound.kr(0, spec: \push);
-      var env = Env.perc.ar(0, trig);
-      (Select.ar(which, [
-        SinOsc.ar(freqs),
-        Saw.ar(freqs)
-      ]) * amps).mean * env;
-    }
-  ],
-  patches: [
-    \test
-  ],
-];
-)
-```
-
-<img width="641" height="417" alt="Screen Shot 2025-07-30 at 00 57 02" src="https://github.com/user-attachments/assets/951263a9-ca67-4926-af86-ac99d23fe899" />
-
 <br />
-<br />
+
+## Other kinds of params: 
 
 ### ESPhasor: 2-way position updates
 
@@ -342,6 +344,41 @@ If you use ESPhasor in your function or SynthDef, you will get a playhead slider
 
 <br />
 <br />
+
+### Multislider, toggle, push
+
+```supercollider
+(
+~session[0] = [
+  things: [
+    \test->{
+      var freqs = \freq.kr(440) * (1..10);
+      // array input = multislider param
+      var amps = \amps.kr(1/(1..10), spec: \amp);
+      // toggle button
+      var which = \saw.kr(0, spec: \toggle);
+      // push button
+      var trig = \sound.kr(0, spec: \push);
+      var env = Env.perc.ar(0, trig);
+      (Select.ar(which, [
+        SinOsc.ar(freqs),
+        Saw.ar(freqs)
+      ]) * amps).mean * env;
+    }
+  ],
+  patches: [
+    \test
+  ],
+];
+)
+```
+
+<img width="641" height="417" alt="Screen Shot 2025-07-30 at 00 57 02" src="https://github.com/user-attachments/assets/951263a9-ca67-4926-af86-ac99d23fe899" />
+
+<br />
+<br />
+
+
 <br />
 <br />
 
@@ -704,8 +741,7 @@ In SC, we will use this patch:
       ) * \amp.kr(0.1)
     }->(top: 50, left: -130),
     \mix->{
-      var in = ESIn(2);
-      in * \amp1.kr(1, spec: \amp);
+      ESIn(2) * \amp1.kr(1, spec: \amp);
     }->(top: -180, left: 5),
 
     \delayLfo->{
@@ -770,7 +806,7 @@ Organize them using the map feature:
 
 Now the knobs a little better reflect the layout of the space:
 
-<img width="1161" height="975" alt="Screen Shot 2025-07-31 at 01 38 52" src="https://github.com/user-attachments/assets/83a41d1f-b03b-4380-ba09-d8aae2490d26" />
+<img height="500" alt="Screen Shot 2025-07-31 at 01 15 11" src="https://github.com/user-attachments/assets/37ceaf8f-ecca-43ba-a3b0-6c1070c4bb86" /><img height="500" alt="Screen Shot 2025-07-31 at 01 38 52" src="https://github.com/user-attachments/assets/83a41d1f-b03b-4380-ba09-d8aae2490d26" />
 
 This OSC format is a work in progress. 
 
