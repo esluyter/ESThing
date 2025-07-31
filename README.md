@@ -206,6 +206,7 @@ Recommended to put in your startup file:
 ~session = ESThingSession();
 // optional:
 ~bufs = ESBufList();
+~osc = ESThingOSC(~session);
 ```
 
 Usually you start somewhere like:
@@ -804,6 +805,151 @@ Template for using ESThing directly to make a new kind of thing (in this case, a
 ### ESThingSession
 - Just holds a bunch of players
 
+<br />
+<br />
+<br />
+<br />
+<br />
+
+## Open Stage Control
+
+Open `osc/open-stage-demo-custom.js` and fix the path name to wherever your install is.
+
+Then with these settings in Open Stage Control
+
+<img width="862" height="636" alt="Screen Shot 2025-07-30 at 21 16 21" src="https://github.com/user-attachments/assets/9a7c8760-e97d-4f65-95b3-ee2b3fabb597" />
+
+Run it. It should automatically open this interface:
+
+<img width="1188" height="1135" alt="Screen Shot 2025-07-30 at 21 17 17" src="https://github.com/user-attachments/assets/c3966205-9df7-40d7-97a5-91f2bc53299b" />
+
+In SC, we will use this patch:
+
+```supercollider
+( // osc demo patch
+~session[0] = [
+  inChannels: 0,
+  things: [
+    \lfo->{
+      LFDNoise3.ar(\lofreq.kr(1))
+    }->(left: -10),
+    \lfos->{
+      LFDNoise3.ar(
+        [\lofreq1, \lofreq2].collect(
+          _.kr(1, spec: \lofreq)
+      ))
+    }->(left: -75, top: 130),
+
+    \mod->{
+      SinOsc.ar(\freq.kr(440))
+    }->(top: -70, left: -40),
+    \car->{
+      SinOsc.ar(\freq.ar(440))
+    }->(top: 40, left: -90),
+
+    \hit->{
+      var tgate = \tgate.kr(0, spec: \push);
+      var lofreq = \lofreq.kr(1);
+      var trig = Impulse.ar(lofreq * tgate) + Trig.kr(tgate, 0.001);
+      var env = Env.perc(
+        \at.kr(0.01, spec: [0, 0.9, 4]) * lofreq.reciprocal,
+        \rt.kr(1) * lofreq.reciprocal
+      ).ar(0, trig);
+      var freq = env.squared.squared.linexp(0, 1, \freq.kr(50), LFDNoise1.kr(5).exprange(1000, 20000));
+      var amps = \amps.kr(1/(1..8), spec: \amp);
+      var freqs = (1..8) * freq;
+      var sig = (SinOsc.ar(freqs) * amps).mean * env;
+      Select.ar(\usePitch.kr(0, spec: \toggle), [
+        sig,
+        PitchShift.ar(sig, 0.2, \pitch.kr(1, spec: [0.01, 10, \exponential]))
+      ])
+    }->(top: 350, left: -220, width: [2, 3, 1, 2]),
+
+    \dist->{
+      BuchlaFoldOS.ar(ESIn(2),
+        \gain.kr(1, spec: [0.5, 10, 4])
+      ) * \amp.kr(0.1)
+    }->(top: -150, left: -180),
+    \dist2->{
+      BuchlaFoldOS.ar(ESIn(2),
+        \gain.kr(1, spec: [0.5, 10, 4])
+      ) * \amp.kr(0.1)
+    }->(top: 50, left: -130),
+    \mix->{
+      var in = ESIn(2);
+      in * \amp1.kr(1, spec: \amp);
+    }->(top: -180, left: 5),
+
+    \delayLfo->{
+      var drate = \drate.kr(1, spec: \rate);
+      var range = \range.kr(1, spec: [0.1, 10, \exponential]);
+      LFDNoise3.ar({ LFDNoise3.ar(drate).exprange(0.1, 10) * range }!3)
+    }->(top: 0, left: -90),
+    \delay->{
+      AllpassC.ar(ESIn(2), 3, \delaytime.kr(0.2, spec: [0.005, 2, \exponential]) * [1, 1 + \stereo.kr(0, spec: [-0.5, 0.5])], \decaytime.kr(1.0, spec: [0.1, 20, \exponential])) * \amp.kr(0.5)
+    }->(top: -100, left: 10)
+  ],
+
+  patches: [
+    (\car : \dist),
+    (\lfo : \dist->\gain, amp: 0.25),
+    (\mod : \car->\freq, amp: 0.5),
+    (\lfos->0 : \mod->\freq, amp: 0.5),
+    (\lfos->1 : \lfo->\lofreq, \amp: 0.5),
+    (\lfo : \lfos->\lofreq1, amp: 0.25),
+    (\dist : \mix),
+    (\car : \mix, amp: 0.1),
+    (\mix : \delay),
+    \mix,
+    (\delayLfo : \delay->[\delaytime, \stereo, \decaytime], amp: 0.1),
+    \delay,
+    \dist2,
+    (\lfos->1 : \hit->\at, amp: 0.25),
+    (\delayLfo->2 : \hit->\freq),
+    (\hit : \dist),
+    (\hit : \dist2),
+    (\dist2 : \delay),
+    (\hit : \out, amp: 0.1)
+  ]
+]
+)
+
+```
+
+<img width="762" height="930" alt="Screen Shot 2025-07-31 at 01 15 11" src="https://github.com/user-attachments/assets/37ceaf8f-ecca-43ba-a3b0-6c1070c4bb86" />
+
+Now, if you haven't already put this in your startup file, run
+
+```supercollider
+~osc = ESThingOSC(~session);
+```
+
+And if you open a web browser and navigate to `localhost:8080` (or put in your IP address if you're using another device like an ipad) you will see a mess of controls, which all control your patch in real time:
+
+<img width="1161" height="975" alt="Screen Shot 2025-07-31 at 01 26 26" src="https://github.com/user-attachments/assets/58c90df8-897e-4581-abb3-2f5e2e34c8be" />
+
+Organize them using the map feature:
+
+```supercollider
+// x => knob
+// . => break
+// + => add space
+// - => skip knob
+// A => skip and store in "a"
+// a => use stored knob from earlier
+~osc.maps = ["xxxABxx.abxxx.CDExxxxc.x+xxd.xxxxe"]
+```
+
+Now the knobs a little better reflect the layout of the space:
+
+<img width="1161" height="975" alt="Screen Shot 2025-07-31 at 01 38 52" src="https://github.com/user-attachments/assets/83a41d1f-b03b-4380-ba09-d8aae2490d26" />
+
+This OSC format is a work in progress. 
+
+It gives you fairly complete control of up to 8 spaces in a session, with split screen and access to space-level preset system
+
+<br />
+<br />
 <br />
 <br />
 <br />
