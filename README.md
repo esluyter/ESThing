@@ -4,180 +4,6 @@ An experimental live performance framework:
 
 A "thing" is a container for any possible SC code that can be played (a bit similar to NodeProxy et al). This framework provides some nice features like built-in routing with mute/solo/bypass; MIDI keyboard polyphony and MPE; parameter control via MIDI, GUI, and Open Stage Control; buffer management; and presets.
 
-<br />
-<br />
-
-<img width="50%" alt="Screenshot 2025-05-02 at 3 56 36 AM" src="https://github.com/user-attachments/assets/2917f52b-9e17-4926-b949-b9ded546001a" /><img width="50%" alt="Screenshot 2025-05-02 at 3 56 06 AM" src="https://github.com/user-attachments/assets/ee428329-a161-4c2f-b221-825d6752f4e9" />
-
-
-
-<img width="1049" alt="Screenshot 2025-04-25 at 3 46 28 AM" src="https://github.com/user-attachments/assets/5c5babfd-a1c8-4715-a900-ba71ea53d2ad" />
-
-<details>
-  <summary>code (beware old syntax)</summary>
-
-```supercollider
-// prep
-(
-~tp = ESThingPlayer();
-~tp.play;
-~bufs = ESBufList('bufs', [ ( 'name': 'testing', 'buf': Platform.resourceDir +/+ "sounds/a11wlk01.wav" ) ]).makeWindow;
-~tp.presets.makeWindow;
-// exclude these params from e.g. randomization
-~tp.paramExclude = [\ADTspace->\gate_4, \ADTspace->\amt_4, \ADTspace->\bypass_0];
-)
-
-// main (reevaluate to update graph, thing parameters will remember their current values)
-(
-~tsadt = ESThingSpace(
-  things: [
-    \dummyIn->({ |thing| { |in, bypass = 1|
-      PlayBuf.ar(2, thing[\buf], BufRateScale.kr(thing[\buf].postln), loop: 1)[0] * 0.5 * (1 - bypass) + (In.ar(in) * bypass);
-    } }: [1, 1]),
-    \extendedDelay->({ |in, amt = 0|
-      var inSig = In.ar(in, 1) * 0.1;
-      var localIn = LocalIn.ar(2);
-      var sig = inSig * amt + (localIn * (amt * 0.1 + 0.9));
-      var delSig = Allpass1.ar(DelayC.ar(sig, 0.2, 0.06666));
-      LocalOut.ar(delSig);
-      delSig;
-    }: [1, 1], top: 150, left: -100),
-    \extendedDelay2->({ |in|
-      var amt = \amt.kr(0, spec: ControlSpec(0, 1, -2));
-      var amt2 = \amt2.kr(0, spec: ControlSpec(0, 1, -2));
-      var inSig = In.ar(in, 1);
-      var delSig, delSig2;
-      var chain = FFT(LocalBuf(512), inSig, 0.25);
-      chain = PV_Freezish(chain, amt, amt);
-      delSig = IFFT(chain);
-
-      chain = FFT(LocalBuf(4096), inSig, 0.25);
-      chain = PV_Freezish(chain, amt2, amt2);
-      delSig2 = IFFT(chain);
-
-      delSig * amt + (delSig2 * amt2) + (inSig * (1 - (amt + amt2).clip));
-    }: [1, 1], top: 150, left: 50),
-    \adt->({ |in, wetness, decay=10, adtAmt = 1|
-      var inSig = In.ar(in, 1);
-      var localIn = LocalIn.ar(2);
-      var delay = DelayC.ar(inSig, 0.2, 0.03 + LFDNoise3.kr(1, 0.01));
-      var localDelay = DC.ar(0!2);
-      var farDelay = DC.ar(0!2);
-      var sig;
-      3.do {
-        localDelay = localDelay + AllpassC.ar((localIn * wetness.linlin(0, 1, 0, 0.5)), 0.2, {exprand(0.05, 0.2)}!2, decay, 0.12);
-      };
-      3.do {
-        farDelay = farDelay + AllpassC.ar(localDelay * wetness.linlin(1, 2, 0, 0.5), 1, {exprand(0.2, 1.0)}!2, decay * 2);
-      };
-      localDelay = localDelay.tanh; // * wetness.linlin(0, 1, 0, 5);
-      farDelay = farDelay.tanh;
-      sig = inSig + delay + localDelay;
-      LocalOut.ar(sig);
-      localDelay + farDelay + (delay * adtAmt);
-    }: [1, 2], params: [
-      \wetness->ControlSpec(0, 2, default: 0.5),
-      \decay->ControlSpec(4, 10, default: 10),
-      \adtAmt->ControlSpec(0, 1, \amp, default: 1)
-    ], top: 50, left: 50),
-    \grains->({ |thing| { |in, gate, amt|
-      var inSig = In.ar(in, 1);
-      //var gate = MouseButton.kr(0, 1, 0);
-      var duration = Latch.kr(Sweep.kr(gate), 1 - gate);
-      RecordBuf.ar(inSig * gate, thing[\recbuf], loop: 0, trigger: gate);
-      (
-        GrainBuf.ar(2, Dust.kr(max(duration, 0.1).reciprocal), duration, thing[\recbuf], 1, pan: LFDNoise1.kr(1))
-        + GrainBuf.ar(2, Dust2.kr(LFDNoise3.kr(1).exprange(1, 10)), LFDNoise3.kr(1).exprange(0.1, 1), thing[\recbuf], 1, LFDNoise3.kr(1).range(0, duration / 10))
-      ) * amt;
-    } }: [1, 2], params:[
-      \gate->\amp,
-      \amt->\amp
-    ], top: -100),
-  ],
-
-  patches: [
-    (\in->0 : \dummyIn),
-    (\dummyIn : \extendedDelay),
-    (\dummyIn : \extendedDelay2),
-    (\dummyIn : \grains),
-    //(\dummyIn : \out, amp: 0.3), // omit for live
-    (\extendedDelay : \extendedDelay2),
-    (\extendedDelay : \adt),
-    (\extendedDelay2 : \adt),
-    (\adt : \out),
-    (\grains : \out)
-  ],
-
-  initFunc: { |space|
-    space[\buf] = Buffer.read(s, "/Users/ericsluyter/Downloads/Standing Trees Vocal Solo.wav");
-    space[\recbuf] = Buffer.alloc(s, s.sampleRate * 10);
-  },
-  freeFunc: { |space|
-    space[\buf].free;
-    space[\recbuf].free;
-  },
-
-  //oldSpace: ~tp.ts // comment out to refresh all values
-);
-//s.record;
-
-~tp.ts = ~ts = ESThingSpace(
-  things: [
-    \lfo->({
-      SinOsc.ar(\lofreq.kr(29.45))
-    }: [0, 1]),
-    \lfo2->({
-      SinOsc.ar(\lofreq.kr(0.45))
-    }: [0, 1], top: 100, left: -90),
-    \lfo3->({
-      [
-        LFPulse.ar(\pulsefreq.kr(0.4, spec: \lofreq) * 0.25, width: LFDNoise1.kr(1).range(0.1, 0.5)),
-        LFDNoise3.ar(\noisefreq.kr(0.4, spec: \lofreq)).range(0, 1)
-      ]
-    }: [0, 2], top: 200, left: -130),
-    \osc->({
-      Pan2.ar(SinOsc.ar(\freq.ar(440)), \pan.kr(0), \amp.kr)
-    }: [1, 2], left: -10, top: -20),
-    \pb->({
-      var buf = ~bufs[\testing];
-      PlayBuf.ar(1, buf, BufRateScale.kr(buf) * \rate.kr(0.27), loop:1) * \amp.kr(0.5);
-    }: [0, 1], top: 250, left: -120),
-    \verb->({ |in|
-      in = In.ar(in, 2);
-      NHHall.ar(in, \size.kr(4.12, spec: [1, 10])) * \amp.kr(0.24)
-    }: [2, 2], left: 0, top: 20),
-    \out->({ |in| In.ar(in) }:[2, 2], top: -100, left: -100),
-    \ADTspace->((~tsadt): [2, 2], top: -130, left: -20, width: [4, 3, 2])
-  ],
-  patches: [
-    (\in->0: \osc),
-    (\lfo: \osc->\freq, amp: 0.1),
-    (\lfo2: \osc->\pan, amp: 1),
-    (\lfo : \pb->\rate, amp: 0.1),
-    (\lfo2 : \lfo->\lofreq, amp: 0.35),
-    (\osc : \out),
-    (\pb : \out),
-    (\osc : \verb),
-    (\pb : \verb),
-
-    (\lfo : \verb->\amp, amp: 0.1),
-    (\verb : \out2),
-
-    //(\out : \out2),
-    (\out : \ADTspace),
-    (\lfo3->0 : \ADTspace->'gate_4'),
-    (\lfo3->1 : \ADTspace->'amt_4'),
-    (\ADTspace : \out2),
-  ],
-
-  oldSpace: ~tp.ts // comment out to refresh all values
-);
-)
-```
-
-</details>
-
-
 
 <br />
 <br />
@@ -206,6 +32,7 @@ Recommended to put in your startup file:
 ~session = ESThingSession();
 // optional:
 ~bufs = ESBufList();
+~osc = ESThingOSC(~session);
 ```
 
 Usually you start somewhere like:
@@ -215,7 +42,9 @@ Usually you start somewhere like:
 ~session[0] = [
   things: [
     // make a thing called sine
-    \sine->{ SinOsc.ar(\freq.kr(440)) * \amp.kr(0.1) }
+    \sine->{
+      SinOsc.ar(\freq.kr(440)) * \amp.kr(0.1)
+    }
   ],
   patches: [
     // patch sine thing to the output
@@ -267,7 +96,41 @@ The full space interface is:
 
 A thing is just an instance of ESThing. For convenience there are some "factory" things you can make with brief syntax.
 
-Here is a sort of overview of how the patching works, and syntax for playing functions a la `{}.play`
+To get started, I have saved this snippet for easy recall:
+
+```supercollider
+(
+~session[0] = [
+  things: [],
+  patches: [],
+];
+)
+```
+
+The first thing to do is make some things and then wire them together, here is the general syntax:
+
+```supercollider
+(
+~session[0] = [
+  things: [
+    /*
+    format
+    \thingName->/*thing object*/->(more arguments)
+    for example:
+    */
+    \myFunc->{ /*func to play*/ },
+    \mySynth->`\defName->\poly,
+    \myPattern->Pbind(),
+    \mySpace->[ things: [ \blah->{} ], patches: [ \blah ] ]
+  ],
+  patches: [
+    // see below for real world examples
+  ],
+];
+)
+```
+
+Here is a sort of overview of how the patching works, and more on the syntax and mechanics:
 
 ```supercollider
 (
@@ -444,41 +307,9 @@ Alternatively, you can make sure the buffer is always created with the patch usi
 
 <br />
 <br />
-
-## Other kinds of params
-
-### Multislider, toggle, push
-
-```supercollider
-(
-~session[0] = [
-  things: [
-    \test->{
-      var freqs = \freq.kr(440) * (1..10);
-      // array input = multislider param
-      var amps = \amps.kr(1/(1..10), spec: \amp);
-      // toggle button
-      var which = \saw.kr(0, spec: \toggle);
-      // push button
-      var trig = \sound.kr(0, spec: \push);
-      var env = Env.perc.ar(0, trig);
-      (Select.ar(which, [
-        SinOsc.ar(freqs),
-        Saw.ar(freqs)
-      ]) * amps).mean * env;
-    }
-  ],
-  patches: [
-    \test
-  ],
-];
-)
-```
-
-<img width="641" height="417" alt="Screen Shot 2025-07-30 at 00 57 02" src="https://github.com/user-attachments/assets/951263a9-ca67-4926-af86-ac99d23fe899" />
-
 <br />
-<br />
+
+## Other kinds of params: 
 
 ### ESPhasor: 2-way position updates
 
@@ -513,6 +344,41 @@ If you use ESPhasor in your function or SynthDef, you will get a playhead slider
 
 <br />
 <br />
+
+### Multislider, toggle, push
+
+```supercollider
+(
+~session[0] = [
+  things: [
+    \test->{
+      var freqs = \freq.kr(440) * (1..10);
+      // array input = multislider param
+      var amps = \amps.kr(1/(1..10), spec: \amp);
+      // toggle button
+      var which = \saw.kr(0, spec: \toggle);
+      // push button
+      var trig = \sound.kr(0, spec: \push);
+      var env = Env.perc.ar(0, trig);
+      (Select.ar(which, [
+        SinOsc.ar(freqs),
+        Saw.ar(freqs)
+      ]) * amps).mean * env;
+    }
+  ],
+  patches: [
+    \test
+  ],
+];
+)
+```
+
+<img width="641" height="417" alt="Screen Shot 2025-07-30 at 00 57 02" src="https://github.com/user-attachments/assets/951263a9-ca67-4926-af86-ac99d23fe899" />
+
+<br />
+<br />
+
+
 <br />
 <br />
 
@@ -807,10 +673,339 @@ Template for using ESThing directly to make a new kind of thing (in this case, a
 <br />
 <br />
 <br />
+<br />
+<br />
+
+## Open Stage Control
+
+Open `osc/open-stage-demo-custom.js` and fix the path name to wherever your install is.
+
+Then with these settings in Open Stage Control
+
+<img width="862" height="636" alt="Screen Shot 2025-07-30 at 21 16 21" src="https://github.com/user-attachments/assets/9a7c8760-e97d-4f65-95b3-ee2b3fabb597" />
+
+Run it. It should automatically open this interface:
+
+<img width="1188" height="1135" alt="Screen Shot 2025-07-30 at 21 17 17" src="https://github.com/user-attachments/assets/c3966205-9df7-40d7-97a5-91f2bc53299b" />
+
+In SC, we will use this patch:
+
+```supercollider
+( // osc demo patch
+~session[0] = [
+  inChannels: 0,
+  things: [
+    \lfo->{
+      LFDNoise3.ar(\lofreq.kr(1))
+    }->(left: -10),
+    \lfos->{
+      LFDNoise3.ar(
+        [\lofreq1, \lofreq2].collect(
+          _.kr(1, spec: \lofreq)
+      ))
+    }->(left: -75, top: 130),
+
+    \mod->{
+      SinOsc.ar(\freq.kr(440))
+    }->(top: -70, left: -40),
+    \car->{
+      SinOsc.ar(\freq.ar(440))
+    }->(top: 40, left: -90),
+
+    \hit->{
+      var tgate = \tgate.kr(0, spec: \push);
+      var lofreq = \lofreq.kr(1);
+      var trig = Impulse.ar(lofreq * tgate) + Trig.kr(tgate, 0.001);
+      var env = Env.perc(
+        \at.kr(0.01, spec: [0, 0.9, 4]) * lofreq.reciprocal,
+        \rt.kr(1) * lofreq.reciprocal
+      ).ar(0, trig);
+      var freq = env.squared.squared.linexp(0, 1, \freq.kr(50), LFDNoise1.kr(5).exprange(1000, 20000));
+      var amps = \amps.kr(1/(1..8), spec: \amp);
+      var freqs = (1..8) * freq;
+      var sig = (SinOsc.ar(freqs) * amps).mean * env;
+      Select.ar(\usePitch.kr(0, spec: \toggle), [
+        sig,
+        PitchShift.ar(sig, 0.2, \pitch.kr(1, spec: [0.01, 10, \exponential]))
+      ])
+    }->(top: 350, left: -220, width: [2, 3, 1, 2]),
+
+    \dist->{
+      BuchlaFoldOS.ar(ESIn(2),
+        \gain.kr(1, spec: [0.5, 10, 4])
+      ) * \amp.kr(0.1)
+    }->(top: -150, left: -180),
+    \dist2->{
+      BuchlaFoldOS.ar(ESIn(2),
+        \gain.kr(1, spec: [0.5, 10, 4])
+      ) * \amp.kr(0.1)
+    }->(top: 50, left: -130),
+    \mix->{
+      ESIn(2) * \amp1.kr(1, spec: \amp);
+    }->(top: -180, left: 5),
+
+    \delayLfo->{
+      var drate = \drate.kr(1, spec: \rate);
+      var range = \range.kr(1, spec: [0.1, 10, \exponential]);
+      LFDNoise3.ar({ LFDNoise3.ar(drate).exprange(0.1, 10) * range }!3)
+    }->(top: 0, left: -90),
+    \delay->{
+      AllpassC.ar(ESIn(2), 3, \delaytime.kr(0.2, spec: [0.005, 2, \exponential]) * [1, 1 + \stereo.kr(0, spec: [-0.5, 0.5])], \decaytime.kr(1.0, spec: [0.1, 20, \exponential])) * \amp.kr(0.5)
+    }->(top: -100, left: 10)
+  ],
+
+  patches: [
+    (\car : \dist),
+    (\lfo : \dist->\gain, amp: 0.25),
+    (\mod : \car->\freq, amp: 0.5),
+    (\lfos->0 : \mod->\freq, amp: 0.5),
+    (\lfos->1 : \lfo->\lofreq, \amp: 0.5),
+    (\lfo : \lfos->\lofreq1, amp: 0.25),
+    (\dist : \mix),
+    (\car : \mix, amp: 0.1),
+    (\mix : \delay),
+    \mix,
+    (\delayLfo : \delay->[\delaytime, \stereo, \decaytime], amp: 0.1),
+    \delay,
+    \dist2,
+    (\lfos->1 : \hit->\at, amp: 0.25),
+    (\delayLfo->2 : \hit->\freq),
+    (\hit : \dist),
+    (\hit : \dist2),
+    (\dist2 : \delay),
+    (\hit : \out, amp: 0.1)
+  ]
+]
+)
+
+```
+
+<img width="762" height="930" alt="Screen Shot 2025-07-31 at 01 15 11" src="https://github.com/user-attachments/assets/37ceaf8f-ecca-43ba-a3b0-6c1070c4bb86" />
+
+Now, if you haven't already put this in your startup file, run
+
+```supercollider
+~osc = ESThingOSC(~session);
+```
+
+And if you open a web browser and navigate to `localhost:8080` (or put in your IP address if you're using another device like an ipad) you will see a mess of controls, which all control your patch in real time:
+
+<img width="1161" height="975" alt="Screen Shot 2025-07-31 at 01 26 26" src="https://github.com/user-attachments/assets/58c90df8-897e-4581-abb3-2f5e2e34c8be" />
+
+Organize them using the map feature:
+
+```supercollider
+// x => knob
+// . => break
+// + => add space
+// - => skip knob
+// A => skip and store in "a"
+// a => use stored knob from earlier
+~osc.maps = ["xxxABxx.abxxx.CDExxxxc.x+xxd.xxxxe"]
+```
+
+Now the knobs a little better reflect the layout of the space:
+
+<img height="500" alt="Screen Shot 2025-07-31 at 01 15 11" src="https://github.com/user-attachments/assets/37ceaf8f-ecca-43ba-a3b0-6c1070c4bb86" /><img height="500" alt="Screen Shot 2025-07-31 at 01 38 52" src="https://github.com/user-attachments/assets/83a41d1f-b03b-4380-ba09-d8aae2490d26" />
+
+This OSC format is a work in progress. 
+
+It gives you fairly complete control of up to 8 spaces in a session, with split screen and access to space-level preset system
+
+<br />
+<br />
+<br />
+<br />
+<br />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 <details>
 
 <summary>old examples</summary>
+
+
+<img width="50%" alt="Screenshot 2025-05-02 at 3 56 36 AM" src="https://github.com/user-attachments/assets/2917f52b-9e17-4926-b949-b9ded546001a" /><img width="50%" alt="Screenshot 2025-05-02 at 3 56 06 AM" src="https://github.com/user-attachments/assets/ee428329-a161-4c2f-b221-825d6752f4e9" />
+
+
+
+<img width="1049" alt="Screenshot 2025-04-25 at 3 46 28 AM" src="https://github.com/user-attachments/assets/5c5babfd-a1c8-4715-a900-ba71ea53d2ad" />
+
+<details>
+  <summary>code (beware old syntax)</summary>
+
+```supercollider
+// prep
+(
+~tp = ESThingPlayer();
+~tp.play;
+~bufs = ESBufList('bufs', [ ( 'name': 'testing', 'buf': Platform.resourceDir +/+ "sounds/a11wlk01.wav" ) ]).makeWindow;
+~tp.presets.makeWindow;
+// exclude these params from e.g. randomization
+~tp.paramExclude = [\ADTspace->\gate_4, \ADTspace->\amt_4, \ADTspace->\bypass_0];
+)
+
+// main (reevaluate to update graph, thing parameters will remember their current values)
+(
+~tsadt = ESThingSpace(
+  things: [
+    \dummyIn->({ |thing| { |in, bypass = 1|
+      PlayBuf.ar(2, thing[\buf], BufRateScale.kr(thing[\buf].postln), loop: 1)[0] * 0.5 * (1 - bypass) + (In.ar(in) * bypass);
+    } }: [1, 1]),
+    \extendedDelay->({ |in, amt = 0|
+      var inSig = In.ar(in, 1) * 0.1;
+      var localIn = LocalIn.ar(2);
+      var sig = inSig * amt + (localIn * (amt * 0.1 + 0.9));
+      var delSig = Allpass1.ar(DelayC.ar(sig, 0.2, 0.06666));
+      LocalOut.ar(delSig);
+      delSig;
+    }: [1, 1], top: 150, left: -100),
+    \extendedDelay2->({ |in|
+      var amt = \amt.kr(0, spec: ControlSpec(0, 1, -2));
+      var amt2 = \amt2.kr(0, spec: ControlSpec(0, 1, -2));
+      var inSig = In.ar(in, 1);
+      var delSig, delSig2;
+      var chain = FFT(LocalBuf(512), inSig, 0.25);
+      chain = PV_Freezish(chain, amt, amt);
+      delSig = IFFT(chain);
+
+      chain = FFT(LocalBuf(4096), inSig, 0.25);
+      chain = PV_Freezish(chain, amt2, amt2);
+      delSig2 = IFFT(chain);
+
+      delSig * amt + (delSig2 * amt2) + (inSig * (1 - (amt + amt2).clip));
+    }: [1, 1], top: 150, left: 50),
+    \adt->({ |in, wetness, decay=10, adtAmt = 1|
+      var inSig = In.ar(in, 1);
+      var localIn = LocalIn.ar(2);
+      var delay = DelayC.ar(inSig, 0.2, 0.03 + LFDNoise3.kr(1, 0.01));
+      var localDelay = DC.ar(0!2);
+      var farDelay = DC.ar(0!2);
+      var sig;
+      3.do {
+        localDelay = localDelay + AllpassC.ar((localIn * wetness.linlin(0, 1, 0, 0.5)), 0.2, {exprand(0.05, 0.2)}!2, decay, 0.12);
+      };
+      3.do {
+        farDelay = farDelay + AllpassC.ar(localDelay * wetness.linlin(1, 2, 0, 0.5), 1, {exprand(0.2, 1.0)}!2, decay * 2);
+      };
+      localDelay = localDelay.tanh; // * wetness.linlin(0, 1, 0, 5);
+      farDelay = farDelay.tanh;
+      sig = inSig + delay + localDelay;
+      LocalOut.ar(sig);
+      localDelay + farDelay + (delay * adtAmt);
+    }: [1, 2], params: [
+      \wetness->ControlSpec(0, 2, default: 0.5),
+      \decay->ControlSpec(4, 10, default: 10),
+      \adtAmt->ControlSpec(0, 1, \amp, default: 1)
+    ], top: 50, left: 50),
+    \grains->({ |thing| { |in, gate, amt|
+      var inSig = In.ar(in, 1);
+      //var gate = MouseButton.kr(0, 1, 0);
+      var duration = Latch.kr(Sweep.kr(gate), 1 - gate);
+      RecordBuf.ar(inSig * gate, thing[\recbuf], loop: 0, trigger: gate);
+      (
+        GrainBuf.ar(2, Dust.kr(max(duration, 0.1).reciprocal), duration, thing[\recbuf], 1, pan: LFDNoise1.kr(1))
+        + GrainBuf.ar(2, Dust2.kr(LFDNoise3.kr(1).exprange(1, 10)), LFDNoise3.kr(1).exprange(0.1, 1), thing[\recbuf], 1, LFDNoise3.kr(1).range(0, duration / 10))
+      ) * amt;
+    } }: [1, 2], params:[
+      \gate->\amp,
+      \amt->\amp
+    ], top: -100),
+  ],
+
+  patches: [
+    (\in->0 : \dummyIn),
+    (\dummyIn : \extendedDelay),
+    (\dummyIn : \extendedDelay2),
+    (\dummyIn : \grains),
+    //(\dummyIn : \out, amp: 0.3), // omit for live
+    (\extendedDelay : \extendedDelay2),
+    (\extendedDelay : \adt),
+    (\extendedDelay2 : \adt),
+    (\adt : \out),
+    (\grains : \out)
+  ],
+
+  initFunc: { |space|
+    space[\buf] = Buffer.read(s, "/Users/ericsluyter/Downloads/Standing Trees Vocal Solo.wav");
+    space[\recbuf] = Buffer.alloc(s, s.sampleRate * 10);
+  },
+  freeFunc: { |space|
+    space[\buf].free;
+    space[\recbuf].free;
+  },
+
+  //oldSpace: ~tp.ts // comment out to refresh all values
+);
+//s.record;
+
+~tp.ts = ~ts = ESThingSpace(
+  things: [
+    \lfo->({
+      SinOsc.ar(\lofreq.kr(29.45))
+    }: [0, 1]),
+    \lfo2->({
+      SinOsc.ar(\lofreq.kr(0.45))
+    }: [0, 1], top: 100, left: -90),
+    \lfo3->({
+      [
+        LFPulse.ar(\pulsefreq.kr(0.4, spec: \lofreq) * 0.25, width: LFDNoise1.kr(1).range(0.1, 0.5)),
+        LFDNoise3.ar(\noisefreq.kr(0.4, spec: \lofreq)).range(0, 1)
+      ]
+    }: [0, 2], top: 200, left: -130),
+    \osc->({
+      Pan2.ar(SinOsc.ar(\freq.ar(440)), \pan.kr(0), \amp.kr)
+    }: [1, 2], left: -10, top: -20),
+    \pb->({
+      var buf = ~bufs[\testing];
+      PlayBuf.ar(1, buf, BufRateScale.kr(buf) * \rate.kr(0.27), loop:1) * \amp.kr(0.5);
+    }: [0, 1], top: 250, left: -120),
+    \verb->({ |in|
+      in = In.ar(in, 2);
+      NHHall.ar(in, \size.kr(4.12, spec: [1, 10])) * \amp.kr(0.24)
+    }: [2, 2], left: 0, top: 20),
+    \out->({ |in| In.ar(in) }:[2, 2], top: -100, left: -100),
+    \ADTspace->((~tsadt): [2, 2], top: -130, left: -20, width: [4, 3, 2])
+  ],
+  patches: [
+    (\in->0: \osc),
+    (\lfo: \osc->\freq, amp: 0.1),
+    (\lfo2: \osc->\pan, amp: 1),
+    (\lfo : \pb->\rate, amp: 0.1),
+    (\lfo2 : \lfo->\lofreq, amp: 0.35),
+    (\osc : \out),
+    (\pb : \out),
+    (\osc : \verb),
+    (\pb : \verb),
+
+    (\lfo : \verb->\amp, amp: 0.1),
+    (\verb : \out2),
+
+    //(\out : \out2),
+    (\out : \ADTspace),
+    (\lfo3->0 : \ADTspace->'gate_4'),
+    (\lfo3->1 : \ADTspace->'amt_4'),
+    (\ADTspace : \out2),
+  ],
+
+  oldSpace: ~tp.ts // comment out to refresh all values
+);
+)
+```
+
+</details>
   
 ## starting template 
 gain knob
