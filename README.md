@@ -678,13 +678,11 @@ Template for using ESThing directly to make a new kind of thing (in this case, a
 
 ## Open Stage Control
 
-Open `osc/open-stage-demo-custom.js` and fix the path name to wherever your install is.
-
-Then with these settings in Open Stage Control
+With these settings in Open Stage Control (locate `osc/open-stage-demo-custom.js` for your custom module)
 
 <img width="862" height="636" alt="Screen Shot 2025-07-30 at 21 16 21" src="https://github.com/user-attachments/assets/9a7c8760-e97d-4f65-95b3-ee2b3fabb597" />
 
-Run it. It should automatically open this interface:
+Click the play button to run it. It should automatically open this interface:
 
 <img width="1188" height="1135" alt="Screen Shot 2025-07-30 at 21 17 17" src="https://github.com/user-attachments/assets/c3966205-9df7-40d7-97a5-91f2bc53299b" />
 
@@ -806,15 +804,28 @@ Organize them using the map feature:
 
 Now the knobs a little better reflect the layout of the space:
 
-<img height="500" alt="Screen Shot 2025-07-31 at 01 15 11" src="https://github.com/user-attachments/assets/37ceaf8f-ecca-43ba-a3b0-6c1070c4bb86" /><img height="500" alt="Screen Shot 2025-07-31 at 01 38 52" src="https://github.com/user-attachments/assets/83a41d1f-b03b-4380-ba09-d8aae2490d26" />
+<img height="450" alt="Screen Shot 2025-07-31 at 01 15 11" src="https://github.com/user-attachments/assets/37ceaf8f-ecca-43ba-a3b0-6c1070c4bb86" /><img height="450" alt="Screen Shot 2025-07-31 at 01 38 52" src="https://github.com/user-attachments/assets/83a41d1f-b03b-4380-ba09-d8aae2490d26" />
 
-This OSC format is a work in progress. 
+(If you click on the multislider control it will open a bigger view for editing.)
 
-It gives you fairly complete control of up to 8 spaces in a session, with split screen and access to space-level preset system
+<br />
+
+This OSC app gives you fairly complete control of up to 8 spaces in a session, with 2 pages of knobs per space, split screen between spaces, and interface to the preset system
 
 <br />
 <br />
 <br />
+
+## MIDI stuff
+
+It works but I will not document it until I've made it better.
+
+<br />
+<br />
+<br />
+
+Happy patching!
+
 <br />
 <br />
 
