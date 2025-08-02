@@ -5,7 +5,7 @@ console.log('custom start')
 
 app.on('open', (data, client)=>{
     send('127.0.0.1', 57120, '/clientId', client.id)
-    receive('/SESSION/OPEN', '/Users/ericsluyter/Library/Application Support/SuperCollider/Extensions/ESThing/osc/open-stage-demo-tabs.json', {clientId: client.id})
+    receive('/SESSION/OPEN', __dirname + '/open-stage-demo-tabs.json', {clientId: client.id})
 })
 
 app.on('close', (data, client)=>{
