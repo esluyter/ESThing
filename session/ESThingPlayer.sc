@@ -94,29 +94,31 @@ ESThingPlayer {
       };
   }
 
-  play {
+  play { |soft = false|
     isPlaying = true;
-    Server.default.waitForBoot {
-      // make sure the output bus is initialized
-      this.initTsbus;
-      // play ts
-      if (ts.isPlaying) {
-        ts.stop;
-        ts.free;
+    if (soft.not) {
+      Server.default.waitForBoot {
+        // make sure the output bus is initialized
+        this.initTsbus;
+        // play ts
+        if (ts.isPlaying) {
+          ts.stop;
+          ts.free;
+        };
+        ts.init;
+        Server.default.sync;
+        ts.play;
+        // patch to output
+        synths.do(_.free);
+        synths = tsbus.numChannels.collect { |i|
+          Synth(\ESThingPatch,
+            [in: tsbus.index + i, out: i, amp: amp],
+            ts.group, \addAfter)
+        };
+        // make window
+        win !? { win.close };
+        win = ts.makeWindow(winBounds, "Space", this);
       };
-      ts.init;
-      Server.default.sync;
-      ts.play;
-      // patch to output
-      synths.do(_.free);
-      synths = tsbus.numChannels.collect { |i|
-        Synth(\ESThingPatch,
-          [in: tsbus.index + i, out: i, amp: amp],
-          ts.group, \addAfter)
-      };
-      // make window
-      win !? { win.close };
-      win = ts.makeWindow(winBounds, "Space", this);
     };
   }
 

@@ -377,18 +377,18 @@
         } {
           func
         };
+        var def = funcToPlay.asSynthDef;
         thing.params = params ?? {
-          var def = funcToPlay.asSynthDef;
           this.prMakeParams(def.allControlNames, false, def)
         };
         // infer in and out channels from func spec
         thing.inChannels = inChannels ?? {
-          funcToPlay.asSynthDef.asSynthDesc.inputs.collect { |io|
+          def.asSynthDesc.inputs.collect { |io|
             io.numberOfChannels
           } .sum
         };
         thing.outChannels = outChannels ?? {
-          funcToPlay.asSynthDef.asSynthDesc.outputs.last.numberOfChannels
+          def.asSynthDesc.outputs.last.numberOfChannels
         };
       },
       initFunc: { |thing|
