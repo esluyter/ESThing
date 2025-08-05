@@ -13,19 +13,20 @@ ESControlSpec : ControlSpec {
 + Symbol {
   ear { |val, spec, meta, lag|
     spec = spec ? this;
-    spec = ESControlSpec.newFrom(spec.asSpec);
+    // double asSpec necessary because \blah.asSpec -> nil
+    spec = ESControlSpec.newFrom(spec.asSpec.asSpec);
     if (meta.notNil) {
       spec.meta = meta;
     };
-    ^this.ar(val, lag, spec);
+    ^this.ar(val, lag, spec: spec);
   }
   ekr { |val, spec, meta, lag|
     spec = spec ? this;
-    spec = ESControlSpec.newFrom(spec.asSpec);
+    spec = ESControlSpec.newFrom(spec.asSpec.asSpec);
     if (meta.notNil) {
       spec.meta = meta;
     };
-    ^this.kr(val, lag, spec);
+    ^this.kr(val, lag, spec: spec);
   }
 }
 

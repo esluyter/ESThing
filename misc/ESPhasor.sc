@@ -8,7 +8,7 @@ ESPhasor {
     updatePhase = "eSPhasor%Phase".format(id).asSymbol.kr(0);
     updateTrig = "eSPhasor%Trig".format(id).asSymbol.tr(0);
     phase = Phasor.ar(updateTrig, SampleDur.ir * freq, resetPos: updatePhase);
-    SendReply.kr(Impulse.kr(24), '/ESPhasor', phase, id);
+    SendReply.kr(Impulse.kr(16), '/ESPhasor', phase, id);
     ^[phase, updateTrig]
   }
 
