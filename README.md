@@ -18,6 +18,8 @@ Trying to abstract away all the boring repetitive stuff like GUI, ipad control, 
 
 The idea is that you build these spaces iteratively by reevaluating your code, the GUI shows you what's going on and gives you knobs which maintain their state when you reevaluate your code.
 
+When you're done noodling, you should have a block of code you can evaluate to get back exactly the node structure you left off, and presets that you can recall with variable fade time (also possible to only affect certain parameters with any preset).
+
 <br />
 <br />
 <br />
