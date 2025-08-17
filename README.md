@@ -2,8 +2,21 @@
 
 An experimental live performance framework:
 
-A "thing" is a container for any possible SC code that can be played (a bit similar to NodeProxy et al). This framework provides some nice features like built-in routing with mute/solo/bypass; MIDI keyboard polyphony and MPE; parameter control via MIDI, GUI, and Open Stage Control; buffer management; and presets.
+<br />
 
+A "space" is a bunch of "things". 
+
+A "thing" is a container for any possible SC code that can be played (a bit similar to NodeProxy et al). It inputs and outputs audio signals, and has parameters that do something when you adjust them. You can nest another space inside a thing, if you want.
+
+These things are patched together within the space. (Any output of any thing can be patched to any input or modulate any parameter of any other thing).
+
+A session is a bunch of spaces with independent volume control.
+
+<br />
+
+Trying to abstract away all the boring repetitive stuff like GUI, ipad control, MIDI/MPE, buffer management, presets, and signal routing, with terse syntax.
+
+The idea is that you build these spaces iteratively by reevaluating your code, the GUI shows you what's going on and gives you knobs which maintain their state when you reevaluate your code.
 
 <br />
 <br />
@@ -11,14 +24,6 @@ A "thing" is a container for any possible SC code that can be played (a bit simi
 <br />
 
 # Syntax
-
-A "space" is a bunch of "things" that make sound, have parameters, and are patched together. A thing can be a space, if you want.
-
-A session is a bunch of spaces with independent volume control.
-
-The idea is that you build these spaces iteratively by reevaluating your code, the GUI shows you what's going on and gives you knobs which maintain their state when you reevaluate your code.
-
-Trying to abstract away all the boring repetitive stuff like MIDI and signal routing, with terse syntax.
 
 <br />
 
@@ -30,35 +35,18 @@ Recommended to put in your startup file:
 
 ```supercollider
 ~session = ESThingSession();
-// optional:
+```
+
+and optionally:
+
+```supercollider
 ~bufs = ESBufList();
 ~osc = ESThingOSC(~session);
 ```
 
-Usually you start somewhere like:
-
-```supercollider
-(
-~session[0] = [
-  things: [
-    // make a thing called sine
-    \sine->{
-      SinOsc.ar(\freq.kr(440)) * \amp.kr(0.1)
-    }
-  ],
-  patches: [
-    // patch sine thing to the output
-    \sine
-  ]
-];
-)
-```
-
-<img width="652" height="368" alt="Screen Shot 2025-07-21 at 02 53 49" src="https://github.com/user-attachments/assets/26fc6e05-4540-47e9-982c-8824dd1c9eb1" />
-
-There is no need to free a space before replacing it -- it is encouraged to continuously reevaluate your `~session[0] = [...]` block as you work on it, the session will take care of all cleanup.
-
-The full space interface is:
+<details>
+  
+<summary>The full space interface</summary>
 
 ```supercollider
 ~session = ESThingSession();
@@ -89,12 +77,7 @@ The full space interface is:
 ~session[0] = nil
 ```
 
-<br />
-<br />
-
-## Things and patching
-
-A thing is just an instance of ESThing. For convenience there are some "factory" things you can make with brief syntax.
+</details>
 
 To get started, I have saved this snippet for easy recall:
 
@@ -107,28 +90,35 @@ To get started, I have saved this snippet for easy recall:
 )
 ```
 
+This will create an empty space in slot 0. Reevaluating this block as you add things to your space will automatically release and re-play your space, but will keep paramater values as they were (so you can reevaluate as you jam).
+
+<br />
+<br />
+
+## Things and patching
+
+A thing is just an instance of ESThing. For convenience there are some "factory" things you can make with brief syntax.
+
 The first thing to do is make some things and then wire them together, here is the general syntax:
 
 ```supercollider
-(
-~session[0] = [
-  things: [
-    /*
-    format
-    \thingName->/*thing object*/->(more arguments)
-    for example:
-    */
+
     \myFunc->{ /*func to play*/ },
     \mySynth->`\defName->\poly,
-    \myPattern->Pbind(),
+    \myPattern->Pbind()->(paramExclude: [\amp]),
     \mySpace->[ things: [ \blah->{} ], patches: [ \blah ] ]
-  ],
-  patches: [
-    // see below for real world examples
-  ],
-];
-)
+
 ```
+
+As you can see, the format is
+
+```
+    \thingName->/*thing object*/->(more arguments)
+```
+
+More on each of these kinds of things later, for now we start with Functions:
+
+<br />
 
 Here is a sort of overview of how the patching works, and more on the syntax and mechanics:
 
