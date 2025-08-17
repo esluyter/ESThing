@@ -36,6 +36,7 @@ Recommended to put in your startup file:
 ```supercollider
 ~session = ESThingSession();
 ```
+(this won't automatically boot the server, until you make a thing)
 
 and optionally:
 
