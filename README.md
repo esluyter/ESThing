@@ -2,6 +2,9 @@
 
 An experimental live performance framework:
 
+<img width="1049" alt="Screenshot 2025-04-25 at 3 46 28 AM" src="https://github.com/user-attachments/assets/5c5babfd-a1c8-4715-a900-ba71ea53d2ad" />
+<img width="50%" alt="Screenshot 2025-05-02 at 3 56 36 AM" src="https://github.com/user-attachments/assets/2917f52b-9e17-4926-b949-b9ded546001a" /><img width="50%" alt="Screenshot 2025-05-02 at 3 56 06 AM" src="https://github.com/user-attachments/assets/ee428329-a161-4c2f-b221-825d6752f4e9" />
+
 <br />
 
 A "space" is a bunch of "things". 
@@ -102,7 +105,31 @@ This will create an empty space in slot 0. Reevaluating this block as you add th
 
 A thing is just an instance of ESThing. For convenience there are some "factory" things you can make with brief syntax.
 
-The first thing to do is make some things and then wire them together, here is the general syntax:
+The first thing to do is make some things and then wire them together, usually you start somewhere like:
+
+```supercollider
+(
+~session[0] = [
+  things: [
+    // make a thing called sine
+    \sine->{
+      SinOsc.ar(\freq.kr(440)) * \amp.kr(0.1)
+    }
+  ],
+  patches: [
+    // patch sine thing to the output
+    \sine
+  ]
+];
+)
+
+```
+
+<img width="652" height="368" alt="Screen Shot 2025-07-21 at 02 53 49" src="https://github.com/user-attachments/assets/26fc6e05-4540-47e9-982c-8824dd1c9eb1" />
+
+<br />
+
+Here is the general syntax:
 
 ```supercollider
 
@@ -115,7 +142,7 @@ The first thing to do is make some things and then wire them together, here is t
 
 As you can see, the format is
 
-```
+```supercollider
     \thingName->/*thing object*/->(more arguments)
 ```
 
