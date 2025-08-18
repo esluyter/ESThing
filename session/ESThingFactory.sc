@@ -745,7 +745,7 @@
           \in, thing.inbus,
           \out, thing.outbus,
           \group, thing.group
-        ).play
+        ).play(quant: 1)
       },
       stopFunc:  { |thing|
         thing[\player].stop
