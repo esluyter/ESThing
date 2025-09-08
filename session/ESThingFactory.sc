@@ -355,7 +355,9 @@
       params: space.params.collect { |param|
         var newParam = ESThingParam((param.name ++ "_" ++ param.parentThing.index.asCompileString).asSymbol, param.spec, { |name, val| param.parentThing.(param.name).val = val }, param.val).hue_(param.parentThing.hue);
         param.addDependant({ |param, val|
-          newParam.valQuiet = val;
+          if (newParam.modPatch.isNil) {
+            newParam.valQuiet = val;
+          };
         });
         newParam;
       },
