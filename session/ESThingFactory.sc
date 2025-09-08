@@ -847,10 +847,20 @@
       if (thing.name.notNil) {
         StaticText(view, Rect(5, 3, width, 20)).string_(thing.name).font_(Font.sansSerif(14, true)).stringColor_(Color.hsv(thing.hue, 1, 0.5)).mouseDownAction_{ |v, x, y, mods, buttNum, clickCount|
           if (mods.isAlt) {
-            thing.inbus.scope
+            if (thing.inbus.numChannels > 0) {
+              "Scoping inbus #%".format(thing.inbus.index).postln;
+              thing.inbus.scope
+            } {
+              "No input - Press shift to scope outbus".warn;
+            }
           };
           if (mods.isShift) {
-            thing.outbus.scope
+            if (thing.outbus.numChannels > 0) {
+              "Scoping outbus #%".format(thing.inbus.index).postln;
+              thing.outbus.scope
+            } {
+              "No output - Press option to scope outbus".warn;
+            }
           };
           if (clickCount == 2) {
             if (thing[\space].class == ESThingSpace) {
