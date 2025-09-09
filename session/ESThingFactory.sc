@@ -764,7 +764,7 @@
 
 +ESThingSpace {
   makeWindow { |winBounds, title = "Space", tp|
-    var bounds = winBounds ?? { Rect(0, 80, 650, 800) };
+    var bounds = winBounds ?? { Rect(0, 80, 800, 800) };
     var winWidth = bounds.width;
     var left = 20;
     var inlets = [];
@@ -859,7 +859,7 @@
               "Scoping outbus #%".format(thing.inbus.index).postln;
               thing.outbus.scope
             } {
-              "No output - Press option to scope outbus".warn;
+              "No output - Press option to scope inbus".warn;
             }
           };
           if (clickCount == 2) {

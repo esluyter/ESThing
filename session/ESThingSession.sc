@@ -26,8 +26,8 @@ ESThingSession {
     };
     if (tps[index].isNil) {
       // make a new player with default winBounds by index
-      tps[index] = ESThingPlayer().play(true).winBounds_(Rect(500 * index, 80, 650, 800));
-      tps[index].presets.makeWindow(Rect(500 * index, 910, 650, 330));
+      tps[index] = ESThingPlayer().play(true).winBounds_(Rect(500 * index, 80, 800, 800));
+      tps[index].presets.makeWindow(Rect(500 * index, 910, 800, 330));
     };
     if (ts.isNil) {
       tps[index].stop;

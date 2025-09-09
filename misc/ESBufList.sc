@@ -19,7 +19,7 @@ ESBufList {
   }
 
   makeWindow { |winBounds|
-    var bounds = winBounds ?? { Rect(650, 80, 400, 800) };
+    var bounds = winBounds ?? { Rect(800, 80, 400, 800) };
     w !? { w.close };
     w = Window(name, bounds).front;
 
