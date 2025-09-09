@@ -386,7 +386,11 @@
         // infer in and out channels from func spec
         thing.inChannels = inChannels ?? {
           def.asSynthDesc.inputs.collect { |io|
-            io.numberOfChannels
+            if (io.type == LocalIn) {
+              0
+            } {
+              io.numberOfChannels
+            }
           } .sum
         };
         thing.outChannels = outChannels ?? {
