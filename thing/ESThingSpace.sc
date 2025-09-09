@@ -40,16 +40,77 @@ ESThingSpace {
     var hueIndex = 0;
 
     // process array of possible things or associations
+    // possibly interleaved with patch information
     // (See ESThingFactory for implementation)
-    things = things.asArray.collect { |thing|
+    var newThings = [];
+    var newPatches = [];
+    var latestThing;
+    var makeThing = { |thing|
       thing = ESThing.newFrom(thing);
       thing.hue = hueList[hueIndex];
       hueIndex = hueIndex + 1 % hueList.size;
-      thing;
+      newThings = newThings.add(thing);
+      latestThing = thing;
     };
+    var patchThing = { |patch|
+      var translatePatchPoint = { |patchPoint|
+        if (patchPoint.indices.isNil) {
+          patchPoint.symbol
+        } {
+          patchPoint.symbol->patchPoint.indices
+        };
+      };
+      var indices = nil;
+      var putPatch = { |patch|
+        var patchFrom, patchTo, amp = 1; // each is symbol with indices
+        patchFrom = if (latestThing.notNil) {
+          latestThing.name.asESSymbolWithIndices
+        } {
+          ''.asESSymbolWithIndices;
+        };
+        patchFrom.indices = indices;
+        if (patch.isKindOf(Association)) {
+          patchTo = patch.key.asESSymbolWithIndices;
+          amp = patch.value.amp ?? 1;
+        } {
+          patchTo = patch.asESSymbolWithIndices;
+        };
+        newPatches = newPatches.add((translatePatchPoint.(patchFrom) : translatePatchPoint.(patchTo), amp: amp));
+      };
+      patch.asArray.do { |item|
+        if (item.isInteger or: item.isArray) {
+          indices = item.asArray;
+        } {
+          putPatch.(item);
+          indices = nil;
+        };
+      };
+    };
+
+    things.asArray.do { |item|
+      if (item.isKindOf(Association)) {
+        if ((item.key.isKindOf(Symbol) or: item.key.isKindOf(ESSymbolWithIndices) or: item.key.isInteger) and: item.value.isKindOf(Dictionary)) {
+          // apply as patching to previous thing
+          patchThing.(item);
+        } {
+          // make a thing
+          makeThing.(item);
+        };
+      } {
+        if (item.isKindOf(ESThing)) {
+          // make a thing
+          makeThing.(item);
+        } {
+          // apply as patching to previous thing
+          patchThing.(item);
+        };
+      };
+    };
+    things = newThings;
+
     // process array of patches
     // (see ESThingFactory for implementation)
-    patches = patches.asArray.collect { |patch|
+    patches = (patches.asArray ++ newPatches).collect { |patch|
       ESThingPatch.newFrom(patch, things, inChannels, outChannels)
     } .flat.reject { |item| item.isNil };
 
