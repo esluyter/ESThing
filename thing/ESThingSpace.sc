@@ -71,7 +71,7 @@ ESThingSpace {
         patchFrom.indices = indices;
         if (patch.isKindOf(Association)) {
           patchTo = patch.key.asESSymbolWithIndices;
-          amp = patch.value.amp ?? 1;
+          amp = if (patch.value.isNumber) { patch.value } { patch.value.amp } ?? 1;
         } {
           patchTo = patch.asESSymbolWithIndices;
         };
@@ -89,7 +89,7 @@ ESThingSpace {
 
     things.asArray.do { |item|
       if (item.isKindOf(Association)) {
-        if ((item.key.isKindOf(Symbol) or: item.key.isKindOf(ESSymbolWithIndices) or: item.key.isInteger) and: item.value.isKindOf(Dictionary)) {
+        if ((item.key.isKindOf(Symbol) or: item.key.isKindOf(ESSymbolWithIndices) or: item.key.isInteger) and: (item.value.isKindOf(Dictionary) or: item.value.isNumber)) {
           // apply as patching to previous thing
           patchThing.(item);
         } {
