@@ -361,8 +361,8 @@
         });
         newParam;
       },
-      inChannels: 2,
-      outChannels: 2,
+      inChannels: space.inChannels,
+      outChannels: space.outChannels,
       callFuncOnParamModulate: true
     ] ++ kwargs);
     space.parentThing = thing;
