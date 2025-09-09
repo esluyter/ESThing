@@ -91,7 +91,6 @@ To get started, I have saved this snippet for easy recall:
 (
 ~session[0] = [
   things: [],
-  patches: [],
 ];
 )
 ```
@@ -114,12 +113,8 @@ The first thing to do is make some things and then wire them together, usually y
     // make a thing called sine
     \sine->{
       SinOsc.ar(\freq.kr(440)) * \amp.kr(0.1)
-    }
+    } : \out // and patch it to the output
   ],
-  patches: [
-    // patch sine thing to the output
-    \sine
-  ]
 ];
 )
 
@@ -133,17 +128,17 @@ Here is the general syntax:
 
 ```supercollider
 
-    \myFunc->{ /*func to play*/ },
+    \myFunc->{ /*func to play*/ } : \destination,
     \mySynth->`\defName->\poly,
     \myPattern->Pbind()->(paramExclude: [\amp]),
-    \mySpace->[ things: [ \blah->{} ], patches: [ \blah ] ]
+    \mySpace->[ things: [ \blah->{} ] ]
 
 ```
 
 As you can see, the format is
 
 ```supercollider
-    \thingName->/*thing object*/->(more arguments)
+    \thingName->/*thing object*/->(more arguments) : routing
 ```
 
 More on each of these kinds of things later, for now we start with Functions:
@@ -156,35 +151,47 @@ Here is a sort of overview of how the patching works, and more on the syntax and
 (
 ~session[0] = [
   things: [
-    // extra, of note:
+    
+    // basic playable function
+    // (every Thing is audio rate)
+    \lfo->{
+      LFDNoise3.ar(\lofreq.kr(1))
+    }
+    // route to modulate parameters on other things with specified amplitude
+    : [\dist[\gain]->0.25, \lfos[\lofreq1]->0.25],
+    
+    
     // multichannel output
     \lfos->{
       LFDNoise3.ar(
         [\lofreq1, \lofreq2].collect(
           _.kr(1, spec: \lofreq)
       ))
-    },
+      // route the outputs independently:
+      // \thingName[index or parameter name]->amp
+    } : [0:\mod[\freq]->0.5, 1:\lfo[\lofreq]->0.5],
+    
+    
+    
+    
     // to provide more parameters, give a dict
     // (type:, channels: [numIns, numOuts], params:, top:, left:, width:, midiChannel:, srcID:)
+    
+    
+    // audio rate modulation
     \mod->{
-      SinOsc.ar(\freq.kr(440))
-    }->(top: 200, left: -50),
-
-
-
-    // basic playable function
-    // (every Thing is audio rate)
-    \lfo->{
-      LFDNoise3.ar(\lofreq.kr(1))
-    },
-
+      SinOsc.ar(\freq.kr(440)) 
+      //         route to carrier frequency
+    }->(top: 100) : \car[\freq]->0.5,
+    
     // use ar controls for audio rate modulation
     \car->{
       SinOsc.ar(\freq.ar(440))
-    }->(top: 150, left: -100),
-
-
-
+      // route to distortion
+    } : \dist,    
+    
+    
+    
     // to process input, provide an 'ESIn' control
     // (just a shortcut for In.ar(\in.kr(numChannels)))
     \dist->{
@@ -193,40 +200,15 @@ Here is a sort of overview of how the patching works, and more on the syntax and
         \gain.kr(1, spec: [0.5, 10, 4])
       ) * \amp.kr(0.1)
       // use paramExclude to leave parameters out of e.g.randomization with the x/y pad
-    }->(paramExclude: [\amp])
+    }->(paramExclude: [\amp]) : \out
+    // any unused symbol such as \out or even just \ can be used to send signal to the output
   ],
-
-  patches: [
-    // patch a Thing to the space's output:
-    // just use the thing's name
-    \dist,
-    // alternatively,
-    // (\dist : -1) or (\dist : \out)
-    // any invalid thing name like \in or \out will patch to space input/output
-
-    // patch a Thing into another Thing
-    (\car : \dist),
-    // control gain like
-    // (\sine: \dist, amp: 1.5)
-
-    // mod a parameter with a Thing
-    (\lfo : \dist->\gain, amp: 0.25),
-
-    // parameter modulation at audio rate
-    // (just provide ar control in your synthdef)
-    (\mod : \car->\freq, amp: 0.5),
-
-    // patching output channels independently
-    (\lfos->0 : \mod->\freq, amp: 0.5),
-    (\lfos->1 : \lfo->\lofreq, \amp: 0.5),
-
-    (\lfo : \lfos->\lofreq1, amp: 0.25)
-  ]
 ]
 )
 ```
 
-<img width="654" height="481" alt="Screen Shot 2025-07-21 at 02 05 01" src="https://github.com/user-attachments/assets/db7d9b82-01c1-44e5-8a74-b78e682f596a" />
+<img width="654" height="413" alt="Screen Shot 2025-09-09 at 04 52 22" src="https://github.com/user-attachments/assets/8d876244-1c06-42b4-8353-c12c58eada6d" />
+
 
 <br />
 <br />
@@ -286,11 +268,8 @@ Playing one in a patch. (See also ESPhasor below)
   things: [
     \pb->{
       PlayBuf.ar(2, ~bufs[\hello])
-    }
+    } : \out
   ],
-  patches: [
-    \pb
-  ]
 ]
 )
 ```
@@ -316,11 +295,8 @@ Alternatively, you can make sure the buffer is always created with the patch usi
   things: [
     \pb->{ |thing| {
       PlayBuf.ar(1, thing[\buf])
-    } }
+    } } : \out
   ],
-  patches: [
-    \pb
-  ]
 ]
 )
 ```
@@ -346,16 +322,12 @@ If you use ESPhasor in your function or SynthDef, you will get a playhead slider
   },
   
   things: [
-    \lfo->{ LFDNoise3.ar(\lofreq.kr(1)) },
+    \lfo->{ LFDNoise3.ar(\lofreq.kr(1)) } : \buf[\rate]->0.3,
     \buf->{ |thing| {
       var rate = \rate.kr(1, spec: [0.1, 10000, \exponential]);
       ESPhasor.buf(thing[\buf], 1, rate) * \amp.kr(0.5);
-    }}->(paramExclude: [\amp])
+    }}->(paramExclude: [\amp]) : \out
   ],
-  patches: [
-    (\lfo: \buf->\rate, amp: 0.3),
-    \buf
-  ]
 ]
 )
 ```
@@ -384,10 +356,7 @@ If you use ESPhasor in your function or SynthDef, you will get a playhead slider
         SinOsc.ar(freqs),
         Saw.ar(freqs)
       ]) * amps).mean * env;
-    }
-  ],
-  patches: [
-    \test
+    } : \out
   ],
 ];
 )
@@ -412,12 +381,8 @@ Provide a Ref to a symbol to play it as a Synth:
 (
 ~session[0] = [
   things: [
-    \synth->`\default
+    \synth->`\default : \out
   ],
-  
-  patches: [
-    \synth
-  ]
 ]
 )
 ```
@@ -434,16 +399,9 @@ This plays it as a "drone" kind of synth, and if you have a MIDI keyboard connec
 // relevant params like \freq and \amp are hidden from gui
 ~session[0] = [
   things: [
-    \synth->`\default->\poly
-    //\synth->`\default->\mono
-    //\synth->`\default->\mono0 // this is analog-style, requires doneAction of 0
-    //\synth->`\default->\drone
-    //\synth->`\default->\mpe
+    \synth->`\default->\poly : \out
+    //also \mono, \mono0 (analog-style, requires doneAction of 0), \drone, \mpe
   ],
-
-  patches: [
-    \synth
-  ]
 ]
 )
 ```
@@ -477,12 +435,8 @@ SynthDef(\sineSynth, { |out, gate = 1|
 
 ~session[0] = [
   things: [
-    \synth->`\sineSynth->\poly
+    \synth->`\sineSynth->\poly : \out
   ],
-  
-  patches: [
-    \synth
-  ]
 ]
 )
 ```
@@ -518,12 +472,8 @@ To use the same SynthDef with different default parameter values, set `args`:
 (
 ~session[0] = [
   things: [
-    \test->`\default->(args: [pan: -1]),
-    \test2->`\default->(args: [freq: 100, pan: 1])
-  ],
-  patches: [
-    \test,
-    \test2
+    \test->`\default->(args: [pan: -1]) : \out,
+    \test2->`\default->(args: [freq: 100, pan: 1]) : \out
   ],
 ];
 )
@@ -540,19 +490,14 @@ Use Pparam in your patterns to expose parameters to the Thing:
 (
 ~session[0] = [
   things: [
-    \lfo2->{ SinOsc.ar(\lofreq.kr(1)) },
-    \lfo->{ SinOsc.ar(\lofreq.kr(0.1)) },
+    \lfo2->{ SinOsc.ar(\lofreq.kr(1)) } : \pat[\amp],
+    \lfo->{ SinOsc.ar(\lofreq.kr(0.1)) } : \pat[\noteOffset],
     \pat->Pbind(
       \note, Pparam(\noteOffset, 0, [-12, 12]) + [-6, 0, 4, 9],
       \dur, Pparam(\dur, 0.1, [0.1, 10, \exp]) * Pwhite(0.1, 0.3) / Pwhite(1, 2),
       \amp, Pparam(\amp, 0, bus: true),
-    )->(paramExclude: [\amp]),
+    )->(paramExclude: [\amp]) : \,
   ],
-  patches: [
-    (\lfo2 : \pat->\amp),
-    (\lfo : \pat->\noteOffset),
-    \pat
-  ]
 ]
 )
 ```
@@ -572,30 +517,20 @@ Provide an Array to create a new space inside of a thing, with the same format `
   things: [
     \patSpace->[
       things: [
-        \lfo2->{ SinOsc.ar(\lofreq.kr(1)) },
-        \lfo->{ SinOsc.ar(\lofreq.kr(0.1)) },
+        \lfo2->{ SinOsc.ar(\lofreq.kr(1)) } : \pat[\amp]->0.2,
+        \lfo->{ SinOsc.ar(\lofreq.kr(0.1)) } : \pat[\noteOffset],
         \pat->Pbind(
           \note, Pparam(\noteOffset, 0, [-12, 12]) + [-6, 0, 4, 9],
           \dur, Pparam(\dur, 0.1, [0.1, 10, \exp]) * Pwhite(0.1, 0.3) / Pwhite(1, 2),
           \amp, Pparam(\amp, 0.06, bus: true),
-        )->(paramExclude: [\amp]),
+        )->(paramExclude: [\amp]) : \out,
       ],
-      patches: [
-        (\lfo2 : \pat->\amp, amp: 0.2),
-        (\lfo : \pat->\noteOffset),
-        \pat
-      ]
-    ]->(paramExclude: [\amp_2]),
+    ]->(paramExclude: [\amp_2]) : [\out, \verb],
     
     \verb->{
       NHHall.ar(ESIn(2), \time.kr(1, spec: [0, 10]), stereo: 1) * \amp.kr(0.5)
-    }
+    } : \out
   ],
-  patches: [
-    \patSpace,
-    (\patSpace : \verb),
-    \verb
-  ]
 ]
 )
 ```
