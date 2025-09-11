@@ -21,4 +21,8 @@ ESSymbolWithIndices {
   asESSymbolWithIndices {
     ^this;
   }
+
+  asESIntegerWithIndices {
+    ^ESIntegerWithIndices(-1, indices, metadata);
+  }
 }

@@ -11,6 +11,10 @@
   asESSymbolWithIndices {
     ^ESSymbolWithIndices(this, nil);
   }
+
+  asESIntegerWithIndices {
+    ^ESIntegerWithIndices(-1, nil);
+  }
 }
 
 /*
@@ -22,3 +26,4 @@
 
 \[1, 3..22]
 */
+
