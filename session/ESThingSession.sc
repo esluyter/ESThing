@@ -8,6 +8,7 @@
 ESThingSession {
   var <>tps, <>group, <>groups, <>fadeGroups, <>fadeBuses, <>amps, <>synths, <routingSynths;
   var <>routing, <>inputRouting, <>outputRouting;
+  var <patchDescs;
   var <>topFadeGroup;
 
   *new { |tps = #[]|
@@ -67,21 +68,22 @@ ESThingSession {
         };
       } {
         // this means it's going to output
-        inbus = 0;
+        inbus = sessionOutBus;
         to.indices = to.indices ?? (0..sessionOutChannels - 1);
       };
 
       if (inbus.notNil and: outbus.notNil) {
-        to.indices.do { |i|
+        to.indices.do { |toI, i|
           var fromI = from.indices[i];
           if (fromI.notNil) {
             routingSynths = routingSynths.add(
               Synth(\ESThingPatch,
-                [in: if (pre) { outbus } { fadeBus } + fromI, out: inbus + i, amp: amp],
+                [in: if (pre) { outbus } { fadeBus } + fromI, out: inbus + toI, amp: amp],
                 fadeGroup, \addToTail)
             );
+            patchDescs = patchDescs.add([fromIndex[fromI], toIndex[toI], amp, pre]);
             if (pruneNormals) {
-              removeNormals.(toIndex, i, fromIndex, fromI);
+              removeNormals.(toIndex, toI, fromIndex, fromI);
             };
           };
         };
@@ -97,13 +99,14 @@ ESThingSession {
           if (n == [fromIndex[fromI], -1[fromI]]) { toRemove = toRemove.add(j) };
         };
       };
-      toRemove.postln.reverse.do { |j|
+      toRemove.reverse.do { |j|
         normals.removeAt(j);
       };
     };
 
     routing = arr;
     routingSynths.do(_.free);
+    patchDescs = [];
 
     // build normalled connections
     tps.select(_.notNil).do { |tp|
@@ -165,7 +168,7 @@ ESThingSession {
       };
     };
 
-    normals.postcs.do { |n|
+    normals.do { |n|
       // patch without pruning normals
       patchMe.(n[0], n[1], 1, false, false);
     };
