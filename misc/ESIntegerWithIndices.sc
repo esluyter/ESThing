@@ -18,4 +18,8 @@ ESIntegerWithIndices {
   asESIntegerWithIndices {
     ^ESIntegerWithIndices(integer, indices, metadata);
   }
+
+  == { |other|
+    ^(integer == other.integer) and: (indices == other.indices)
+  }
 }

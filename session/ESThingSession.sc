@@ -11,7 +11,8 @@ ESThingSession {
   var <>topFadeGroup;
 
   *new { |tps = #[]|
-    ^super.newCopyArgs(tps, nil, [], [], [], [], [], [], [], [], []);
+    ^super.newCopyArgs(tps, nil, [], [], [], [], [], [],
+      [], [], []);
   }
 
   // is this good?
@@ -20,13 +21,86 @@ ESThingSession {
   }
 
   route { |arr|
+    var sessionOutChannels = Server.default.options.numOutputBusChannels;
+    var sessionInChannels = Server.default.options.numInputBusChannels;
+    var sessionOutBus = 0;
+    var sessionInBus = Server.default.options.numOutputBusChannels;
+
+    var normals = [];
+
+    // complicated logic to patch:
+    var patchMe = { |from, to, amp=1, pre=false, pruneNormals=true|
+      var fromIndex, toIndex;
+      var outbus, fadeBus, fadeGroup;
+      var inbus;
+      from = from.asESIntegerWithIndices;
+      to = to.asESIntegerWithIndices;
+      fromIndex = from.integer;
+      toIndex = to.integer;
+
+      if (fromIndex >= 0) {
+        var fromTs = tps[fromIndex].ts;
+        outbus = fromTs.outbus.index;
+        fadeBus = fadeBuses[fromIndex].index;
+        fadeGroup = fadeGroups[fromIndex];
+        from.indices = from.indices ?? (0..fromTs.outChannels - 1);
+      } {
+        // this is the first input bus....v confusing re var names
+        outbus = sessionInBus;
+        fadeBus = outbus;
+        fadeGroup = topFadeGroup;
+        from.indices = from.indices ?? (0..sessionInChannels - 1);
+      };
+
+      if (toIndex >= 0) {
+        var toTs = tps[toIndex].ts;
+        inbus = toTs.inbus.index;
+        to.indices = to.indices ?? (0..toTs.inChannels - 1);
+      } {
+        // this means it's going to output
+        inbus = 0;
+        to.indices = to.indices ?? (0..sessionOutChannels - 1);
+      };
+
+      to.indices.do { |i|
+        var fromI = from.indices[i];
+        var toRemove = [];
+        if (fromI.notNil) {
+          routingSynths = routingSynths.add(
+            Synth(\ESThingPatch,
+              [in: if (pre) { outbus } { fadeBus } + fromI, out: inbus + i, amp: amp],
+              fadeGroup, \addToTail)
+          );
+          if (pruneNormals) {
+            normals.do { |n, j|
+              if (n == [-1[i], toIndex[i]]) { toRemove = toRemove.add(j) };
+              if (n == [fromIndex[fromI], -1[fromI]]) { toRemove = toRemove.add(j) };
+            };
+            toRemove.reverse.do { |j|
+              normals.removeAt(j);
+            };
+          };
+        };
+      };
+    };
+
     routing = arr;
     routingSynths.do(_.free);
 
+    // build normalled connections
+    tps.select(_.notNil).do { |tp|
+      var ts = tp.ts;
+      var numInputs = min(ts.inChannels, sessionInChannels);
+      var numOutputs = min(ts.outChannels, sessionOutChannels);
+      var inputs = numInputs.collect { |i| [-1[i], ts.index[i]] };
+      var outputs = numOutputs.collect { |i| [ts.index[i], -1[i]] };
+      normals = normals ++ inputs ++ outputs;
+    };
+
+    // break them using the array
     arr.pairsDo { |from, to|
-
-      from = from.asESIntegerWithIndices;
-
+      if (to.isNil) { to = [nil] };
+      // treat every to as an array
       to.asArray.do { |item|
         var amp = 1;
         var pre = false;
@@ -45,50 +119,18 @@ ESThingSession {
           item = item.key;
         };
 
-        item = item.asESIntegerWithIndices;
+        if (item.isNil) {
+          // remove normal patch
+        };
 
-        {
-          var fromIndex = from.integer;
-          var toIndex = item.integer;
-          var outbus, fadeBus, fadeGroup;
-          var inbus;
-
-          if (fromIndex >= 0) {
-            var fromTs = tps[fromIndex].ts;
-            outbus = fromTs.outbus.index;
-            fadeBus = fadeBuses[fromIndex].index;
-            fadeGroup = fadeGroups[fromIndex];
-            from.indices = from.indices ?? (0..fromTs.outChannels - 1);
-          } {
-            // this is the first input bus....v confusing re var names
-            outbus = Server.default.options.numOutputBusChannels;
-            fadeBus = outbus;
-            fadeGroup = topFadeGroup;
-            from.indices = from.indices ?? (0..Server.default.options.numInputBusChannels - 1);
-          };
-
-          if (toIndex >= 0) {
-            var toTs = tps[toIndex].ts;
-            inbus = toTs.inbus.index;
-            item.indices = item.indices ?? (0..toTs.inChannels - 1);
-          } {
-            // this means it's going to output
-            inbus = 0;
-            item.indices = item.indices ?? (0..Server.default.options.numOutputBusChannels - 1);
-          };
-
-          item.indices.do { |i|
-            var fromI = from.indices[i];
-            if (fromI.notNil) {
-              routingSynths = routingSynths.add(
-                Synth(\ESThingPatch,
-                  [in: if (pre) { outbus } { fadeBus } + i, out: inbus + i, amp: amp],
-                  fadeGroup, \addToTail)
-              );
-            };
-          };
-        }.();
+        // execute the patches for this to item
+        patchMe.(from, item, amp, pre);
       };
+    };
+
+    normals.do { |n|
+      // patch without pruning normals
+      patchMe.(n[0], n[1], 1, false, false);
     };
   }
 
