@@ -10,6 +10,7 @@ ESThingSession {
   var <>routing, <>inputRouting, <>outputRouting;
   var <patchDescs;
   var <>topFadeGroup;
+  var w;
 
   *new { |tps = #[]|
     ^super.newCopyArgs(tps, nil, [], [], [], [], [], [],

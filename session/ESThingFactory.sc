@@ -766,6 +766,130 @@
 
 
 
++ESThingSession {
+  makeWindow { |winBounds, title = "Session", tp|
+    var bounds = winBounds ?? { Rect(0, 80, 800, 800) };
+    var left = 20, top = 150;
+    var inlets = ();
+    var outlets = ();
+    //var knobPoints = [];
+    var adc = Server.default.options.numInputBusChannels.collect { |i| i * 50 + 25 };
+    var dac = Server.default.options.numOutputBusChannels.collect { |i| i * 50 + 25 };
+    var patchView, spaceView;
+    w !? { w.close };
+    w = Window(title, bounds).background_(Color.gray(0.95)).front;
+
+    patchView = UserView(w, w.bounds.copy.origin_(0@0))
+    .resize_(5).acceptsMouse_(false).drawFunc_({ |v|
+      patchDescs.collect { |patchDesc|
+
+        var from = patchDesc[0];
+        var to = patchDesc[1];
+
+        var toPoint = if (to.integer == -1) { dac[to.indices[0]]@v.bounds.height } { inlets[to.integer][to.indices[0]] };
+        var fromPoint = if (from.integer == -1) { adc[from.indices[0]]@0 } { outlets[from.integer][from.indices[0]] };
+        var colorVal = (patchDesc[2].curvelin(0, 10, 0.1, 1, 4));
+        var hue = nil;
+        var color = Color.hsv(hue ?? 0, 1, if (hue.notNil) { 0.5 } { 0 }, colorVal);
+
+
+        var p1 = fromPoint;
+        var p2 = toPoint;
+        var offset = Point(0, max(((p2.y - p1.y) / 8), max((p1.y - p2.y) / 16, if (p2.y < p1.y) { 40 } { 20 })));
+        var sideoffset = Point(max((p2.x - p1.x) / 4, max((p1.x - p2.x) / 8, 5)), 0);
+
+        Pen.lineDash = FloatArray[2, 0];
+        // wider for input
+        Pen.width = if (hue.notNil) { 2 } { 3 };
+        // black if hue is nil (i.e. input)
+
+        Pen.moveTo(p1);
+        Pen.curveTo(p2, p1 + offset, p2 - offset);
+        Pen.color_(color);
+        Pen.stroke;
+      };
+    });
+
+    spaceView = { |space, parentView, left, top|
+      var width = 25 * max(space.outChannels, space.inChannels) + 60;
+      var height = 100;
+      var hue = 0;
+      var view = UserView(parentView, Rect(left, top, width, height)).background_(Color.hsv(hue, 0.05, 1, 0.8)).drawFunc_({ |view|
+        Pen.use {
+          Pen.addRect(view.bounds.copy.origin_(0@0));
+          Pen.color = Color.hsv(hue, 1, 0.5);
+          Pen.width = 2;
+          Pen.stroke;
+        }
+      });
+      var newInlets = [];
+      var newOutlets = [];
+      //var newKnobPoints = ();
+      var w;
+      var x = 0, y = 0;
+      StaticText(view, Rect(5, 3, width, 20)).string_(space.index).font_(Font.sansSerif(14, true)).stringColor_(Color.hsv(hue, 1, 0.5)).mouseDownAction_{ |v, x, y, mods, buttNum, clickCount|
+        if (mods.isAlt) {
+          if (space.inbus.numChannels > 0) {
+            "Scoping inbus #%".format(space.inbus.index).postln;
+            space.inbus.scope
+          } {
+            "No input - Press shift to scope outbus".warn;
+          }
+        };
+        if (mods.isShift) {
+          if (space.outbus.numChannels > 0) {
+            "Scoping outbus #%".format(space.inbus.index).postln;
+            space.outbus.scope
+          } {
+            "No output - Press option to scope inbus".warn;
+          }
+        };
+        if (clickCount == 2) {
+
+        };
+      };
+      space.inChannels.do { |i|
+        var thisLeft = left + (i * 25) + 40;
+        var thisTop = top - 1;
+        newInlets = newInlets.add(thisLeft@thisTop);
+        View(parentView, Rect(thisLeft, thisTop - 1.5, 3, 4)).background_(Color.black);
+      };
+      space.outChannels.do { |i|
+        var thisLeft = left + (i * 25) + 40;
+        var thisTop = top + height - 1;
+        newOutlets = newOutlets.add(thisLeft@thisTop);
+        View(parentView, Rect(thisLeft - 3, thisTop - 1.5, 3, 4)).background_(Color.black);
+      };
+      inlets[space.index] = newInlets;
+      outlets[space.index] = newOutlets;
+      view;
+    };
+
+
+    adc.do { |x|
+      View(w, Rect(x - 2, 0, 5, 7)).background_(Color.black);
+    };
+    dac.do { |x|
+      View(w, Rect(x - 2, w.bounds.height - 7, 5, 7)).background_(Color.black).resize_(3);
+    };
+
+
+    tps.select(_.notNil).do { |tp, i|
+      var ts = tp.ts;
+      var sv = spaceView.(ts, w, left, top);
+      left = left + sv.bounds.width + 20;
+      if (left > (w.bounds.width * 0.75)) {
+        left = 30;
+        top = top + 120
+      };
+    };
+
+    ^w;
+  }
+}
+
+
+
 +ESThingSpace {
   makeWindow { |winBounds, title = "Space", tp|
     var bounds = winBounds ?? { Rect(0, 80, 800, 800) };
@@ -777,7 +901,7 @@
     var adc = inChannels.collect { |i| i * 50 + 25 };
     var dac = outChannels.collect { |i| i * 50 + 25 };
 
-    var w = Window(title, bounds).background_(Color.gray(0.95)).front;
+    var w = Window(title ++ " " ++ index, bounds).background_(Color.gray(0.95)).front;
 
     // xy randomizer
     var func = if (tp.notNil) { tp.makeXYFunc } { this.makeXYFunc };
