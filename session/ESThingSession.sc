@@ -39,13 +39,17 @@ ESThingSession {
       toIndex = to.integer;
 
       if (fromIndex >= 0) {
-        var fromTs = tps[fromIndex].ts;
-        outbus = fromTs.outbus.index;
-        fadeBus = fadeBuses[fromIndex].index;
-        fadeGroup = fadeGroups[fromIndex];
-        from.indices = from.indices ?? (0..fromTs.outChannels - 1);
+        var fromTs;
+        if (tps[fromIndex].isNil) {
+          ("Nothing in slot " ++ fromIndex).error;
+        } {
+          fromTs = tps[fromIndex].ts;
+          outbus = fromTs.outbus.index;
+          fadeBus = fadeBuses[fromIndex].index;
+          fadeGroup = fadeGroups[fromIndex];
+          from.indices = from.indices ?? (0..fromTs.outChannels - 1);
+        };
       } {
-        // this is the first input bus....v confusing re var names
         outbus = sessionInBus;
         fadeBus = outbus;
         fadeGroup = topFadeGroup;
@@ -53,34 +57,48 @@ ESThingSession {
       };
 
       if (toIndex >= 0) {
-        var toTs = tps[toIndex].ts;
-        inbus = toTs.inbus.index;
-        to.indices = to.indices ?? (0..toTs.inChannels - 1);
+        var toTs;
+        if (tps[toIndex].isNil) {
+          ("Nothing in slot " ++ toIndex).error;
+        } {
+          toTs = tps[toIndex].ts;
+          inbus = toTs.inbus.index;
+          to.indices = to.indices ?? (0..toTs.inChannels - 1);
+        };
       } {
         // this means it's going to output
         inbus = 0;
         to.indices = to.indices ?? (0..sessionOutChannels - 1);
       };
 
-      to.indices.do { |i|
-        var fromI = from.indices[i];
-        var toRemove = [];
-        if (fromI.notNil) {
-          routingSynths = routingSynths.add(
-            Synth(\ESThingPatch,
-              [in: if (pre) { outbus } { fadeBus } + fromI, out: inbus + i, amp: amp],
-              fadeGroup, \addToTail)
-          );
-          if (pruneNormals) {
-            normals.do { |n, j|
-              if (n == [-1[i], toIndex[i]]) { toRemove = toRemove.add(j) };
-              if (n == [fromIndex[fromI], -1[fromI]]) { toRemove = toRemove.add(j) };
-            };
-            toRemove.reverse.do { |j|
-              normals.removeAt(j);
+      if (inbus.notNil and: outbus.notNil) {
+        to.indices.do { |i|
+          var fromI = from.indices[i];
+          if (fromI.notNil) {
+            routingSynths = routingSynths.add(
+              Synth(\ESThingPatch,
+                [in: if (pre) { outbus } { fadeBus } + fromI, out: inbus + i, amp: amp],
+                fadeGroup, \addToTail)
+            );
+            if (pruneNormals) {
+              removeNormals.(toIndex, i, fromIndex, fromI);
             };
           };
         };
+      };
+    };
+    var removeNormals = { |toIndex, toI, fromIndex, fromI|
+      var toRemove = [];
+      normals.do { |n, j|
+        if (toIndex.notNil) {
+          if (n == [-1[toI], toIndex[toI]]) { toRemove = toRemove.add(j) };
+        };
+        if (fromIndex.notNil) {
+          if (n == [fromIndex[fromI], -1[fromI]]) { toRemove = toRemove.add(j) };
+        };
+      };
+      toRemove.postln.reverse.do { |j|
+        normals.removeAt(j);
       };
     };
 
@@ -100,6 +118,7 @@ ESThingSession {
     // break them using the array
     arr.pairsDo { |from, to|
       if (to.isNil) { to = [nil] };
+      if (from == 'nil') { from = nil };
       // treat every to as an array
       to.asArray.do { |item|
         var amp = 1;
@@ -119,16 +138,34 @@ ESThingSession {
           item = item.key;
         };
 
-        if (item.isNil) {
+        if (from.isNil) {
           // remove normal patch
+          to = to.asESIntegerWithIndices;
+          if (to.indices.isNil) {
+            to.indices = to.indices ?? (0..tps[to.integer].ts.inChannels - 1);
+          };
+          to.indices.do { |toI|
+            removeNormals.(to.integer, toI);
+          };
+        } {
+          if (item.isNil) {
+            // remove normal patch
+            from = from.asESIntegerWithIndices;
+            if (from.indices.isNil) {
+              from.indices = from.indices ?? (0..tps[from.integer].ts.outChannels - 1);
+            };
+            from.indices.do { |fromI|
+              removeNormals.(nil, nil, from.integer, fromI);
+            };
+          } {
+            // execute the patches for this to item
+            patchMe.(from, item, amp, pre);
+          };
         };
-
-        // execute the patches for this to item
-        patchMe.(from, item, amp, pre);
       };
     };
 
-    normals.do { |n|
+    normals.postcs.do { |n|
       // patch without pruning normals
       patchMe.(n[0], n[1], 1, false, false);
     };
