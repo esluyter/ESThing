@@ -20,6 +20,7 @@ ESThingSession {
   }
 
   route { |arr|
+    routing = arr;
     routingSynths.do(_.free);
 
     arr.pairsDo { |from, to|
@@ -144,6 +145,9 @@ ESThingSession {
           };
         }.();
       };
+
+      // redo routing
+      this.route(routing);
     };
   }
 }
