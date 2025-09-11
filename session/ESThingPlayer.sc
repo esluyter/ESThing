@@ -18,7 +18,7 @@ ESThingPlayer {
   var <win, <>winBounds;
   var <isPlaying = false;
   // tsbus so we have volume control etc
-  var <tsbus, <amp = 1, <synths;
+  //var <tsbus, <amp = 1, <synths;
 
   *new { |ts, knobFunc, knobArr = ([]), ccExclude = ([]), modExclude = ([]), noteExclude = ([])|
     ts = ts ?? { ESThingSpace() };
@@ -78,11 +78,13 @@ ESThingPlayer {
     });
   }
 
+  /*
   // called later, on play
   initTsbus {
     tsbus = tsbus ?? { Bus.audio(Server.default, ts.outChannels) };
     ts.outbus = tsbus;
   }
+  */
 
   // this is so it can be used as out device by controller...
   control { |chan = 0, num = 0, val = 0|
@@ -99,7 +101,7 @@ ESThingPlayer {
     if (soft.not) {
       Server.default.waitForBoot {
         // make sure the output bus is initialized
-        this.initTsbus;
+        //this.initTsbus;
         // play ts
         if (ts.isPlaying) {
           ts.stop;
@@ -108,6 +110,7 @@ ESThingPlayer {
         ts.init;
         Server.default.sync;
         ts.play;
+        /*
         // patch to output
         synths.do(_.free);
         synths = tsbus.numChannels.collect { |i|
@@ -115,6 +118,7 @@ ESThingPlayer {
             [in: tsbus.index + i, out: i, amp: amp],
             ts.group, \addAfter)
         };
+        */
         // make window
         win !? { win.close };
         win = ts.makeWindow(winBounds, "Space", this);
@@ -122,15 +126,19 @@ ESThingPlayer {
     };
   }
 
+  /*
   amp_ { |val|
     amp = val;
     synths.do(_.set(\amp, amp));
     this.changed(\amp, amp);
   }
+  */
 
   stop {
+    /*
     synths.do(_.free);
     synths = nil;
+    */
     ts.stop;
     ts.free;
     // remember window bounds on close
@@ -147,7 +155,7 @@ ESThingPlayer {
   free {
     [noteOnMf, noteOffMf, bendMf, touchMf, polytouchMf, ccMf].do(_.free);
 
-    tsbus.free;
+    //tsbus.free;
   }
 
   // smoothly replace ts on reeval
@@ -157,7 +165,7 @@ ESThingPlayer {
       // in case of an error, we still want to play on reeval
       isPlaying = true;
       ts = val;
-      ts.outbus = tsbus;
+      //ts.outbus = tsbus;
       this.play;
     } {
       ts = val;

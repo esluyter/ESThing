@@ -124,8 +124,10 @@ ESThingSpace {
     soloThings = [];
     things.do(_.parentSpace_(this));
     patches.do(_.parentSpace_(this));
-    inbus = Server.default.options.numOutputBusChannels.asBus('audio', inChannels, Server.default);
-    outbus = 0.asBus('audio', outChannels, Server.default);
+    //inbus = Server.default.options.numOutputBusChannels.asBus('audio', inChannels, Server.default);
+    //outbus = 0.asBus('audio', outChannels, Server.default);
+    inbus = Bus.audio(Server.default, inChannels);
+    outbus = Bus.audio(Server.default, outChannels);
   }
 
 
@@ -160,6 +162,8 @@ ESThingSpace {
   free {
     freeFunc.value(this);
     things.do(_.free);
+    inbus.free;
+    outbus.free;
   }
 
   outPatches {

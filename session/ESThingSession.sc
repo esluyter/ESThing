@@ -6,10 +6,10 @@
 
 
 ESThingSession {
-  var <>tps, <>group, <>groups;
+  var <>tps, <>group, <>groups, <>fadeGroups, <>fadeBuses, <>amps, <>synths;
 
   *new { |tps = #[]|
-    ^super.newCopyArgs(tps, nil, []);
+    ^super.newCopyArgs(tps, nil, [], [], [], [], []);
   }
 
   // is this good?
@@ -31,6 +31,12 @@ ESThingSession {
         while { groups.size <= index } {
           groups = groups.add(Group(group, \addToTail));
         };
+        fadeGroups = fadeGroups.extend(index + 1);
+        fadeBuses = fadeBuses.extend(index + 1);
+        amps = amps.extend(index + 1, 1);
+        while { synths.size <= index } {
+          synths = synths.add([]);
+        };
       };
       // make sure there's a tp
       if (tps[index].isNil) {
@@ -46,7 +52,22 @@ ESThingSession {
         tps[index] = nil;
       } {
         // after all this, if ts not nil put it where it goes
-        tps[index].ts = ESThingSpace.newFrom(ts, tps[index].ts).index_(index).session_(this).target_(groups[index]);
+        ts = ESThingSpace.newFrom(ts, tps[index].ts).index_(index).session_(this).target_(groups[index]);
+        tps[index].ts = ts;
+        {
+          var fadeGroup, fadeBus;
+          fadeGroups[index].free;
+          fadeGroup = Group(groups[index], \addToTail);
+          fadeGroups[index] = group;
+          fadeBuses[index].free;
+          fadeBus = Bus.audio(Server.default, ts.outChannels);
+          fadeBuses[index] = fadeBus;
+          synths[index] = ts.outbus.numChannels.collect { |i|
+            Synth(\ESThingPatch,
+              [in: ts.outbus.index + i, out: fadeBus.index + i, amp: amps[index]],
+              fadeGroup)
+          };
+        }.();
       };
     };
   }
