@@ -15,7 +15,7 @@ ESThingSpace {
   // i/o specs
   <inChannels, <outChannels,
   // where to add group
-  <>target;
+  <>target, <>addAction;
 
   // top level spaces get an index
   var <>index, <>session, <>parentThing;
@@ -27,11 +27,11 @@ ESThingSpace {
 
   storeArgs { ^[things, patches,
     initFunc, freeFunc, playFunc, stopFunc,
-    inChannels, outChannels, target]}
+    inChannels, outChannels, target, addAction]}
 
   *new { |things, patches,
     initFunc, playFunc, stopFunc, freeFunc,
-    inChannels = 2, outChannels = 2, target,
+    inChannels = 2, outChannels = 2, target, addAction = \addToHead,
     // oldSpace is for remembering parameter values when reevaluating
     oldSpace|
 
@@ -117,7 +117,7 @@ ESThingSpace {
     // default to target the default server
     target = target ?? { Server.default };
 
-    ^super.newCopyArgs(things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, target).prInit.restoreOldSpace(oldSpace);
+    ^super.newCopyArgs(things, patches, initFunc, playFunc, stopFunc, freeFunc, inChannels, outChannels, target, addAction).prInit.restoreOldSpace(oldSpace);
   }
   prInit { |oldSpace|
     environment = ();
@@ -137,7 +137,7 @@ ESThingSpace {
   }
   play {
     group.free;
-    group = Group(target);
+    group = Group(target, addAction);
     soloGroup.free;
     soloGroup = Group(group, \addToTail);
     forkIfNeeded {
@@ -275,7 +275,7 @@ ESThingSpace {
       };
     };
   }
-
+/*
   postModPatches {
     this.modPatches.do { |patch|
       // this doesn't work with backslash directly, so use question mark temp
@@ -291,6 +291,7 @@ ESThingSpace {
       ).tr($?, $\\).postln;
     };
   }
+  */
 
   // generates a func to be used for 2D parameter randomization
   makeXYFunc { |affectModAmps = true|

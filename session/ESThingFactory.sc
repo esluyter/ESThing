@@ -184,8 +184,8 @@
   *newFrom { |ts, oldSpace|
     // sugar: convert array to ESThingSpace
     if (ts.isArray) {
-      var argNames = ['things', 'patches', 'initFunc', 'playFunc', 'stopFunc', 'freeFunc', 'inChannels', 'outChannels', 'target', 'oldSpace'];
-      var args = [[], [], nil, nil, nil, nil, 2, 2, nil, oldSpace];
+      var argNames = ['things', 'patches', 'initFunc', 'playFunc', 'stopFunc', 'freeFunc', 'inChannels', 'outChannels', 'target', 'addAction', 'oldSpace'];
+      var args = [[], [], nil, nil, nil, nil, 2, 2, nil, \addToHead, oldSpace];
       var i = 0;
       ts.do { |item|
         var argIndex = argNames.indexOf(item);
