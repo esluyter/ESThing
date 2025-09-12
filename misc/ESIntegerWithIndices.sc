@@ -20,6 +20,7 @@ ESIntegerWithIndices {
   }
 
   == { |other|
+    if (other.isKindOf(ESIntegerWithIndices).not) { ^false };
     ^(integer == other.integer) and: (indices == other.indices)
   }
 }

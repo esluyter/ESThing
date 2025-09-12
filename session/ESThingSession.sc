@@ -117,6 +117,7 @@ ESThingSession {
 
     routing = arr;
     routingSynths.do(_.free);
+    routingSynths = [];
     patchDescs = [];
 
     // build normalled connections
