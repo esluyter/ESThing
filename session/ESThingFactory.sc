@@ -873,7 +873,17 @@
       };
       inlets[space.index] = newInlets;
       outlets[space.index] = newOutlets;
-      Slider(view, Rect(width - 20, 0, 20, height)).value_(sliderSpec.unmap(amps[space.index])).background_(Color.gray(0.7)).action_{ |v| this.setAmp(space.index, sliderSpec.map(v.value)) };
+
+      {
+        var func = { |obj, what, index|
+          if ((what == \amps) and: (index == space.index)) {
+            slider.value = sliderSpec.unmap(amps[space.index]);
+          };
+        };
+        var slider = Slider(view, Rect(width - 20, 0, 20, height)).value_(sliderSpec.unmap(amps[space.index])).background_(Color.gray(0.7)).action_{ |v| this.setAmp(space.index, sliderSpec.map(v.value)) }.onClose_{ this.removeDependant(func) };
+        this.addDependant(func);
+      }.();
+
       view;
     };
 

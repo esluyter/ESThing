@@ -35,6 +35,7 @@ ESThingSession {
   setAmp { |index, amp|
     amps[index] = amp;
     synths[index].do(_.set(\amp, amp));
+    this.changed(\amps, index);
   }
 
   route { |arr|
@@ -226,7 +227,7 @@ ESThingSession {
       // make sure there's a tp
       if (tps[index].isNil) {
         // make a new player with default winBounds by index
-        tps[index] = ESThingPlayer().play(true).winBounds_(Rect(500 * index, 80, 800, 800));
+        tps[index] = ESThingPlayer(session: this, index: index).play(true).winBounds_(Rect(500 * index, 80, 800, 800));
         //tps[index].presets.makeWindow(Rect(500 * index, 910, 800, 330));
       };
       // and play or stop accordingly

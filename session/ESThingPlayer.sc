@@ -9,7 +9,9 @@ ESThingPlayer {
   // ts is the thing space we are playing
   var <ts,
   // these are misc to do with what devices control which things
-  <>knobFunc, <>knobArr, <>ccExclude, <>modExclude, <>noteExclude;
+  <>knobFunc, <>knobArr, <>ccExclude, <>modExclude, <>noteExclude,
+  // parent session
+  <>session, <>index;
   // an instance of ESPresets
   var <presets;
   // midi funcs
@@ -17,12 +19,10 @@ ESThingPlayer {
   // GUI window, remembers its bounds on reeval
   var <win, <>winBounds;
   var <isPlaying = false;
-  // tsbus so we have volume control etc
-  //var <tsbus, <amp = 1, <synths;
 
-  *new { |ts, knobFunc, knobArr = ([]), ccExclude = ([]), modExclude = ([]), noteExclude = ([])|
+  *new { |ts, knobFunc, knobArr = ([]), ccExclude = ([]), modExclude = ([]), noteExclude = ([]), session, index|
     ts = ts ?? { ESThingSpace() };
-    ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude, modExclude, noteExclude).initMidi.initPresets;
+    ^super.newCopyArgs(ts, knobFunc, knobArr, ccExclude, modExclude, noteExclude, session, index).initMidi.initPresets;
   }
   initPresets {
     presets = ESThingPresets(this);
@@ -78,14 +78,6 @@ ESThingPlayer {
     });
   }
 
-  /*
-  // called later, on play
-  initTsbus {
-    tsbus = tsbus ?? { Bus.audio(Server.default, ts.outChannels) };
-    ts.outbus = tsbus;
-  }
-  */
-
   // this is so it can be used as out device by controller...
   control { |chan = 0, num = 0, val = 0|
     knobArr.pairsDo { |key, value|
@@ -100,8 +92,6 @@ ESThingPlayer {
     isPlaying = true;
     if (soft.not) {
       Server.default.waitForBoot {
-        // make sure the output bus is initialized
-        //this.initTsbus;
         // play ts
         if (ts.isPlaying) {
           ts.stop;
@@ -110,35 +100,16 @@ ESThingPlayer {
         ts.init;
         Server.default.sync;
         ts.play;
-        /*
-        // patch to output
-        synths.do(_.free);
-        synths = tsbus.numChannels.collect { |i|
-          Synth(\ESThingPatch,
-            [in: tsbus.index + i, out: i, amp: amp],
-            ts.group, \addAfter)
-        };
-        */
-        // make window
-        //win !? { win.close };
-        //win = ts.makeWindow(winBounds, "Space", this);
       };
     };
   }
 
-  /*
+  amp { ^session.amps[index] }
   amp_ { |val|
-    amp = val;
-    synths.do(_.set(\amp, amp));
-    this.changed(\amp, amp);
+    session.setAmp(index, val);
   }
-  */
 
   stop {
-    /*
-    synths.do(_.free);
-    synths = nil;
-    */
     ts.stop;
     ts.free;
     // remember window bounds on close
@@ -154,8 +125,6 @@ ESThingPlayer {
 
   free {
     [noteOnMf, noteOffMf, bendMf, touchMf, polytouchMf, ccMf].do(_.free);
-
-    //tsbus.free;
   }
 
   // smoothly replace ts on reeval
