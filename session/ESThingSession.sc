@@ -80,17 +80,25 @@ ESThingSession {
         } {
           toTs = tps[toIndex].ts;
           inbus = toTs.inbus.index;
-          to.indices = to.indices ?? (0..toTs.inChannels - 1);
+
+
+          if (from.notNil) {
+            var size = min(toTs.inChannels, from.indices.size);
+            to.indices = to.indices ?? (0..size - 1);
+          } {
+            to.indices = to.indices ?? (0..toTs.inChannels - 1);
+          };
         };
       } {
         // this means it's going to output
+        var size = min(sessionOutChannels, from.indices.size);
         inbus = sessionOutBus;
-        to.indices = to.indices ?? (0..sessionOutChannels - 1);
+        to.indices = to.indices ?? (0..size - 1);
       };
 
       if (inbus.notNil and: outbus.notNil) {
         to.indices.do { |toI, i|
-          var fromI = from.indices[i];
+          var fromI = from.indices.wrapAt(i);
           if (fromI.notNil) {
             routingSynths = routingSynths.add(
               Synth(\ESThingPatch,

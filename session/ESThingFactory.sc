@@ -799,10 +799,9 @@
 
         var toPoint = if (to.integer == -1) { dac[to.indices[0]]@v.bounds.height } { inlets[to.integer][to.indices[0]] };
         var fromPoint = if (from.integer == -1) { adc[from.indices[0]]@0 } { outlets[from.integer][from.indices[0]] };
-        var colorVal = (patchDesc[2].curvelin(0, 10, 0.1, 1, 4));
+        var colorVal = (patchDesc[2].curvelin(0, 16, 0.01, 1, 4));
         var hue = nil;
         var color = Color.hsv(hue ?? 0, 1, if (hue.notNil) { 0.5 } { 0 }, colorVal);
-
 
         var p1 = fromPoint;
         var p2 = toPoint;
