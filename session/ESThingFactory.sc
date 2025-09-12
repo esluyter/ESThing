@@ -776,10 +776,7 @@
     var adc = Server.default.options.numInputBusChannels.collect { |i| i * 50 + 25 };
     var dac = Server.default.options.numOutputBusChannels.collect { |i| i * 50 + 25 };
     var patchView, spaceView;
-    w !? { w.onClose_(nil); w.close };
-    w = Window(title, bounds).background_(Color.gray(0.95)).front.onClose_{
-      w = nil;
-    };
+    var w = Window(title, bounds).background_(Color.gray(0.95)).front;
 
     patchView = UserView(w, w.bounds.copy.origin_(0@0))
     .resize_(5).acceptsMouse_(false).drawFunc_({ |v|

@@ -10,7 +10,6 @@ ESThingSession {
   var <>routing, <>inputRouting, <>outputRouting;
   var <patchDescs;
   var <>topFadeGroup;
-  var <>w;
 
   *new { |tps = #[]|
     ^super.newCopyArgs(tps, nil, [], [], [], [], [], [],
@@ -185,9 +184,7 @@ ESThingSession {
       patchMe.(n[0], n[1], 1, false, false);
     };
 
-    if (w.notNil) {
-      this.makeWindow(w.bounds);
-    };
+    this.changed(\routing);
   }
 
   // sugar: put a thing space directly
