@@ -46,16 +46,16 @@ ESThingSessionTabs {
       };
     };
     w !? { w.onClose_(nil); w.close };
-    w = Window("Tabs", Rect(left, 0, width, 50)).front;
+    w = Window("Tabs", Rect(left, 10, width, 50)).front;
     w.onClose = { [bigWin, presetWin].do { |win|
       win !? { win.close };
     } };
-    bigWinBounds = bigWinBounds ?? Rect(left, 80, 800, 800);
+    bigWinBounds = bigWinBounds ?? Rect(left, 90, 800, 800);
     buttons = (nTabs - 1).collect { |i|
       Button(w, Rect(tabWidth * (i + 1), 0, tabWidth, 50)).string_(spaces[i].index).action_ {
         closeBigWin.();
         bigWin = spaces[i].makeWindow(bigWinBounds);
-        presetWin = thisTps[i].presets.makeWindow(Rect(bigWin.bounds.left, 910, 800, 330));
+        presetWin = thisTps[i].presets.makeWindow(Rect(bigWin.bounds.left, 920, 800, 330));
         activeButton = i;
       }
     } ++ Button(w, Rect(0, 0, tabWidth, 50)).string_("Session routing").action_ {
