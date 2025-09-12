@@ -6,7 +6,7 @@
 
 
 ESThingSession {
-  var <>tps, <>group, <>groups, <>fadeGroups, <>fadeBuses, <>amps, <>synths, <routingSynths;
+  var <>tps, <>group, <>groups, <>fadeGroups, <>fadeBuses, <amps, <>synths, <routingSynths;
   var <>routing, <>inputRouting, <>outputRouting;
   var <patchDescs;
   var <>topFadeGroup;
@@ -30,6 +30,11 @@ ESThingSession {
       };
     };
     this.route([])
+  }
+
+  setAmp { |index, amp|
+    amps[index] = amp;
+    synths[index].do(_.set(\amp, amp));
   }
 
   route { |arr|

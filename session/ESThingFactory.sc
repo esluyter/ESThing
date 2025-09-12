@@ -778,6 +778,18 @@
     var patchView, spaceView;
     var w = Window(title, bounds).background_(Color.gray(0.95)).front;
 
+    // xy randomizer
+    var funcs = tps.select(_.notNil).collect(_.makeXYFunc);
+    var func = { |x = 0.5, y = 0.5|
+      funcs.do(_.value(x, y));
+    };
+    var pad = Slider2D(w, Rect(w.bounds.width - 220, w.bounds.height - 220, 200, 200)).resize_(9).x_(0.5).y_(0.5).background_(Color.gray(0.95)).action_{ |view|
+      func.(view.x, view.y);
+    }.mouseUpAction_{ |view|
+      view.x = 0.5;
+      view.activey = 0.5;
+    };
+
     patchView = UserView(w, w.bounds.copy.origin_(0@0))
     .resize_(5).acceptsMouse_(false).drawFunc_({ |v|
       patchDescs.collect { |patchDesc|
@@ -826,6 +838,7 @@
       //var newKnobPoints = ();
       var w;
       var x = 0, y = 0;
+      var sliderSpec = [0, 4, \amp].asSpec;
       StaticText(view, Rect(0, 0, width, height)).align_(\center).string_(space.index).font_(Font.sansSerif(14, true)).stringColor_(Color.hsv(hue, 1, 0.5)).mouseDownAction_{ |v, x, y, mods, buttNum, clickCount|
         if (mods.isAlt) {
           if (space.inbus.numChannels > 0) {
@@ -861,6 +874,7 @@
       };
       inlets[space.index] = newInlets;
       outlets[space.index] = newOutlets;
+      Slider(view, Rect(width - 20, 0, 20, height)).value_(sliderSpec.unmap(amps[space.index])).background_(Color.gray(0.7)).action_{ |v| this.setAmp(space.index, sliderSpec.map(v.value)) };
       view;
     };
 
