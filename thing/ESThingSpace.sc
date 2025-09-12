@@ -140,7 +140,7 @@ ESThingSpace {
   play {
     group.free;
     group = Group(target, addAction);
-    soloGroup.free;
+    //soloGroup.free;
     soloGroup = Group(group, \addToTail);
     forkIfNeeded {
       playFunc.value(this);
@@ -156,7 +156,7 @@ ESThingSpace {
     patches.do(_.stop);
     group.free;
     group = nil;
-    soloGroup.free;
+    //soloGroup.free;
     soloGroup = nil;
   }
   free {

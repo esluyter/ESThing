@@ -769,12 +769,14 @@
 +ESThingSession {
   makeWindow { |winBounds, title = "Session", dblClickAction|
     var bounds = winBounds ?? { Rect(0, 80, 800, 800) };
-    var left = 20, top = 150;
+    var left = 20, top = 200;
     var inlets = ();
     var outlets = ();
     //var knobPoints = [];
     var adc = Server.default.options.numInputBusChannels.collect { |i| i * 50 + 25 };
     var dac = Server.default.options.numOutputBusChannels.collect { |i| i * 50 + 25 };
+    var sessionIn = inChannels.collect { |i| i * 50 + 25 };
+    var sessionOut = outChannels.collect { |i| i * 50 + 25 };
     var patchView, spaceView;
     var w = Window(title, bounds).background_(Color.gray(0.95)).front;
 
@@ -783,7 +785,7 @@
     var func = { |x = 0.5, y = 0.5|
       funcs.do(_.value(x, y));
     };
-    var pad = Slider2D(w, Rect(w.bounds.width - 220, w.bounds.height - 220, 200, 200)).resize_(9).x_(0.5).y_(0.5).background_(Color.gray(0.95)).action_{ |view|
+    var pad = Slider2D(w, Rect(w.bounds.width - 220, w.bounds.height - 320, 200, 200)).resize_(9).x_(0.5).y_(0.5).background_(Color.gray(0.95)).action_{ |view|
       func.(view.x, view.y);
     }.mouseUpAction_{ |view|
       view.x = 0.5;
@@ -792,13 +794,71 @@
 
     patchView = UserView(w, w.bounds.copy.origin_(0@0))
     .resize_(5).acceptsMouse_(false).drawFunc_({ |v|
-      patchDescs.collect { |patchDesc|
+      Pen.addRect(Rect(0, 0, v.bounds.width, 100));
+      Pen.addRect(Rect(0, v.bounds.height - 100, v.bounds.width, 100));
+      Pen.fillColor_(Color.hsv(0.7, 0.01, 0.9));
+      Pen.strokeColor_(Color.black);
+      Pen.width = 1;
+      Pen.fillStroke;
 
+      patchDescs.collect { |patchDesc|
         var from = patchDesc[0];
         var to = patchDesc[1];
 
-        var toPoint = if (to.integer == -1) { dac[to.indices[0]]@v.bounds.height } { inlets[to.integer][to.indices[0]] };
-        var fromPoint = if (from.integer == -1) { adc[from.indices[0]]@0 } { outlets[from.integer][from.indices[0]] };
+        var toPoint = if (to.integer == -1) { sessionOut[to.indices[0]]@(v.bounds.height - 100) } { inlets[to.integer][to.indices[0]] };
+        var fromPoint = if (from.integer == -1) { sessionIn[from.indices[0]]@100 } { outlets[from.integer][from.indices[0]] };
+        var colorVal = (patchDesc[2].curvelin(0, 16, 0.01, 1, 4));
+        var hue = nil;
+        var color = Color.hsv(hue ?? 0, 1, if (hue.notNil) { 0.5 } { 0 }, colorVal);
+
+        var p1 = fromPoint;
+        var p2 = toPoint;
+        var offset = Point(0, max(((p2.y - p1.y) / 8), max((p1.y - p2.y) / 16, if (p2.y < p1.y) { 40 } { 20 })));
+        var sideoffset = Point(max((p2.x - p1.x) / 4, max((p1.x - p2.x) / 8, 5)), 0);
+
+        Pen.lineDash = FloatArray[2, 0];
+        // wider for input
+        Pen.width = if (hue.notNil) { 2 } { 3 };
+        // black if hue is nil (i.e. input)
+
+        Pen.moveTo(p1);
+        Pen.curveTo(p2, p1 + offset, p2 - offset);
+        Pen.color_(color);
+        Pen.stroke;
+      };
+
+      inputDescs.collect { |patchDesc|
+        var from = patchDesc[0];
+        var to = patchDesc[1];
+
+        var toPoint = sessionIn[to]@100;
+        var fromPoint = adc[from]@0;
+        var colorVal = (patchDesc[2].curvelin(0, 16, 0.01, 1, 4));
+        var hue = nil;
+        var color = Color.hsv(hue ?? 0, 1, if (hue.notNil) { 0.5 } { 0 }, colorVal);
+
+        var p1 = fromPoint;
+        var p2 = toPoint;
+        var offset = Point(0, max(((p2.y - p1.y) / 8), max((p1.y - p2.y) / 16, if (p2.y < p1.y) { 40 } { 20 })));
+        var sideoffset = Point(max((p2.x - p1.x) / 4, max((p1.x - p2.x) / 8, 5)), 0);
+
+        Pen.lineDash = FloatArray[2, 0];
+        // wider for input
+        Pen.width = if (hue.notNil) { 2 } { 3 };
+        // black if hue is nil (i.e. input)
+
+        Pen.moveTo(p1);
+        Pen.curveTo(p2, p1 + offset, p2 - offset);
+        Pen.color_(color);
+        Pen.stroke;
+      };
+
+      outputDescs.collect { |patchDesc|
+        var from = patchDesc[0];
+        var to = patchDesc[1];
+
+        var toPoint = dac[to]@v.bounds.height;
+        var fromPoint = sessionOut[from]@(v.bounds.height - 100);
         var colorVal = (patchDesc[2].curvelin(0, 16, 0.01, 1, 4));
         var hue = nil;
         var color = Color.hsv(hue ?? 0, 1, if (hue.notNil) { 0.5 } { 0 }, colorVal);
@@ -889,10 +949,16 @@
 
 
     adc.do { |x|
-      View(w, Rect(x - 2, 0, 5, 7)).background_(Color.black);
+      View(w, Rect(x - 2, 0, 5, 7)).background_(Color.gray(0.6));
+    };
+    sessionIn.do { |x|
+      View(w, Rect(x - 2, 100, 5, 7)).background_(Color.black);
+    };
+    sessionOut.do { |x|
+      View(w, Rect(x - 2, w.bounds.height - 107, 5, 7)).background_(Color.black).resize_(3);
     };
     dac.do { |x|
-      View(w, Rect(x - 2, w.bounds.height - 7, 5, 7)).background_(Color.black).resize_(3);
+      View(w, Rect(x - 2, w.bounds.height - 7, 5, 7)).background_(Color.gray(0.6)).resize_(3);
     };
 
 

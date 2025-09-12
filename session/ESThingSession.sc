@@ -6,19 +6,30 @@
 
 
 ESThingSession {
-  var <>tps, <>group, <>groups, <>fadeGroups, <>fadeBuses, <amps, <>synths, <routingSynths;
+  var <>tps, <>group, <>groups, <>fadeGroups, <>fadeBuses, <amps, <>synths, <routingSynths, <ioSynths;
   var <>routing, <>inputRouting, <>outputRouting;
-  var <patchDescs;
-  var <>topFadeGroup;
+  var <>inChannels, <>outChannels, <>inbus, <>outbus;
+  var <patchDescs, <inputDescs, <outputDescs;
+  var <>inputGroup, <>topFadeGroup;
 
-  *new { |tps = #[]|
-    ^super.newCopyArgs(tps, nil, [], [], [], [], [], [],
-      [], [], []);
+  *new { |tps = #[], inChannels, outChannels|
+    inChannels = inChannels ?? Server.default.options.numInputBusChannels;
+    outChannels = outChannels ?? Server.default.options.numOutputBusChannels;
+    ^super.newCopyArgs(tps, nil, [], [], [], [], [], [], [],
+      [], nil, nil, inChannels, outChannels);
   }
 
   // is this good?
   doesNotUnderstand { |selector ...args|
     ^tps.perform(selector, *args);
+  }
+
+  initBuses {
+    inbus = Bus.audio(Server.default, inChannels);
+    outbus = Bus.audio(Server.default, outChannels);
+  }
+  freeBuses {
+    [inbus, outbus].do(_.free)
   }
 
   clear {
@@ -29,6 +40,8 @@ ESThingSession {
         tps[i] = nil;
       };
     };
+    inputRouting = nil;
+    outputRouting = nil;
     this.route([])
   }
 
@@ -38,177 +51,280 @@ ESThingSession {
     this.changed(\amps, index);
   }
 
+  channels { |arr|
+    if (arr.isInteger) {
+      inChannels = outChannels = arr;
+    } {
+      inChannels = arr[0];
+      outChannels = arr[1];
+    };
+    if (inbus.notNil) {
+      this.freeBuses;
+      this.initBuses;
+      this.route;
+    };
+  }
+
+  input { |arr|
+    inputRouting = arr;
+    if (inbus.notNil) {
+      this.route;
+    };
+  }
+
+  output { |arr|
+    outputRouting = arr;
+    if (inbus.notNil) {
+      this.route;
+    };
+  }
+
   route { |arr|
-    var sessionOutChannels = Server.default.options.numOutputBusChannels;
-    var sessionInChannels = Server.default.options.numInputBusChannels;
-    var sessionOutBus = 0;
-    var sessionInBus = Server.default.options.numOutputBusChannels;
+    if (inbus.isNil) {
+      routing = arr;
+      this.changed(\routing);
+      ^this
+    } {
+      var sessionOutChannels = outChannels;//Server.default.options.numOutputBusChannels;
+      var sessionInChannels = inChannels;//Server.default.options.numInputBusChannels;
+      var sessionOutBus = outbus.index;//0;
+      var sessionInBus = inbus.index;//Server.default.options.numOutputBusChannels;
 
-    var normals = [];
+      var normals = [];
+      var ioRouting;
 
-    // complicated logic to patch:
-    var patchMe = { |from, to, amp=1, pre=false, pruneNormals=true|
-      var fromIndex, toIndex;
-      var outbus, fadeBus, fadeGroup;
-      var inbus;
-      from = from.asESIntegerWithIndices;
-      to = to.asESIntegerWithIndices;
-      fromIndex = from.integer;
-      toIndex = to.integer;
+      // complicated logic to patch:
+      var patchMe = { |from, to, amp=1, pre=false, pruneNormals=true|
+        var fromIndex, toIndex;
+        var outbus, fadeBus, fadeGroup;
+        var inbus;
+        from = from.asESIntegerWithIndices;
+        to = to.asESIntegerWithIndices;
+        fromIndex = from.integer;
+        toIndex = to.integer;
 
-      if (fromIndex >= 0) {
-        var fromTs;
-        if (tps[fromIndex].isNil) {
-          ("Nothing in slot " ++ fromIndex).error;
-        } {
-          fromTs = tps[fromIndex].ts;
-          outbus = fromTs.outbus.index;
-          fadeBus = fadeBuses[fromIndex].index;
-          fadeGroup = fadeGroups[fromIndex];
-          from.indices = from.indices ?? (0..fromTs.outChannels - 1);
-        };
-      } {
-        outbus = sessionInBus;
-        fadeBus = outbus;
-        fadeGroup = topFadeGroup;
-        from.indices = from.indices ?? (0..sessionInChannels - 1);
-      };
-
-      if (toIndex >= 0) {
-        var toTs;
-        if (tps[toIndex].isNil) {
-          ("Nothing in slot " ++ toIndex).error;
-        } {
-          toTs = tps[toIndex].ts;
-          inbus = toTs.inbus.index;
-
-
-          if (from.notNil) {
-            var size = min(toTs.inChannels, from.indices.size);
-            to.indices = to.indices ?? (0..size - 1);
+        if (fromIndex >= 0) {
+          var fromTs;
+          if (tps[fromIndex].isNil) {
+            ("Nothing in slot " ++ fromIndex).warn;
           } {
-            to.indices = to.indices ?? (0..toTs.inChannels - 1);
+            fromTs = tps[fromIndex].ts;
+            outbus = fromTs.outbus.index;
+            fadeBus = fadeBuses[fromIndex].index;
+            fadeGroup = fadeGroups[fromIndex];
+            from.indices = from.indices ?? (0..fromTs.outChannels - 1);
           };
+        } {
+          outbus = sessionInBus;
+          fadeBus = outbus;
+          fadeGroup = topFadeGroup;
+          from.indices = from.indices ?? (0..sessionInChannels - 1);
         };
-      } {
-        // this means it's going to output
-        var size = min(sessionOutChannels, from.indices.size);
-        inbus = sessionOutBus;
-        to.indices = to.indices ?? (0..size - 1);
-      };
 
-      if (inbus.notNil and: outbus.notNil) {
-        to.indices.do { |toI, i|
-          var fromI = from.indices.wrapAt(i);
-          if (fromI.notNil) {
-            routingSynths = routingSynths.add(
-              Synth(\ESThingPatch,
-                [in: if (pre) { outbus } { fadeBus } + fromI, out: inbus + toI, amp: amp],
-                fadeGroup, \addToTail)
-            );
-            patchDescs = patchDescs.add([fromIndex[fromI], toIndex[toI], amp, pre]);
-            if (pruneNormals) {
-              removeNormals.(toIndex, toI, fromIndex, fromI);
+        if (toIndex >= 0) {
+          var toTs;
+          if (tps[toIndex].isNil) {
+            ("Nothing in slot " ++ toIndex).warn;
+          } {
+            toTs = tps[toIndex].ts;
+            inbus = toTs.inbus.index;
+            if (from.notNil) {
+              var size = min(toTs.inChannels, from.indices.size);
+              to.indices = to.indices ?? (0..size - 1);
+            } {
+              to.indices = to.indices ?? (0..toTs.inChannels - 1);
+            };
+          };
+        } {
+          // this means it's going to output
+          var size = min(sessionOutChannels, from.indices.size);
+          inbus = sessionOutBus;
+          to.indices = to.indices ?? (0..size - 1);
+        };
+
+        if (inbus.notNil and: outbus.notNil) {
+          to.indices.do { |toI, i|
+            var fromI = from.indices.wrapAt(i);
+            if (fromI.notNil) {
+              routingSynths = routingSynths.add(
+                Synth(\ESThingPatch,
+                  [in: if (pre) { outbus } { fadeBus } + fromI, out: inbus + toI, amp: amp],
+                  fadeGroup, \addToTail)
+              );
+              patchDescs = patchDescs.add([fromIndex[fromI], toIndex[toI], amp, pre]);
+              if (pruneNormals) {
+                removeNormals.(toIndex, toI, fromIndex, fromI);
+              };
             };
           };
         };
       };
-    };
-    var removeNormals = { |toIndex, toI, fromIndex, fromI|
-      var toRemove = [];
-      normals.do { |n, j|
-        if (toIndex.notNil) {
-          if (n == [-1[toI], toIndex[toI]]) { toRemove = toRemove.add(j) };
+      var removeNormals = { |toIndex, toI, fromIndex, fromI|
+        var toRemove = [];
+        normals.do { |n, j|
+          if (toIndex.notNil) {
+            if (n == [-1[toI], toIndex[toI]]) { toRemove = toRemove.add(j) };
+          };
+          if (fromIndex.notNil) {
+            if (n == [fromIndex[fromI], -1[fromI]]) { toRemove = toRemove.add(j) };
+          };
         };
-        if (fromIndex.notNil) {
-          if (n == [fromIndex[fromI], -1[fromI]]) { toRemove = toRemove.add(j) };
+        toRemove.reverse.do { |j|
+          normals.removeAt(j);
         };
       };
-      toRemove.reverse.do { |j|
-        normals.removeAt(j);
+
+      if (arr.isNil) { arr = routing };
+
+      routing = arr;
+
+      routingSynths.do(_.free);
+      ioSynths.do(_.free);
+
+      routingSynths = [];
+      ioSynths = [];
+
+      patchDescs = [];
+      inputDescs = [];
+      outputDescs = [];
+
+      // build normalled connections
+      tps.select(_.notNil).do { |tp|
+        var ts = tp.ts;
+        var numInputs = min(ts.inChannels, sessionInChannels);
+        var numOutputs = min(ts.outChannels, sessionOutChannels);
+        var inputs = numInputs.collect { |i| [-1[i], ts.index[i]] };
+        var outputs = numOutputs.collect { |i| [ts.index[i], -1[i]] };
+        normals = normals ++ inputs ++ outputs;
       };
-    };
 
-    routing = arr;
-    routingSynths.do(_.free);
-    routingSynths = [];
-    patchDescs = [];
+      // break them using the array
+      arr.pairsDo { |from, to|
+        if (to.isNil) { to = [nil] };
+        if (from == 'nil') { from = nil };
+        // treat every to as an array
+        to.asArray.do { |item|
+          var amp = 1;
+          var pre = false;
 
-    // build normalled connections
-    tps.select(_.notNil).do { |tp|
-      var ts = tp.ts;
-      var numInputs = min(ts.inChannels, sessionInChannels);
-      var numOutputs = min(ts.outChannels, sessionOutChannels);
-      var inputs = numInputs.collect { |i| [-1[i], ts.index[i]] };
-      var outputs = numOutputs.collect { |i| [ts.index[i], -1[i]] };
-      normals = normals ++ inputs ++ outputs;
-    };
-
-    // break them using the array
-    arr.pairsDo { |from, to|
-      if (to.isNil) { to = [nil] };
-      if (from == 'nil') { from = nil };
-      // treat every to as an array
-      to.asArray.do { |item|
-        var amp = 1;
-        var pre = false;
-
-        // get parameters from association
-        // \in : 2[1..3]->0.75
-        // \in : 2[1..3]->(amp: 0.75, pre: true)
-        if (item.isKindOf(Association)) {
-          if (item.value.isNumber) {
-            amp = item.value;
-          } {
-            // value is event with possible amp and pre
-            amp = amp ?? item.value[\amp];
-            pre = pre ?? item.value[\pre];
+          // get parameters from association
+          // \in : 2[1..3]->0.75
+          // \in : 2[1..3]->(amp: 0.75, pre: true)
+          if (item.isKindOf(Association)) {
+            if (item.value.isNumber) {
+              amp = item.value;
+            } {
+              // value is event with possible amp and pre
+              amp = amp ?? item.value[\amp];
+              pre = pre ?? item.value[\pre];
+            };
+            item = item.key;
           };
-          item = item.key;
-        };
 
-        if (from.isNil) {
-          // remove normal patch
-          to = to.asESIntegerWithIndices;
-          if (to.indices.isNil) {
-            to.indices = to.indices ?? (0..tps[to.integer].ts.inChannels - 1);
-          };
-          to.indices.do { |toI|
-            removeNormals.(to.integer, toI);
-          };
-        } {
-          if (item.isNil) {
+          if (from.isNil) {
             // remove normal patch
-            from = from.asESIntegerWithIndices;
-            if (from.indices.isNil) {
-              from.indices = from.indices ?? (0..tps[from.integer].ts.outChannels - 1);
+            to = to.asESIntegerWithIndices;
+            if (to.indices.isNil) {
+              to.indices = to.indices ?? (0..tps[to.integer].ts.inChannels - 1);
             };
-            from.indices.do { |fromI|
-              removeNormals.(nil, nil, from.integer, fromI);
+            to.indices.do { |toI|
+              removeNormals.(to.integer, toI);
             };
           } {
-            // execute the patches for this to item
-            patchMe.(from, item, amp, pre);
+            if (item.isNil) {
+              // remove normal patch
+              from = from.asESIntegerWithIndices;
+              if (from.indices.isNil) {
+                from.indices = from.indices ?? (0..tps[from.integer].ts.outChannels - 1);
+              };
+              from.indices.do { |fromI|
+                removeNormals.(nil, nil, from.integer, fromI);
+              };
+            } {
+              // execute the patches for this to item
+              patchMe.(from, item, amp, pre);
+            };
           };
         };
       };
-    };
 
-    normals.do { |n|
-      // patch without pruning normals
-      patchMe.(n[0], n[1], 1, false, false);
-    };
+      normals.do { |n|
+        // patch without pruning normals
+        patchMe.(n[0], n[1], 1, false, false);
+      };
 
-    this.changed(\routing);
+      // ----- I/O ROUTING ------
+      ioRouting = inputRouting ?? [-1, -1];
+
+      ioRouting.pairsDo { |from, to|
+        var amp = 1;
+        if (to.isKindOf(Association)) {
+          amp = to.value;
+          to = to.key;
+        };
+        if (from == -1) {
+          from = (0..Server.default.options.numInputBusChannels - 1);
+        };
+        if (to == -1) {
+          var size = min(inChannels, from.asArray.size);
+          to = (0..size - 1);
+        };
+        from = from.asArray;
+        to = to.asArray;
+        to.do { |toI, i|
+          var fromI = from.wrapAt(i);
+          ioSynths = ioSynths.add(
+            Synth(\ESThingPatch,
+              [in: Server.default.options.numOutputBusChannels + fromI, out: sessionInBus + toI, amp: amp],
+              inputGroup, \addToTail)
+          );
+          inputDescs = inputDescs.add([fromI, toI, amp]);
+        }
+      };
+
+      ioRouting = outputRouting ?? [-1, -1];
+
+      ioRouting.pairsDo { |from, to|
+        var amp = 1;
+        if (to.isKindOf(Association)) {
+          amp = to.value;
+          to = to.key;
+        };
+        if (from == -1) {
+          from = (0..outChannels - 1);
+        };
+        if (to == -1) {
+          var size = min(Server.default.options.numOutputBusChannels, from.asArray.size);
+          to = (0..size - 1);
+        };
+        from = from.asArray;
+        to = to.asArray;
+        to.do { |toI, i|
+          var fromI = from.wrapAt(i);
+          ioSynths = ioSynths.add(
+            Synth(\ESThingPatch,
+              [in: sessionOutBus + fromI, out: toI, amp: amp],
+              inputGroup, \addToTail)
+          );
+          outputDescs = outputDescs.add([fromI, toI, amp]);
+        }
+      };
+
+      this.changed(\routing);
+    }
   }
 
   // sugar: put a thing space directly
   // interacts directly with ESPhasor -- this won't work if you don't use this sugar
   put { |index, ts|
     Server.default.waitForBoot {
+      if (inbus.isNil) {
+        this.initBuses;
+      };
       // make a group to play the session in
       if (group.isNil) { group = Group(Server.default) };
       if (topFadeGroup.isNil) { topFadeGroup = Group(group) };
+      if (inputGroup.isNil) { inputGroup = Group(topFadeGroup, \addBefore) };
       // set ESPhasor space id
       ESPhasor.spaceId = index * 100;
       // make sure arrays are big enough
@@ -242,6 +358,9 @@ ESThingSession {
         tps[index].ts = ts;
         {
           var fadeGroup, fadeBus;
+          // to avoid failure in server msgs
+          routingSynths.do(_.free);
+          routingSynths = [];
           fadeGroups[index].free;
           fadeGroup = Group(groups[index], \addToTail);
           fadeGroups[index] = fadeGroup;
@@ -257,7 +376,7 @@ ESThingSession {
       };
 
       // redo routing
-      this.route(routing);
+      this.route;
     };
   }
 }
