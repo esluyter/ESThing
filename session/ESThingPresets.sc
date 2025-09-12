@@ -18,8 +18,6 @@ ESThingPresets {
   <>restoreCallback,
   // default save path is the now executing dir
   <>defaultPath;
-  // window
-  var <w;
 
   defaultTime_ { |val|
     defaultTime = val;
@@ -139,10 +137,10 @@ ESThingPresets {
     var list, populateList, textView, setTextViewString;
     var slider, goButt, goNowButt, modBox, saveEditButt, captureButt, deleteButt, moveUpButt, moveDownButt, writeButt, readButt;
     var dependantFunc;
+    var w;
 
     bounds = bounds ?? Rect(0, 910, 650, 330);
 
-    w !? { w.close };
     w = Window("Space Presets", bounds).front;
     view = View(w, Rect(0, 30, 650, 300)).resize_(5);
 

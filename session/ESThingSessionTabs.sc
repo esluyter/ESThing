@@ -1,13 +1,13 @@
 ESThingSessionTabs {
-  var <session;
+  var <session, <>left;
   var <bigWin, <presetWin;
   var <bigWinBounds;
   var <buttons;
   var <activeButton = 0;
   var <w, <f;
 
-  *new { |session|
-    ^super.newCopyArgs(session).init.makeWindow;
+  *new { |session, left = 0|
+    ^super.newCopyArgs(session, left).init.makeWindow;
   }
 
   init {
@@ -46,10 +46,11 @@ ESThingSessionTabs {
       };
     };
     w !? { w.onClose_(nil); w.close };
-    w = Window("Tabs", Rect(0, 0, width, 50)).front;
+    w = Window("Tabs", Rect(left, 0, width, 50)).front;
     w.onClose = { [bigWin, presetWin].do { |win|
       win !? { win.close };
     } };
+    bigWinBounds = bigWinBounds ?? Rect(left, 80, 800, 800);
     buttons = (nTabs - 1).collect { |i|
       Button(w, Rect(tabWidth * (i + 1), 0, tabWidth, 50)).string_(spaces[i].index).action_ {
         closeBigWin.();
