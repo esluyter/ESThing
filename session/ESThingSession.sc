@@ -10,7 +10,7 @@ ESThingSession {
   var <>routing, <>inputRouting, <>outputRouting;
   var <patchDescs;
   var <>topFadeGroup;
-  var w;
+  var <>w;
 
   *new { |tps = #[]|
     ^super.newCopyArgs(tps, nil, [], [], [], [], [], [],
@@ -20,6 +20,17 @@ ESThingSession {
   // is this good?
   doesNotUnderstand { |selector ...args|
     ^tps.perform(selector, *args);
+  }
+
+  clear {
+    tps.size.do { |i|
+      if (tps[i].notNil) {
+        tps[i].stop;
+        tps[i].free;
+        tps[i] = nil;
+      };
+    };
+    this.route([])
   }
 
   route { |arr|
@@ -173,6 +184,10 @@ ESThingSession {
       // patch without pruning normals
       patchMe.(n[0], n[1], 1, false, false);
     };
+
+    if (w.notNil) {
+      this.makeWindow(w.bounds);
+    };
   }
 
   // sugar: put a thing space directly
@@ -201,7 +216,7 @@ ESThingSession {
       if (tps[index].isNil) {
         // make a new player with default winBounds by index
         tps[index] = ESThingPlayer().play(true).winBounds_(Rect(500 * index, 80, 800, 800));
-        tps[index].presets.makeWindow(Rect(500 * index, 910, 800, 330));
+        //tps[index].presets.makeWindow(Rect(500 * index, 910, 800, 330));
       };
       // and play or stop accordingly
       if (ts.isNil) {

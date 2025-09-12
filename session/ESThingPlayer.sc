@@ -120,8 +120,8 @@ ESThingPlayer {
         };
         */
         // make window
-        win !? { win.close };
-        win = ts.makeWindow(winBounds, "Space", this);
+        //win !? { win.close };
+        //win = ts.makeWindow(winBounds, "Space", this);
       };
     };
   }

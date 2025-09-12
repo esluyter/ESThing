@@ -232,5 +232,7 @@ ESThingPresets {
     };
     tp.presets.addDependant(dependantFunc);
     w.onClose_{ tp.presets.removeDependant(dependantFunc); };
+
+    ^w;
   }
 }

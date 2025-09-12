@@ -767,7 +767,7 @@
 
 
 +ESThingSession {
-  makeWindow { |winBounds, title = "Session", tp|
+  makeWindow { |winBounds, title = "Session", dblClickAction|
     var bounds = winBounds ?? { Rect(0, 80, 800, 800) };
     var left = 20, top = 150;
     var inlets = ();
@@ -776,8 +776,10 @@
     var adc = Server.default.options.numInputBusChannels.collect { |i| i * 50 + 25 };
     var dac = Server.default.options.numOutputBusChannels.collect { |i| i * 50 + 25 };
     var patchView, spaceView;
-    w !? { w.close };
-    w = Window(title, bounds).background_(Color.gray(0.95)).front;
+    w !? { w.onClose_(nil); w.close };
+    w = Window(title, bounds).background_(Color.gray(0.95)).front.onClose_{
+      w = nil;
+    };
 
     patchView = UserView(w, w.bounds.copy.origin_(0@0))
     .resize_(5).acceptsMouse_(false).drawFunc_({ |v|
@@ -827,7 +829,7 @@
       //var newKnobPoints = ();
       var w;
       var x = 0, y = 0;
-      StaticText(view, Rect(5, 3, width, 20)).string_(space.index).font_(Font.sansSerif(14, true)).stringColor_(Color.hsv(hue, 1, 0.5)).mouseDownAction_{ |v, x, y, mods, buttNum, clickCount|
+      StaticText(view, Rect(0, 0, width, height)).align_(\center).string_(space.index).font_(Font.sansSerif(14, true)).stringColor_(Color.hsv(hue, 1, 0.5)).mouseDownAction_{ |v, x, y, mods, buttNum, clickCount|
         if (mods.isAlt) {
           if (space.inbus.numChannels > 0) {
             "Scoping inbus #%".format(space.inbus.index).postln;
@@ -845,7 +847,7 @@
           }
         };
         if (clickCount == 2) {
-
+          dblClickAction.(space)
         };
       };
       space.inChannels.do { |i|
