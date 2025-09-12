@@ -60,7 +60,7 @@ ESThingSessionTabs {
       }
     } ++ Button(w, Rect(0, 0, tabWidth, 50)).string_("Session routing").action_ {
       closeBigWin.();
-      bigWin = ~session.makeWindow(bigWinBounds, dblClickAction: { |space|
+      bigWin = this.makeWindow(bigWinBounds, dblClickAction: { |space|
         buttons[spaces.indexOf(space)].action.();
       });
       activeButton = nTabs - 1;
