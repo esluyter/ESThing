@@ -10,7 +10,7 @@ ESThingSession {
   var <>routing, <>inputRouting, <>outputRouting;
   var <>inChannels, <>outChannels, <>inbus, <>outbus;
   var <patchDescs, <inputDescs, <outputDescs;
-  var <>inputGroup, <>topFadeGroup;
+  var <>inputGroup, <>topFadeGroup, <>outputGroup;
 
   *new { |tps = #[], inChannels, outChannels|
     inChannels = inChannels ?? Server.default.options.numInputBusChannels;
@@ -304,7 +304,7 @@ ESThingSession {
           ioSynths = ioSynths.add(
             Synth(\ESThingPatch,
               [in: sessionOutBus + fromI, out: toI, amp: amp],
-              inputGroup, \addToTail)
+              outputGroup, \addToTail)
           );
           outputDescs = outputDescs.add([fromI, toI, amp]);
         }
@@ -325,13 +325,14 @@ ESThingSession {
       if (group.isNil) { group = Group(Server.default) };
       if (topFadeGroup.isNil) { topFadeGroup = Group(group) };
       if (inputGroup.isNil) { inputGroup = Group(topFadeGroup, \addBefore) };
+      if (outputGroup.isNil) { outputGroup = Group(group, \addToTail) };
       // set ESPhasor space id
       ESPhasor.spaceId = index * 100;
       // make sure arrays are big enough
       if (tps.size <= index) {
         tps = tps.extend(index + 1);
         while { groups.size <= index } {
-          groups = groups.add(Group(group, \addToTail));
+          groups = groups.add(Group(outputGroup, \addBefore));
         };
         fadeGroups = fadeGroups.extend(index + 1);
         fadeBuses = fadeBuses.extend(index + 1);
